@@ -30,64 +30,85 @@
     <a class="back-link" href="/">← RETOUR À L'AGENT</a>
     <p class="eyebrow">GUIDE · LE CLUB IA VIP</p>
     <h1>Construire un agent vocal utile</h1>
-    <p style="font-size:17px; color:var(--fg-muted); margin:0 0 8px; max-width:640px;">Exemple fil rouge : un agent qui répond au téléphone d'un restaurant. Modèle utilisé : <code style="color:var(--accent);background:var(--accent-bg);border:0;">grok-voice-think-fast-1.0</code>.</p>
+    <p style="font-size:17px; color:var(--fg-muted); margin:0 0 8px; max-width:640px;">Exemple fil rouge : <strong>Margot</strong>, hôtesse vocale du <em>Petit Bistro</em>, qui répond au téléphone et réserve dans Google Calendar. Modèle : <code style="color:var(--accent);background:var(--accent-bg);border:0;">grok-voice-think-fast-1.0</code>.</p>
 
     <h2>1. Comment ça marche, en 30 secondes</h2>
     <ul>
-      <li>Le navigateur (ou Twilio) ouvre un <strong>WebSocket</strong> vers <code>wss://api.x.ai/v1/realtime</code>.</li>
-      <li>Le client <strong>envoie</strong> de l'audio mic (PCM16 base64) en streaming.</li>
-      <li>Le serveur xAI <strong>répond</strong> en streaming : audio synthétisé + transcription + appels d'outils.</li>
-      <li>La <strong>VAD côté serveur</strong> (<code>turn_detection: server_vad</code>) détecte automatiquement quand l'utilisateur a fini de parler — pas besoin de bouton "send".</li>
-      <li>Le modèle <code>grok-voice-think-fast-1.0</code> fait <em>tout</em> : ASR, raisonnement, TTS, et orchestration d'outils — un seul WebSocket, latence sub-seconde.</li>
+      <li><strong>Deux portes d'entrée</strong>, une seule config d'agent :
+        <ul>
+          <li><strong>Web</strong> — le navigateur ouvre un WebSocket directement vers <code>wss://api.x.ai/v1/realtime</code>. Le serveur ne fait que minter un token éphémère et servir l'app.</li>
+          <li><strong>Téléphone (Twilio)</strong> — Twilio ouvre un WebSocket vers <em>notre</em> serveur. Le serveur relaie l'audio µ-law 8 kHz vers xAI dans les deux sens, et gère les tool calls lui-même.</li>
+        </ul>
+      </li>
+      <li><strong>VAD côté serveur</strong> (<code>turn_detection: server_vad</code>) détecte automatiquement la fin des paroles — pas de bouton "send".</li>
+      <li><strong>Un seul modèle</strong> pour tout : ASR, raisonnement, TTS, orchestration d'outils. Latence sub-seconde.</li>
     </ul>
 
-    <h2>2. Les 4 fichiers à connaître</h2>
+    <h2>2. Les fichiers à connaître</h2>
     <table>
       <thead><tr><th>Fichier</th><th>Rôle</th><th>Edit</th></tr></thead>
       <tbody>
-        <tr><td><code>web/config/system_prompt.txt</code></td><td>Personnalité, mission, règles.</td><td><strong>Souvent</strong></td></tr>
-        <tr><td><code>web/config/tools.json</code></td><td>Outils que l'agent peut appeler.</td><td><strong>Oui</strong></td></tr>
-        <tr><td><code>web/static/voice.js</code></td><td>Implémentations des function tools côté navigateur.</td><td>Si tu ajoutes un tool</td></tr>
-        <tr><td><code>web/server.py</code></td><td>Mint du token éphémère, sert <code>/config</code>, endpoints API.</td><td>Rarement</td></tr>
+        <tr><td><code>web/config/system_prompt.txt</code></td><td>Personnalité, règles, conversation flow.</td><td><strong>Souvent</strong></td></tr>
+        <tr><td><code>web/config/tools.json</code></td><td>Outils que l'agent peut appeler (function, MCP, web_search…).</td><td><strong>Oui</strong></td></tr>
+        <tr><td><code>web/static/voice.js</code></td><td>Implémentations des function tools côté navigateur (map <code>FUNCTIONS</code>).</td><td>Si tu ajoutes un tool</td></tr>
+        <tr><td><code>web/server.py</code></td><td>Token éphémère, <code>/config</code>, relais Twilio, handlers serveur des function tools.</td><td>Si tu ajoutes un tool (path Twilio)</td></tr>
+        <tr><td><code>.env</code></td><td><code>XAI_API_KEY</code>, <code>COMPOSIO_*</code>, <code>TWILIO_*</code>. Gitignored.</td><td>Une fois</td></tr>
       </tbody>
     </table>
     <div class="callout">
-      Pas besoin de redémarrer le serveur pour changer le prompt ou les outils — <code>/config</code> relit le disque à chaque session. Recharge juste la page et clique <strong>Start</strong>.
+      Pas besoin de redémarrer le serveur pour changer <code>system_prompt.txt</code> ou <code>tools.json</code> — <code>/config</code> relit le disque à chaque session. En prod, le dossier <code>web/config</code> est bind-mounté dans le container, donc <code>git pull</code> suffit (pas de <code>docker compose up</code>).
     </div>
 
     <h2>3. Écrire un bon system prompt</h2>
-    <p>Le prompt système conditionne <em>tout</em>. Pour un agent qui marche bien :</p>
+    <p>Suivre la structure 8 sections du <a href="https://developers.openai.com/cookbook/examples/realtime_prompting_guide" target="_blank">Realtime Prompting Guide d'OpenAI</a> (xAI mirroirent l'API) :</p>
+    <ol>
+      <li><strong>Role &amp; Objective</strong> — qui tu es, quel est l'appel réussi.</li>
+      <li><strong>Personality &amp; Tone</strong> — ton, débit, longueur cible des phrases, vouvoiement.</li>
+      <li><strong>Unclear audio</strong> — "ne devine pas, demande de répéter". <em>Critique pour le téléphone.</em></li>
+      <li><strong>Reference Pronunciations</strong> — comment dire les horaires, numéros, noms propres.</li>
+      <li><strong>Tools</strong> — chaque outil + ses paramètres + quand l'appeler.</li>
+      <li><strong>Rules</strong> — les ABSOLUES (ne jamais mentir, tirer sur la gâchette dès que les infos sont là).</li>
+      <li><strong>Conversation Flow</strong> — un état par étape (Greeting / Collect / Check / Book / Goodbye), avec sample phrases et "Exit when".</li>
+      <li><strong>Safety &amp; Escalation</strong> — quoi dire quand c'est hors-cadre.</li>
+    </ol>
     <ul>
-      <li><strong>Identité</strong> — un prénom et un rôle. <em>"Tu es Margot, hôte du Petit Bistro."</em></li>
-      <li><strong>Mission claire</strong> — 2 à 4 tâches qu'il sait faire.</li>
-      <li><strong>Style</strong> — concis, max 1–2 phrases par tour. La voix coupe l'utilisateur si elle parle trop.</li>
-      <li><strong>Garde-fous</strong> — <em>"Si ce n'est pas dans ta liste, propose qu'un humain rappelle."</em></li>
-      <li><strong>Confirmation</strong> — <em>"Confirme TOUJOURS les détails à voix haute avant d'appeler le tool."</em></li>
-      <li><strong>Langue</strong> — précise-la explicitement si tu veux la verrouiller (par défaut le modèle s'aligne sur l'utilisateur).</li>
+      <li><strong>Bullets &gt; paragraphes</strong> — le modèle suit mieux les listes courtes.</li>
+      <li><strong>MAJUSCULES</strong> pour l'emphase des règles critiques.</li>
+      <li><strong>Donne des exemples de phrases</strong> par état — le modèle imite le style.</li>
+      <li><strong>Pin la langue</strong> dans une section dédiée si tu as des dérapages.</li>
     </ul>
 
     <h2>4. Les outils — le cœur d'un vrai agent</h2>
-    <p>Un agent qui ne peut que parler n'est pas un agent — c'est un chatbot. Quatre familles d'outils :</p>
+    <p>Un agent qui ne peut que parler n'est pas un agent. xAI accepte plusieurs types d'outils dans <code>session.update.tools</code> :</p>
 
     <h3>4.1 function — tools maison</h3>
-    <p>Tu déclares un nom + un schéma JSON. Quand le modèle appelle la fonction, il émet <code>response.function_call_arguments.done</code>. Ton code l'exécute et renvoie le résultat.</p>
+    <p>Tu déclares un nom + un schéma JSON. Quand le modèle appelle, il émet <code>response.function_call_arguments.done</code>. Ton code exécute et renvoie le résultat.</p>
 <pre><code>// tools.json
 {
   "type": "function",
   "name": "book_reservation",
-  "description": "Book a table. Call after oral confirmation.",
+  "description": "Réserve une table. À appeler après confirmation orale.",
   "parameters": {
     "type": "object",
     "properties": {
-      "name":      { "type": "string" },
-      "phone":     { "type": "string" },
-      "date":      { "type": "string", "description": "YYYY-MM-DD" },
-      "time":      { "type": "string", "description": "HH:MM" },
-      "party_size":{ "type": "integer" }
+      "name":       { "type": "string" },
+      "phone":      { "type": "string" },
+      "date":       { "type": "string", "description": "YYYY-MM-DD" },
+      "time":       { "type": "string", "description": "HH:MM 24h" },
+      "party_size": { "type": "integer" },
+      "notes":      { "type": "string" }
     },
     "required": ["name","phone","date","time","party_size"]
   }
 }</code></pre>
+    <div class="callout">
+      <strong>Important :</strong> pour chaque <code>function</code> tool tu DOIS ajouter un handler à <strong>deux endroits</strong> :
+      <ul>
+        <li><code>web/static/voice.js</code> — map <code>FUNCTIONS</code> (path navigateur)</li>
+        <li><code>web/server.py</code> — fonction <code>_server_tool_call</code> (path Twilio, sans navigateur dans la boucle)</li>
+      </ul>
+      Garde-les synchronisés.
+    </div>
 
     <h3>4.2 web_search — recherche web (zéro code)</h3>
     <p>xAI exécute la recherche, pas toi.</p>
@@ -104,79 +125,150 @@
   "max_num_results": 8
 }</code></pre>
 
-    <h3>4.5 mcp — serveurs externes</h3>
-    <p>Si tu as un serveur <a href="https://modelcontextprotocol.io/" target="_blank">MCP</a> (Stripe, Notion, ton CRM) :</p>
+    <h3>4.5 mcp — serveurs Model Context Protocol</h3>
+    <p>Le plus puissant. Tu plug n'importe quel serveur <a href="https://modelcontextprotocol.io/" target="_blank">MCP</a> et xAI s'occupe de tout (list_tools, appels, retours). Voir section 5 pour la liste active + comment en ajouter un.</p>
+
+    <h2>5. MCP — la liste active et comment en ajouter</h2>
+
+    <h3>5.1 Outils MCP actuellement câblés dans <code>tools.json</code></h3>
+    <table>
+      <thead><tr><th>Serveur</th><th>Outil exposé</th><th>Usage par Margot</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Composio · Google Calendar</strong><br /><code>${COMPOSIO_MCP_URL}</code></td>
+          <td><code>GOOGLECALENDAR_FIND_FREE_SLOTS</code></td>
+          <td>Vérifier la dispo d'un créneau avant de proposer une heure. Lecture seule — la création passe par <code>book_reservation</code> (voir 5.3).</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Le bloc dans <code>tools.json</code> :</p>
 <pre><code>{
   "type": "mcp",
-  "server_url": "https://mcp.example.com/mcp",
-  "server_label": "crm",
-  "authorization": "Bearer ton-token"
+  "server_url": "${COMPOSIO_MCP_URL}",
+  "server_label": "google_calendar",
+  "server_description": "Read-only Google Calendar access via Composio. Use GOOGLECALENDAR_FIND_FREE_SLOTS to check availability before quoting a time. Do NOT use this for creating events — use the book_reservation function tool instead.",
+  "headers": { "x-api-key": "${COMPOSIO_API_KEY}" },
+  "allowed_tools": ["GOOGLECALENDAR_FIND_FREE_SLOTS"]
 }</code></pre>
+    <ul>
+      <li><strong><code>${ENV_VAR}</code> dans <code>tools.json</code></strong> — résolu côté serveur par <code>string.Template.safe_substitute</code> dans <code>/config</code>, donc tu peux pousser le fichier sur GitHub sans fuiter ta clé Composio.</li>
+      <li><strong><code>allowed_tools</code></strong> — filtre explicite pour n'exposer que ce dont tu as besoin. Sans ce filtre, xAI charge <em>tous</em> les tools du serveur MCP — souvent inutile et coûteux en tokens.</li>
+      <li><strong><code>server_description</code></strong> — explique au modèle quand utiliser ce serveur. Le ton "do NOT use this for X" évite que Grok hallucine un <code>GOOGLECALENDAR_CREATE_EVENT</code>.</li>
+    </ul>
 
-    <h3>4.6 Google Calendar — fait dans ce projet</h3>
-    <p>Pas de MCP Google Calendar officiel. Pour un test perso, l'API directe est plus simple. On utilise un <code>function</code> tool qui POST vers <code>/api/calendar/book</code> ; le serveur FastAPI utilise l'API Google Calendar via OAuth Desktop, refresh-token sur disque.</p>
-    <p><strong>Setup en 5 étapes :</strong></p>
+    <h3>5.2 Ajouter un nouveau MCP (recette en 4 étapes)</h3>
+    <p>Exemple : connecter un MCP Notion pour que Margot puisse lire les "Spéciaux du jour" dans une page.</p>
     <ol>
-      <li><a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a> → projet → active <strong>Google Calendar API</strong>.</li>
-      <li>APIs &amp; Services → Credentials → <strong>Create Credentials → OAuth client ID</strong> → <strong>Desktop app</strong>.</li>
-      <li>Sauve le JSON sous <code>web/config/google_oauth_client.json</code>.</li>
-      <li>Lance <code>python setup_google.py</code> — un navigateur s'ouvre, tu autorises, le token est sauvé.</li>
-      <li>Recharge l'app, clique Start, dis : <em>"I'd like to book a table for 4 tomorrow at 7 PM, name Eric, phone…"</em></li>
+      <li><strong>Trouver un serveur MCP</strong> — soit officiel (<a href="https://github.com/modelcontextprotocol/servers" target="_blank">référentiel MCP</a>), soit via une plateforme comme <a href="https://composio.dev" target="_blank">Composio</a> qui héberge des centaines d'intégrations (Notion, Slack, HubSpot, Stripe, Linear…) avec OAuth déjà géré.</li>
+      <li><strong>Récupérer l'URL + l'auth</strong> :
+        <ul>
+          <li>Composio → connecte le compte cible → crée un MCP server → tu obtiens une URL <code>https://mcp.composio.dev/...</code> et tu utilises ta <code>COMPOSIO_API_KEY</code> comme header <code>x-api-key</code>.</li>
+          <li>Serveur MCP auto-hébergé → URL + <code>Bearer &lt;token&gt;</code> en <code>authorization</code>.</li>
+        </ul>
+      </li>
+      <li><strong>Ajouter le bloc dans <code>tools.json</code></strong> :
+<pre><code>{
+  "type": "mcp",
+  "server_url": "${NOTION_MCP_URL}",
+  "server_label": "notion",
+  "server_description": "Read-only access à la base Notion du restaurant. Utilise NOTION_QUERY_DATABASE pour les Spéciaux du jour.",
+  "headers": { "x-api-key": "${COMPOSIO_API_KEY}" },
+  "allowed_tools": ["NOTION_QUERY_DATABASE"]
+}</code></pre>
+      </li>
+      <li><strong>Mettre les vars dans <code>.env</code></strong> (et redémarrer le container une seule fois, ensuite tout est hot-reloaded) :
+<pre><code>NOTION_MCP_URL=https://mcp.composio.dev/composio/server/...</code></pre>
+      </li>
     </ol>
+    <p>Mentionne le nouvel outil dans <code>system_prompt.txt</code> section <em>Tools</em> avec un exemple d'appel — sans ça, le modèle ne saura pas qu'il existe même s'il est listé techniquement.</p>
     <div class="callout">
-      <strong>Sécurité :</strong> <code>google_token.json</code> et <code>google_oauth_client.json</code> sont dans <code>.gitignore</code>. Pour la prod multi-utilisateurs, utilise un service account (Workspace) ou OAuth complet par utilisateur.
+      <strong>Vérifier que xAI a bien accepté ton MCP :</strong> regarde les logs du container — au démarrage de chaque appel tu verras
+      <code>[xai] session.updated tools=[..., mcp:notion]</code>. Si <code>notion</code> n'apparaît pas, ton URL ou tes headers sont faux.
     </div>
 
-    <h2>5. Recette : agent restaurant complet</h2>
+    <h3>5.3 Pourquoi <code>book_reservation</code> est une <code>function</code>, pas un appel direct au MCP ?</h3>
+    <p>Composio expose aussi <code>GOOGLECALENDAR_CREATE_EVENT</code>, mais on ne le branche pas dans <code>tools.json</code>. Raison : le schéma complet a beaucoup de champs (recurrence, working location, attendees…) et Grok a tendance à les remplir avec des valeurs hallucinées. On préfère une <code>function</code> maison qui construit le payload côté serveur (dans <code>/api/calendar/book</code>) à partir des 5 champs métier, et POST elle-même vers l'API REST Composio. Le modèle ne voit que les 5 champs qui comptent.</p>
+    <p>Garde-fou supplémentaire côté serveur : si le modèle passe quand même <code>phone="anonymous"</code> (cas masked CallerID), <code>book_reservation</code> retourne <code>{"status":"error","message":"INVALID_PHONE: …"}</code> pour forcer Margot à redemander.</p>
+
+    <h2>6. Connecter un vrai numéro de téléphone (Twilio)</h2>
+    <p>Implémenté dans ce projet. Architecture :</p>
+<pre><code>PSTN → Twilio → wss://&lt;ton-domaine&gt;/twilio/stream → wss://api.x.ai/v1/realtime
+                          ↓
+                  tool calls server-side
+                  (book_reservation, end_call, ...)</code></pre>
     <ol>
-      <li><strong>Identité &amp; mission</strong> dans <code>system_prompt.txt</code>.</li>
-      <li><strong>Réservations</strong> — <code>book_reservation</code> → Google Calendar / Resy / DB.</li>
-      <li><strong>Annulation / modif</strong> — <code>cancel_reservation</code>, <code>find_reservation_by_phone</code>.</li>
-      <li><strong>Menu &amp; allergènes</strong> — menu PDF via Collections API → <code>file_search</code>.</li>
-      <li><strong>Horaires</strong> — outil simple <code>get_hours(date?)</code>.</li>
-      <li><strong>Spéciaux du jour</strong> — <code>web_search</code> sur ton site/Insta.</li>
-      <li><strong>Escalade humaine</strong> — <code>request_callback(phone, reason)</code> qui SMS un manager (Twilio).</li>
-      <li><strong>Bonus</strong> — <code>send_confirmation_sms</code>, <code>collect_feedback</code>.</li>
+      <li><strong>Configurer le webhook</strong> dans la console Twilio sur ton numéro : <em>Voice &amp; Fax → A call comes in → Webhook</em> → <code>https://&lt;ton-domaine&gt;/twilio/voice</code> (POST). Pas de TwiML Bin à créer, le serveur génère la TwiML dynamiquement.</li>
+      <li><strong>Ajouter dans <code>.env</code></strong> : <code>TWILIO_ACCOUNT_SID</code> + <code>TWILIO_AUTH_TOKEN</code> — nécessaires pour raccrocher via l'API REST (close WS seul ≠ raccrocher).</li>
+      <li><strong>Récupération du numéro appelant</strong> : Twilio envoie <code>From=+33...</code> dans le body du webhook. <code>/twilio/voice</code> le passe en <code>&lt;Parameter name="from"&gt;</code> dans la TwiML, et <code>/twilio/stream</code> l'injecte dans le system prompt comme contexte. Si l'appelant masque son numéro (Twilio envoie <code>From=anonymous</code>), un bloc différent est injecté : "demande le numéro explicitement".</li>
+      <li><strong>Format audio</strong> — Twilio parle µ-law 8 kHz nativement. xAI accepte aussi via <code>audio.input.format = audio.output.format = "audio/pcmu"</code>. <em>Zéro transcoding</em>, on relaye juste les bytes base64.</li>
+      <li><strong>Filet de sécurité au raccrochage</strong> — Grok-voice oublie souvent d'appeler <code>end_call</code> après avoir dit "au revoir". Le serveur scanne le transcript de l'assistant et déclenche le hangup lui-même si une phrase d'au revoir est détectée mais que <code>end_call</code> n'a pas été émis.</li>
     </ol>
+    <div class="callout">
+      <strong>Démasquer son numéro pour un appel</strong> (utile en debug FR) : composer <code>3651</code> avant le numéro — ça force la présentation du CallerID pour cet appel uniquement.
+    </div>
 
-    <h2>6. Connecter à un vrai téléphone (Twilio)</h2>
+    <h2>7. Déployer 24/7 sur un VPS (Docker + Caddy)</h2>
+    <p>Le projet livre tout ce qu'il faut : <code>Dockerfile</code>, <code>docker-compose.yml</code>, et un example Nginx (<code>deploy/nginx.conf.example</code>). En prod sur ce démo on tourne sur <strong>Caddy</strong> (TLS automatique, WebSockets natifs).</p>
+    <ol>
+      <li><strong>Cloner</strong> sur ton VPS : <code>git clone https://github.com/Thomas-Berton/template-grok-voice-agent.git /opt/margot-voice</code></li>
+      <li><strong>Créer <code>.env</code></strong> avec <code>XAI_API_KEY</code>, <code>COMPOSIO_API_KEY</code>, <code>COMPOSIO_MCP_URL</code>, <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>.</li>
+      <li><strong>Lancer le container</strong> :
+<pre><code>cd /opt/margot-voice
+docker compose up -d --build
+docker logs -f margot-voice</code></pre>
+        Le container écoute sur <code>127.0.0.1:8001</code> uniquement — il ne touche pas les autres apps de la machine.
+      </li>
+      <li><strong>Configurer le reverse proxy</strong> — exemple Caddy minimaliste, à ajouter dans <code>/etc/caddy/Caddyfile</code> :
+<pre><code>voiceagents.tondomaine.com {
+    reverse_proxy 127.0.0.1:8001 {
+        header_up Host {host}
+    }
+}</code></pre>
+        Puis <code>systemctl reload caddy</code>. Caddy provisionne automatiquement le cert Let's Encrypt.
+      </li>
+      <li><strong>Pointer ton DNS</strong> (enregistrement <code>A</code>) sur l'IP du VPS, attendre la propagation, et c'est jouable.</li>
+    </ol>
+    <div class="callout">
+      Le <code>header_up Host {host}</code> est obligatoire — <code>/twilio/voice</code> lit le header Host pour construire l'URL <code>wss://&lt;public-host&gt;/twilio/stream</code> retournée dans la TwiML. Sans ça, Twilio essaierait de joindre <code>wss://127.0.0.1:8001</code>.
+    </div>
+
+    <h2>8. Logs et debug</h2>
+    <p>Le serveur logue des lignes taggées pour que <code>docker logs -f margot-voice</code> suffise à diagnostiquer :</p>
     <ul>
-      <li>Achète un numéro Twilio.</li>
-      <li>Bridge serveur Python : Twilio Media Streams (WS µ-law 8 kHz) ↔ xAI realtime (configuré <code>audio/pcmu</code> 8 kHz, zéro transcoding).</li>
-      <li>Réutilise le même <code>system_prompt.txt</code> et <code>tools.json</code>.</li>
-      <li>Ref : <a href="https://github.com/xai-org/xai-cookbook/tree/main/voice-examples/agent/telephony" target="_blank">xai-cookbook telephony</a>.</li>
+      <li><code>[twilio] ...</code> — cycle de vie du WS Twilio (connecté, start avec <code>from='...'</code>, stop).</li>
+      <li><code>[caller] ...</code> — transcript final de l'appelant (Whisper).</li>
+      <li><code>[margot] ...</code> — transcript final de l'assistant.</li>
+      <li><code>[tool] → name(args)</code> / <code>[tool] ← name → result</code> — function tools côté serveur.</li>
+      <li><code>[xai] session.updated tools=[...]</code> — outils que xAI a vraiment accepté (super utile pour vérifier qu'un MCP est bien chargé).</li>
+      <li><code>[xai] response.mcp_call.in_progress / .completed</code> — appels MCP gérés par xAI eux-mêmes (utile pour debug Composio).</li>
+      <li><code>[xai] ERROR (...)</code> — toute anomalie remontée par xAI.</li>
+    </ul>
+    <ul>
+      <li>Pas de <code>[tool] → book_reservation</code> alors que tu as donné les 5 infos → la règle R2 du prompt n'est pas suivie.</li>
+      <li>Caractères en alphabets non-latins dans <code>[caller]</code> → le pin <code>language: "fr"</code> du Whisper a sauté.</li>
+      <li>Pas de <code>mcp:google_calendar</code> dans <code>session.updated</code> → ton MCP URL ou ton header API key est faux.</li>
+      <li>Côté navigateur : DevTools → Network → onglet WS → tu vois chaque event en clair.</li>
     </ul>
 
-    <h2>7. 24/7 dans le cloud</h2>
+    <h2>9. Astuces voix &amp; latence</h2>
     <ul>
-      <li><strong>App web</strong> → Vercel (le WS vit dans le navigateur, le serveur ne fait que minter le token).</li>
-      <li><strong>Bridge Twilio</strong> → Fly.io / Render / Railway (process Python persistant).</li>
-      <li>Variables d'env : <code>XAI_API_KEY</code>, secrets Twilio, Google credentials. Healthcheck + auto-restart.</li>
-    </ul>
-
-    <h2>8. Astuces</h2>
-    <ul>
-      <li><strong>Latence</strong> : démarre la capture mic <em>en parallèle</em> du WS, bufferise, flush au <code>open</code> — déjà fait.</li>
-      <li><strong>Pas de chevauchement audio</strong> après tool call : attends la fin de la lecture avant <code>response.create</code>.</li>
-      <li><strong>Voix</strong> : <code>eve</code>, <code>ara</code>, <code>rex</code>, <code>sal</code>, <code>leo</code>, ou voix custom.</li>
-      <li><strong>µ-law 8 kHz</strong> : seulement pour Twilio. Browser → 24 kHz PCM.</li>
-      <li><strong>Sécurité</strong> : jamais la <code>XAI_API_KEY</code> dans le navigateur. Toujours via <code>/token</code> (secret éphémère 5 min).</li>
-    </ul>
-
-    <h2>9. Debug</h2>
-    <ul>
-      <li>Console DevTools → Network → WS → onglet Messages : tu vois chaque event en clair.</li>
-      <li>Console <code>uvicorn</code> : <code>POST /token</code>, <code>GET /config</code>, <code>POST /api/calendar/book</code>.</li>
-      <li>Si l'agent ne dit rien : vérifie <code>input_audio_buffer.speech_stopped</code> + <code>response.created</code>.</li>
-      <li>Audio crachote ? Sample rate non assorti. <code>SAMPLE_RATE = 24000</code> partout.</li>
+      <li><strong>Voix</strong> — on utilise <code>69smp8rm</code> (voix française de la Composio Voice Library). xAI fournit aussi <code>eve</code>, <code>ara</code>, <code>rex</code>, <code>sal</code>, <code>leo</code> en stock.</li>
+      <li><strong>Sample rates</strong> — 24 kHz PCM partout côté browser, 8 kHz µ-law côté Twilio. Ne pas mélanger, audio crachote sinon.</li>
+      <li><strong>Latence mic</strong> — démarre la capture <em>en parallèle</em> du WS open, bufferise, flush au <code>onopen</code> (déjà fait dans <code>voice.js</code>).</li>
+      <li><strong>Audio coupé sur le "au revoir"</strong> — ne ferme jamais le WS dès que <code>end_call</code> est invoqué : attends la fin de la lecture (<code>response.done</code> + drain).</li>
+      <li><strong>Sécurité</strong> — jamais la <code>XAI_API_KEY</code> dans le navigateur. Toujours via <code>/token</code> (secret éphémère 5 min). Côté Twilio, le serveur s'authentifie directement avec sa clé serveur.</li>
     </ul>
 
     <h2>10. Ressources</h2>
     <ul>
-      <li><a href="https://docs.x.ai/developers/model-capabilities/audio/voice-agent" target="_blank">Doc Voice Agent API</a></li>
-      <li><a href="https://docs.x.ai/developers/rest-api-reference/inference/voice" target="_blank">Référence des events realtime</a></li>
-      <li><a href="https://github.com/xai-org/xai-cookbook" target="_blank">xai-cookbook</a></li>
-      <li><a href="https://docs.x.ai/developers/model-capabilities/audio/custom-voices" target="_blank">Custom Voices</a></li>
+      <li><a href="https://docs.x.ai/developers/model-capabilities/audio/voice-agent" target="_blank">Doc Voice Agent API (xAI)</a></li>
+      <li><a href="https://docs.x.ai/developers/rest-api-reference/inference/voice" target="_blank">Référence des events realtime (xAI)</a></li>
+      <li><a href="https://developers.openai.com/cookbook/examples/realtime_prompting_guide" target="_blank">Realtime Prompting Guide (OpenAI cookbook)</a> — la bible du system prompt vocal, applicable à xAI.</li>
+      <li><a href="https://modelcontextprotocol.io/" target="_blank">Model Context Protocol — spec</a></li>
+      <li><a href="https://github.com/modelcontextprotocol/servers" target="_blank">Référentiel des serveurs MCP officiels</a></li>
+      <li><a href="https://composio.dev" target="_blank">Composio — MCP managé pour 300+ apps</a></li>
+      <li><a href="https://www.twilio.com/docs/voice/twiml/stream" target="_blank">Twilio Media Streams (TwiML &lt;Stream&gt;)</a></li>
+      <li><a href="https://caddyserver.com/docs/caddyfile" target="_blank">Caddyfile reference</a></li>
     </ul>
 
     <p style="margin-top:60px"><a class="back-link" href="/">← RETOUR À L'AGENT</a></p>
