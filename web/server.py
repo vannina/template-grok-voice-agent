@@ -368,6 +368,20 @@ async def twilio_stream(ws: WebSocket) -> None:
                             transcript = (evt.get("transcript") or "").replace("\n", " ").strip()
                             if transcript:
                                 print(f"[margot] {transcript}")
+                                # Safety net: Grok routinely says "au revoir" out loud
+                                # but forgets to invoke end_call. If we hear the goodbye
+                                # in the transcript, we trigger the hangup ourselves
+                                # at response.done. If the model also calls end_call,
+                                # pending_end_call is already True — no harm.
+                                low = transcript.lower()
+                                GOODBYES = (
+                                    "au revoir", "bonne soirée", "bonne journée",
+                                    "à très vite", "à bientôt", "bonne fin de",
+                                    "merci d'avoir appelé", "à plus tard",
+                                )
+                                if not pending_end_call and any(g in low for g in GOODBYES):
+                                    print("[twilio] auto-hangup armed (goodbye in transcript)")
+                                    pending_end_call = True
                         elif t == "conversation.item.input_audio_transcription.completed":
                             transcript = (evt.get("transcript") or "").replace("\n", " ").strip()
                             if transcript:
