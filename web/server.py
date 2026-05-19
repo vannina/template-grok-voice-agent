@@ -304,7 +304,32 @@ async def twilio_stream(ws: WebSocket) -> None:
                 nonlocal pending_end_call
                 async for raw in xai:
                     evt = json.loads(raw)
-                    t = evt.get("type")
+                    t = evt.get("type", "")
+                    # Log every non-audio event so we can see MCP calls,
+                    # transcripts, errors, etc. Audio deltas are excluded
+                    # because there are dozens per second.
+                    if t not in ("response.audio.delta", "response.output_audio.delta"):
+                        if t == "session.updated":
+                            tools = (evt.get("session") or {}).get("tools") or []
+                            tool_summary = ", ".join(
+                                f"{tt.get('type')}:{tt.get('server_label') or tt.get('name','?')}" for tt in tools
+                            ) or "(none)"
+                            print(f"[xai] session.updated tools=[{tool_summary}]")
+                        elif t in ("response.audio_transcript.delta", "response.output_audio_transcript.delta"):
+                            # Skip per-token deltas, we'll log .done versions.
+                            pass
+                        elif t in ("response.audio_transcript.done", "response.output_audio_transcript.done"):
+                            transcript = (evt.get("transcript") or "").replace("\n", " ").strip()
+                            if transcript:
+                                print(f"[margot] {transcript}")
+                        elif t == "conversation.item.input_audio_transcription.completed":
+                            transcript = (evt.get("transcript") or "").replace("\n", " ").strip()
+                            if transcript:
+                                print(f"[caller] {transcript}")
+                        elif t == "error" or "error" in t.lower():
+                            print(f"[xai] ERROR ({t}): {json.dumps(evt)[:600]}")
+                        elif "mcp" in t.lower() or "tool" in t.lower() or "fail" in t.lower():
+                            print(f"[xai] {t}: {json.dumps(evt)[:600]}")
                     if t in ("response.audio.delta", "response.output_audio.delta"):
                         if stream_sid:
                             await ws.send_text(json.dumps({
