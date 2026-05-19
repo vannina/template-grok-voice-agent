@@ -208,17 +208,19 @@ async def book(res: Reservation) -> JSONResponse:
 async def twilio_voice(request: Request) -> Response:
     """Webhook hit by Twilio when a call comes in on the configured number.
     Returns TwiML that tells Twilio to open a bidirectional Media Stream
-    WebSocket to /twilio/stream. The Host header is the public hostname seen
-    by Twilio — that's what we want for the wss:// URL.
-
-    Note: behind Nginx the Host header is preserved (we set proxy_set_header
-    Host $host in deploy/nginx.conf.example) so this works out of the box."""
+    WebSocket to /twilio/stream, and passes the caller's number as a custom
+    Stream <Parameter> so the WS handler can inject it into the system prompt
+    (otherwise the model has no way to know what number the caller is calling
+    from, and can't honour "use the number I'm calling from")."""
     host = request.headers.get("host") or request.url.hostname or "example.com"
     ws_url = f"wss://{host}/twilio/stream"
+    form = await request.form()
+    caller_from = (form.get("From") or "").strip()
+    param_xml = f'<Parameter name="from" value="{caller_from}" />' if caller_from else ""
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Response>'
-        f'<Connect><Stream url="{ws_url}" /></Connect>'
+        f'<Connect><Stream url="{ws_url}">{param_xml}</Stream></Connect>'
         '</Response>'
     )
     return Response(content=twiml, media_type="application/xml")
@@ -249,36 +251,15 @@ async def twilio_stream(ws: WebSocket) -> None:
 
     try:
         async with websockets.connect(xai_url, additional_headers=headers, max_size=None) as xai:
-            # Configure session — µ-law 8 kHz so we can pass audio through verbatim.
-            await xai.send(json.dumps({
-                "type": "session.update",
-                "session": {
-                    "voice": VOICE,
-                    "instructions": config["instructions"],
-                    "tools": config["tools"],
-                    "turn_detection": {"type": "server_vad"},
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "audio": {
-                        "input":  {"format": {"type": "audio/pcmu"}},
-                        "output": {"format": {"type": "audio/pcmu"}},
-                    },
-                },
-            }))
-
-            # Twilio doesn't speak first — kick off a greeting so the caller
-            # doesn't pick up the phone to silence.
-            await xai.send(json.dumps({
-                "type": "response.create",
-                "response": {
-                    "instructions": (
-                        "Salue brièvement et chaleureusement l'appelant en français, "
-                        "présente-toi comme Margot du Petit Bistro, et demande "
-                        "comment tu peux l'aider."
-                    ),
-                },
-            }))
 
             async def twilio_to_xai() -> None:
+                """Reads Twilio events and forwards audio to xAI.
+
+                The session.update + greeting are deferred until we receive
+                the Twilio `start` event, because that's when we learn the
+                caller's phone number (passed in as a custom <Parameter>).
+                We inject it into the system prompt so Margot can honour
+                'use the number I'm calling from'."""
                 nonlocal stream_sid, call_sid
                 try:
                     while True:
@@ -288,7 +269,50 @@ async def twilio_stream(ws: WebSocket) -> None:
                         if kind == "start":
                             stream_sid = evt["start"]["streamSid"]
                             call_sid = evt["start"].get("callSid")
-                            print(f"[twilio] start streamSid={stream_sid} callSid={call_sid}")
+                            custom = evt["start"].get("customParameters") or {}
+                            caller_from = (custom.get("from") or "").strip()
+                            print(f"[twilio] start streamSid={stream_sid} callSid={call_sid} from={caller_from!r}")
+
+                            instructions = config["instructions"]
+                            if caller_from:
+                                instructions += (
+                                    f"\n\n[Contexte de l'appel]\n"
+                                    f"Le numéro depuis lequel l'appelant te contacte (CallerID) "
+                                    f"est : {caller_from}. Si l'appelant dit «mon numéro est celui "
+                                    f"qui s'affiche», «le numéro depuis lequel j'appelle», ou ne "
+                                    f"donne pas explicitement de numéro, utilise CE numéro pour "
+                                    f"book_reservation."
+                                )
+
+                            await xai.send(json.dumps({
+                                "type": "session.update",
+                                "session": {
+                                    "voice": VOICE,
+                                    "instructions": instructions,
+                                    "tools": config["tools"],
+                                    "turn_detection": {"type": "server_vad"},
+                                    "input_audio_transcription": {
+                                        "model": "whisper-1",
+                                        "language": "fr",
+                                    },
+                                    "audio": {
+                                        "input":  {"format": {"type": "audio/pcmu"}},
+                                        "output": {"format": {"type": "audio/pcmu"}},
+                                    },
+                                },
+                            }))
+
+                            # Trigger an opening greeting — Twilio doesn't speak first.
+                            await xai.send(json.dumps({
+                                "type": "response.create",
+                                "response": {
+                                    "instructions": (
+                                        "Salue brièvement en français comme une hôtesse parisienne "
+                                        "pressée. Ex : 'Le Petit Bistro, Margot, j'écoute.' "
+                                        "Une seule phrase courte."
+                                    ),
+                                },
+                            }))
                         elif kind == "media":
                             await xai.send(json.dumps({
                                 "type": "input_audio_buffer.append",
