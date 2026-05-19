@@ -116,12 +116,121 @@ le modèle ne touche jamais directement aux champs Google.
 
 ---
 
+## 🐳 Déploiement Docker sur un VPS
+
+Pour faire tourner Margot 24/7 (et la brancher à un numéro Twilio), un VPS
+Debian/Ubuntu + Docker + Nginx suffit. Le projet expose le container sur
+**`127.0.0.1:8001` uniquement** pour qu'aucune autre app du VPS ne soit
+gênée, et c'est Nginx qui s'occupe du HTTPS + des en-têtes WebSocket.
+
+### 1. Cloner et configurer le projet
+
+```bash
+git clone https://github.com/Thomas-Berton/template-grok-voice-agent.git
+cd template-grok-voice-agent
+cp .env.example .env
+nano .env          # colle XAI_API_KEY, COMPOSIO_*, TWILIO_*
+```
+
+### 2. Builder + démarrer
+
+```bash
+docker compose up -d --build
+docker compose logs -f          # vérifie que uvicorn démarre
+curl http://127.0.0.1:8001/config   # doit renvoyer du JSON
+```
+
+### 3. Configurer Nginx pour ton domaine
+
+Pointe d'abord ton sous-domaine (ex. `margot.tondomaine.com`) sur l'IP du
+VPS (enregistrement DNS `A`). Puis :
+
+```bash
+sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/margot.conf
+sudo nano /etc/nginx/sites-available/margot.conf   # remplace server_name
+sudo ln -s /etc/nginx/sites-available/margot.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d margot.tondomaine.com      # HTTPS auto via Let's Encrypt
+```
+
+Une fois fini, **<https://margot.tondomaine.com>** sert l'app web. Tout est
+prêt pour Twilio.
+
+---
+
+## 📞 Brancher un numéro de téléphone Twilio
+
+Margot peut aussi répondre à un vrai numéro de téléphone via **Twilio Media
+Streams**. Le serveur relaie l'audio (µ-law 8 kHz) entre Twilio et xAI sans
+transcodage, et gère les tool calls côté serveur (réservation, raccrochage,
+horaires).
+
+### 1. Ajouter les credentials Twilio au `.env`
+
+Récupère-les dans <https://console.twilio.com/> (Account SID + Auth Token
+sur le dashboard) et colle-les dans `.env` :
+
+```env
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Puis redémarre le container : `docker compose restart`.
+
+### 2. Configurer le numéro Twilio
+
+Dans la console Twilio :
+
+1. **Phone Numbers** → **Manage** → **Active numbers** → clique sur ton numéro.
+2. Onglet **Configure**, section **Voice Configuration** :
+   - **A call comes in** → `Webhook`
+   - URL : `https://margot.tondomaine.com/twilio/voice`
+   - Méthode : `HTTP POST`
+3. **Save configuration** en bas de la page.
+
+C'est tout. Aucune TwiML Bin à créer — le serveur génère la TwiML
+dynamiquement avec l'URL WebSocket correcte.
+
+### 3. Tester
+
+Appelle ton numéro Twilio depuis ton portable. Margot devrait répondre en
+français en quelques secondes. Suis les logs :
+
+```bash
+docker compose logs -f margot
+```
+
+Tu devrais voir :
+
+```
+[twilio] WS connected
+[twilio] start streamSid=MZ… callSid=CA…
+[tool] → book_reservation({...})
+[tool] ← book_reservation → {'status': 'confirmed', …}
+```
+
+### 4. Comment ça marche (vue de l'oiseau)
+
+```
+PSTN ──▶ Twilio ──wss──▶ /twilio/stream ──wss──▶ api.x.ai/v1/realtime
+                              │
+                              └──▶ tool calls (book_reservation, end_call, …)
+```
+
+Twilio envoie l'audio µ-law en base64 dans des messages JSON ; on les
+ré-enveloppe en `input_audio_buffer.append` pour xAI. Au retour, xAI nous
+envoie du µ-law qu'on ré-enveloppe en `media` events pour Twilio. Quand
+Margot appelle `end_call`, on patche le statut de l'appel via l'API REST
+Twilio (`Status=completed`) pour vraiment raccrocher la ligne PSTN.
+
+---
+
 ## 📖 Guide complet
 
 Une fois le serveur lancé, ouvre **<http://localhost:8000/guide.html>** pour le guide
 détaillé : comment écrire un bon prompt, les 5 types d'outils
 (`function`, `web_search`, `x_search`, `file_search`, `mcp`), recette d'un agent
-restaurant complet, branchement Twilio, déploiement 24/7, debug.
+restaurant complet, débogage.
 
 ---
 
@@ -131,8 +240,10 @@ restaurant complet, branchement Twilio, déploiement 24/7, debug.
 - **FastAPI** + **uvicorn** (serveur Python)
 - **WebSocket realtime** vers `wss://api.x.ai/v1/realtime`
 - **Web Audio API** côté navigateur (PCM16 24 kHz)
+- **Twilio Media Streams** côté téléphone (µ-law 8 kHz)
 - **Ephemeral tokens** xAI — la clé API ne quitte jamais le serveur
 - **Composio MCP** pour Google Calendar (optionnel)
+- **Docker** + **Nginx** + **certbot** pour le déploiement VPS
 
 ---
 

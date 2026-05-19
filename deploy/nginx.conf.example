@@ -1,0 +1,54 @@
+# Nginx vhost example for the Margot voice agent.
+#
+# Drop this file at /etc/nginx/sites-available/margot.conf, replace
+# server_name with your actual domain, then:
+#
+#   sudo ln -s /etc/nginx/sites-available/margot.conf /etc/nginx/sites-enabled/
+#   sudo nginx -t
+#   sudo systemctl reload nginx
+#   sudo certbot --nginx -d margot.example.com
+#
+# certbot will rewrite this file to add the SSL listener + auto-renewal.
+
+# Map needed by the WebSocket upgrade dance.
+# If it's already defined in another vhost on this server, remove this block
+# (duplicate "map" definitions are an nginx error).
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name margot.example.com;   # ← change me
+
+    # Twilio sends webhooks as application/x-www-form-urlencoded — let nginx
+    # forward the body without buffering it (slow webhooks hurt call latency).
+    proxy_request_buffering off;
+    proxy_buffering off;
+
+    # Reasonable timeouts. The /twilio/stream WebSocket can stay open for the
+    # whole duration of a call — bump these if you expect long conversations.
+    proxy_read_timeout  3600s;
+    proxy_send_timeout  3600s;
+    client_max_body_size 1m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8001;
+
+        # Preserve the public Host header so /twilio/voice can build the
+        # correct wss://<host>/twilio/stream URL in the TwiML response.
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        # WebSocket upgrade — required for both the browser realtime UI and
+        # the Twilio Media Stream.
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+    }
+}

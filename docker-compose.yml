@@ -1,0 +1,17 @@
+services:
+  margot:
+    build: .
+    image: margot-voice:latest
+    container_name: margot-voice
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Bind ONLY to 127.0.0.1 — Nginx (host network) reverse-proxies to us.
+    # Nothing else on the VPS, and nothing on the public internet, can touch
+    # this container directly.
+    ports:
+      - "127.0.0.1:8001:8000"
+    # Mount the config dir read-only so edits to system_prompt.txt / tools.json
+    # take effect on the next conversation without rebuilding the image.
+    volumes:
+      - ./web/config:/app/web/config:ro

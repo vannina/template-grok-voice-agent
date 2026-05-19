@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+.env
+.env.example
+.DS_Store
+*.zip
+README.md
+CLAUDE.md
+deploy/
+agent-ia-vocal-club-vip.zip
