@@ -86,6 +86,14 @@ async def _create_calendar_event(args: dict) -> dict:
     Composio. Returns a dict the voice agent can read back to the caller."""
     if not COMPOSIO_API_KEY:
         return {"status": "error", "message": "COMPOSIO_API_KEY not set"}
+    # Reject obvious placeholder phones — otherwise Margot blindly saves
+    # "anonymous" because Twilio sent it as the masked caller's From=.
+    phone = str(args.get("phone") or "").strip()
+    if phone.lower() in {"", "anonymous", "restricted", "unavailable", "unknown", "private", "none", "n/a"}:
+        return {
+            "status": "error",
+            "message": "INVALID_PHONE: aucun numéro valide fourni — demande au client un vrai numéro de téléphone et rappelle book_reservation avec.",
+        }
     payload = {
         "user_id": COMPOSIO_USER_ID,
         "arguments": {
@@ -274,7 +282,21 @@ async def twilio_stream(ws: WebSocket) -> None:
                             print(f"[twilio] start streamSid={stream_sid} callSid={call_sid} from={caller_from!r}")
 
                             instructions = config["instructions"]
-                            if caller_from:
+                            # Twilio sends literal strings like "anonymous" / "restricted"
+                            # / "unavailable" when the caller's number is hidden. Treat
+                            # them as "no CallerID" — otherwise the model passes the
+                            # literal "anonymous" as the phone field.
+                            HIDDEN = {"", "anonymous", "restricted", "unavailable", "unknown", "private"}
+                            if caller_from.lower() in HIDDEN:
+                                instructions += (
+                                    "\n\n[Contexte de l'appel]\n"
+                                    "Le numéro de l'appelant est MASQUÉ (numéro privé). "
+                                    "Tu n'as PAS de CallerID exploitable. "
+                                    "Tu DOIS demander explicitement un numéro à l'appelant. "
+                                    "Si l'appelant dit «utilisez celui qui s'affiche» ou similaire, "
+                                    "réponds : «Désolée, votre numéro est masqué. Pouvez-vous me le donner ?»"
+                                )
+                            else:
                                 instructions += (
                                     f"\n\n[Contexte de l'appel]\n"
                                     f"Le numéro depuis lequel l'appelant te contacte (CallerID) "
