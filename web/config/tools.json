@@ -1,0 +1,34 @@
+[
+  { "type": "web_search" },
+  {
+    "type": "mcp",
+    "server_url": "${COMPOSIO_MCP_URL}",
+    "server_label": "google_calendar",
+    "server_description": "Read-only Google Calendar access via Composio. Use GOOGLECALENDAR_FIND_FREE_SLOTS to check availability before quoting a time. Do NOT use this for creating events — use the book_reservation function tool instead.",
+    "headers": { "x-api-key": "${COMPOSIO_API_KEY}" },
+    "allowed_tools": ["GOOGLECALENDAR_FIND_FREE_SLOTS"]
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Book a table in the restaurant's Google Calendar. Call ONLY after the caller has confirmed all details out loud.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name":       { "type": "string",  "description": "Guest full name" },
+        "phone":      { "type": "string",  "description": "Phone number" },
+        "date":       { "type": "string",  "description": "ISO date YYYY-MM-DD" },
+        "time":       { "type": "string",  "description": "24h time HH:MM" },
+        "party_size": { "type": "integer", "description": "Number of guests (1-12)" },
+        "notes":      { "type": "string",  "description": "Allergies / preferences, or empty" }
+      },
+      "required": ["name", "phone", "date", "time", "party_size"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "End the call and hang up. Call ONLY after saying goodbye out loud. Do not call mid-conversation, only when the caller has clearly indicated the conversation is over (reservation confirmed and goodbyes exchanged, or caller said 'merci au revoir', etc.).",
+    "parameters": { "type": "object", "properties": {}, "required": [] }
+  }
+]

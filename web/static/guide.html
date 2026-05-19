@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guide — Agent IA Vocal · Le Club IA VIP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="page-guide">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="brand" href="https://skool.com/le-club-ia-vip" target="_blank">
+        <span class="brand-mark">VIP</span>
+        <span class="brand-name">Le Club IA VIP</span>
+      </a>
+      <nav class="topnav">
+        <a href="/">AGENT</a>
+        <a class="active" href="/guide.html">GUIDE</a>
+        <a href="https://docs.x.ai/developers/model-capabilities/audio/voice-agent" target="_blank">DOCS</a>
+      </nav>
+    </div>
+    <a class="cta-pill" href="https://skool.com/le-club-ia-vip" target="_blank">REJOINDRE LE CLUB</a>
+  </header>
+
+  <main class="container">
+    <a class="back-link" href="/">← RETOUR À L'AGENT</a>
+    <p class="eyebrow">GUIDE · LE CLUB IA VIP</p>
+    <h1>Construire un agent vocal utile</h1>
+    <p style="font-size:17px; color:var(--fg-muted); margin:0 0 8px; max-width:640px;">Exemple fil rouge : un agent qui répond au téléphone d'un restaurant. Modèle utilisé : <code style="color:var(--accent);background:var(--accent-bg);border:0;">grok-voice-think-fast-1.0</code>.</p>
+
+    <h2>1. Comment ça marche, en 30 secondes</h2>
+    <ul>
+      <li>Le navigateur (ou Twilio) ouvre un <strong>WebSocket</strong> vers <code>wss://api.x.ai/v1/realtime</code>.</li>
+      <li>Le client <strong>envoie</strong> de l'audio mic (PCM16 base64) en streaming.</li>
+      <li>Le serveur xAI <strong>répond</strong> en streaming : audio synthétisé + transcription + appels d'outils.</li>
+      <li>La <strong>VAD côté serveur</strong> (<code>turn_detection: server_vad</code>) détecte automatiquement quand l'utilisateur a fini de parler — pas besoin de bouton "send".</li>
+      <li>Le modèle <code>grok-voice-think-fast-1.0</code> fait <em>tout</em> : ASR, raisonnement, TTS, et orchestration d'outils — un seul WebSocket, latence sub-seconde.</li>
+    </ul>
+
+    <h2>2. Les 4 fichiers à connaître</h2>
+    <table>
+      <thead><tr><th>Fichier</th><th>Rôle</th><th>Edit</th></tr></thead>
+      <tbody>
+        <tr><td><code>web/config/system_prompt.txt</code></td><td>Personnalité, mission, règles.</td><td><strong>Souvent</strong></td></tr>
+        <tr><td><code>web/config/tools.json</code></td><td>Outils que l'agent peut appeler.</td><td><strong>Oui</strong></td></tr>
+        <tr><td><code>web/static/voice.js</code></td><td>Implémentations des function tools côté navigateur.</td><td>Si tu ajoutes un tool</td></tr>
+        <tr><td><code>web/server.py</code></td><td>Mint du token éphémère, sert <code>/config</code>, endpoints API.</td><td>Rarement</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      Pas besoin de redémarrer le serveur pour changer le prompt ou les outils — <code>/config</code> relit le disque à chaque session. Recharge juste la page et clique <strong>Start</strong>.
+    </div>
+
+    <h2>3. Écrire un bon system prompt</h2>
+    <p>Le prompt système conditionne <em>tout</em>. Pour un agent qui marche bien :</p>
+    <ul>
+      <li><strong>Identité</strong> — un prénom et un rôle. <em>"Tu es Margot, hôte du Petit Bistro."</em></li>
+      <li><strong>Mission claire</strong> — 2 à 4 tâches qu'il sait faire.</li>
+      <li><strong>Style</strong> — concis, max 1–2 phrases par tour. La voix coupe l'utilisateur si elle parle trop.</li>
+      <li><strong>Garde-fous</strong> — <em>"Si ce n'est pas dans ta liste, propose qu'un humain rappelle."</em></li>
+      <li><strong>Confirmation</strong> — <em>"Confirme TOUJOURS les détails à voix haute avant d'appeler le tool."</em></li>
+      <li><strong>Langue</strong> — précise-la explicitement si tu veux la verrouiller (par défaut le modèle s'aligne sur l'utilisateur).</li>
+    </ul>
+
+    <h2>4. Les outils — le cœur d'un vrai agent</h2>
+    <p>Un agent qui ne peut que parler n'est pas un agent — c'est un chatbot. Quatre familles d'outils :</p>
+
+    <h3>4.1 function — tools maison</h3>
+    <p>Tu déclares un nom + un schéma JSON. Quand le modèle appelle la fonction, il émet <code>response.function_call_arguments.done</code>. Ton code l'exécute et renvoie le résultat.</p>
+<pre><code>// tools.json
+{
+  "type": "function",
+  "name": "book_reservation",
+  "description": "Book a table. Call after oral confirmation.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name":      { "type": "string" },
+      "phone":     { "type": "string" },
+      "date":      { "type": "string", "description": "YYYY-MM-DD" },
+      "time":      { "type": "string", "description": "HH:MM" },
+      "party_size":{ "type": "integer" }
+    },
+    "required": ["name","phone","date","time","party_size"]
+  }
+}</code></pre>
+
+    <h3>4.2 web_search — recherche web (zéro code)</h3>
+    <p>xAI exécute la recherche, pas toi.</p>
+<pre><code>{ "type": "web_search" }</code></pre>
+
+    <h3>4.3 x_search — recherche sur X / Twitter</h3>
+<pre><code>{ "type": "x_search", "allowed_x_handles": ["votre_resto"] }</code></pre>
+
+    <h3>4.4 file_search — RAG sur tes documents</h3>
+    <p>Upload ton menu via la <a href="https://docs.x.ai/developers/rest-api-reference/collections" target="_blank">Collections API</a>, récupère un <code>collection_id</code>, puis :</p>
+<pre><code>{
+  "type": "file_search",
+  "vector_store_ids": ["ton-collection-id"],
+  "max_num_results": 8
+}</code></pre>
+
+    <h3>4.5 mcp — serveurs externes</h3>
+    <p>Si tu as un serveur <a href="https://modelcontextprotocol.io/" target="_blank">MCP</a> (Stripe, Notion, ton CRM) :</p>
+<pre><code>{
+  "type": "mcp",
+  "server_url": "https://mcp.example.com/mcp",
+  "server_label": "crm",
+  "authorization": "Bearer ton-token"
+}</code></pre>
+
+    <h3>4.6 Google Calendar — fait dans ce projet</h3>
+    <p>Pas de MCP Google Calendar officiel. Pour un test perso, l'API directe est plus simple. On utilise un <code>function</code> tool qui POST vers <code>/api/calendar/book</code> ; le serveur FastAPI utilise l'API Google Calendar via OAuth Desktop, refresh-token sur disque.</p>
+    <p><strong>Setup en 5 étapes :</strong></p>
+    <ol>
+      <li><a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a> → projet → active <strong>Google Calendar API</strong>.</li>
+      <li>APIs &amp; Services → Credentials → <strong>Create Credentials → OAuth client ID</strong> → <strong>Desktop app</strong>.</li>
+      <li>Sauve le JSON sous <code>web/config/google_oauth_client.json</code>.</li>
+      <li>Lance <code>python setup_google.py</code> — un navigateur s'ouvre, tu autorises, le token est sauvé.</li>
+      <li>Recharge l'app, clique Start, dis : <em>"I'd like to book a table for 4 tomorrow at 7 PM, name Eric, phone…"</em></li>
+    </ol>
+    <div class="callout">
+      <strong>Sécurité :</strong> <code>google_token.json</code> et <code>google_oauth_client.json</code> sont dans <code>.gitignore</code>. Pour la prod multi-utilisateurs, utilise un service account (Workspace) ou OAuth complet par utilisateur.
+    </div>
+
+    <h2>5. Recette : agent restaurant complet</h2>
+    <ol>
+      <li><strong>Identité &amp; mission</strong> dans <code>system_prompt.txt</code>.</li>
+      <li><strong>Réservations</strong> — <code>book_reservation</code> → Google Calendar / Resy / DB.</li>
+      <li><strong>Annulation / modif</strong> — <code>cancel_reservation</code>, <code>find_reservation_by_phone</code>.</li>
+      <li><strong>Menu &amp; allergènes</strong> — menu PDF via Collections API → <code>file_search</code>.</li>
+      <li><strong>Horaires</strong> — outil simple <code>get_hours(date?)</code>.</li>
+      <li><strong>Spéciaux du jour</strong> — <code>web_search</code> sur ton site/Insta.</li>
+      <li><strong>Escalade humaine</strong> — <code>request_callback(phone, reason)</code> qui SMS un manager (Twilio).</li>
+      <li><strong>Bonus</strong> — <code>send_confirmation_sms</code>, <code>collect_feedback</code>.</li>
+    </ol>
+
+    <h2>6. Connecter à un vrai téléphone (Twilio)</h2>
+    <ul>
+      <li>Achète un numéro Twilio.</li>
+      <li>Bridge serveur Python : Twilio Media Streams (WS µ-law 8 kHz) ↔ xAI realtime (configuré <code>audio/pcmu</code> 8 kHz, zéro transcoding).</li>
+      <li>Réutilise le même <code>system_prompt.txt</code> et <code>tools.json</code>.</li>
+      <li>Ref : <a href="https://github.com/xai-org/xai-cookbook/tree/main/voice-examples/agent/telephony" target="_blank">xai-cookbook telephony</a>.</li>
+    </ul>
+
+    <h2>7. 24/7 dans le cloud</h2>
+    <ul>
+      <li><strong>App web</strong> → Vercel (le WS vit dans le navigateur, le serveur ne fait que minter le token).</li>
+      <li><strong>Bridge Twilio</strong> → Fly.io / Render / Railway (process Python persistant).</li>
+      <li>Variables d'env : <code>XAI_API_KEY</code>, secrets Twilio, Google credentials. Healthcheck + auto-restart.</li>
+    </ul>
+
+    <h2>8. Astuces</h2>
+    <ul>
+      <li><strong>Latence</strong> : démarre la capture mic <em>en parallèle</em> du WS, bufferise, flush au <code>open</code> — déjà fait.</li>
+      <li><strong>Pas de chevauchement audio</strong> après tool call : attends la fin de la lecture avant <code>response.create</code>.</li>
+      <li><strong>Voix</strong> : <code>eve</code>, <code>ara</code>, <code>rex</code>, <code>sal</code>, <code>leo</code>, ou voix custom.</li>
+      <li><strong>µ-law 8 kHz</strong> : seulement pour Twilio. Browser → 24 kHz PCM.</li>
+      <li><strong>Sécurité</strong> : jamais la <code>XAI_API_KEY</code> dans le navigateur. Toujours via <code>/token</code> (secret éphémère 5 min).</li>
+    </ul>
+
+    <h2>9. Debug</h2>
+    <ul>
+      <li>Console DevTools → Network → WS → onglet Messages : tu vois chaque event en clair.</li>
+      <li>Console <code>uvicorn</code> : <code>POST /token</code>, <code>GET /config</code>, <code>POST /api/calendar/book</code>.</li>
+      <li>Si l'agent ne dit rien : vérifie <code>input_audio_buffer.speech_stopped</code> + <code>response.created</code>.</li>
+      <li>Audio crachote ? Sample rate non assorti. <code>SAMPLE_RATE = 24000</code> partout.</li>
+    </ul>
+
+    <h2>10. Ressources</h2>
+    <ul>
+      <li><a href="https://docs.x.ai/developers/model-capabilities/audio/voice-agent" target="_blank">Doc Voice Agent API</a></li>
+      <li><a href="https://docs.x.ai/developers/rest-api-reference/inference/voice" target="_blank">Référence des events realtime</a></li>
+      <li><a href="https://github.com/xai-org/xai-cookbook" target="_blank">xai-cookbook</a></li>
+      <li><a href="https://docs.x.ai/developers/model-capabilities/audio/custom-voices" target="_blank">Custom Voices</a></li>
+    </ul>
+
+    <p style="margin-top:60px"><a class="back-link" href="/">← RETOUR À L'AGENT</a></p>
+  </main>
+</body>
+</html>

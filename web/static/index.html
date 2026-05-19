@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent IA Vocal — Le Club IA VIP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="page-app">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="brand" href="https://skool.com/le-club-ia-vip" target="_blank">
+        <span class="brand-mark">VIP</span>
+        <span class="brand-name">Le Club IA VIP</span>
+      </a>
+      <nav class="topnav">
+        <a class="active" href="/">AGENT</a>
+        <a href="/guide.html">GUIDE</a>
+        <a href="https://docs.x.ai/developers/model-capabilities/audio/voice-agent" target="_blank">DOCS</a>
+      </nav>
+    </div>
+    <a class="cta-pill" href="https://skool.com/le-club-ia-vip" target="_blank">REJOINDRE LE CLUB</a>
+  </header>
+
+  <main class="app-main">
+    <section class="hero">
+      <p class="eyebrow">AGENT IA VOCAL · LIVE DEMO</p>
+      <h1>Parlez à votre agent IA.</h1>
+      <p class="lede">Démo en temps réel propulsée par <code class="accent">grok-voice-think-fast-1.0</code>. Conversation naturelle, appels d'outils, intégration Google Calendar — un aperçu de ce qu'on construit dans <a href="https://skool.com/le-club-ia-vip" target="_blank" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px;">Le Club IA VIP</a>.</p>
+
+      <div class="actions">
+        <button id="toggle" class="cta-pill primary">
+          <span class="dot"></span>
+          <span class="cta-label">Démarrer la conversation</span>
+        </button>
+        <span id="status" class="status">idle</span>
+        <span id="config-info" class="muted small">config: …</span>
+      </div>
+    </section>
+
+    <section id="chat" class="transcript" aria-live="polite"></section>
+  </main>
+
+  <script type="module" src="/voice.js"></script>
+</body>
+</html>
