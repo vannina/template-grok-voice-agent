@@ -20,8 +20,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 from string import Template
+from zoneinfo import ZoneInfo
 
 import httpx
 import websockets
@@ -41,8 +43,27 @@ VOICE = "69smp8rm"  # Composio voice library id — French speaker
 
 COMPOSIO_API_KEY = os.environ.get("COMPOSIO_API_KEY")
 COMPOSIO_EXEC_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_CREATE_EVENT"
-COMPOSIO_USER_ID = "margot-bistro-demo"
+COMPOSIO_LIST_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_EVENTS_LIST"
+COMPOSIO_USER_ID = os.environ.get("COMPOSIO_USER_ID", "margot-bistro-demo")
 RESTAURANT_TIMEZONE = "Europe/Paris"
+TZ = ZoneInfo(RESTAURANT_TIMEZONE)
+
+# Réservation multi-tables : capacité par créneau, durée d'une table.
+RESTAURANT_CALENDAR_ID = os.environ.get("RESTAURANT_CALENDAR_ID", "primary")
+CAPACITY_PER_SLOT = int(os.environ.get("CAPACITY_PER_SLOT", "10"))
+TABLE_DURATION_MIN = int(os.environ.get("TABLE_DURATION_MIN", "90"))
+
+# Fenêtres de service (heures locales) pour proposer des alternatives crédibles.
+SERVICE_WINDOWS = [("12:00", "13:30"), ("19:30", "21:00")]  # dernière réservation
+
+FR_DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+FR_MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+             "août", "septembre", "octobre", "novembre", "décembre"]
+
+
+def _today_fr() -> str:
+    now = datetime.now(TZ)
+    return f"{FR_DAYS[now.weekday()]} {now.day} {FR_MONTHS[now.month - 1]} {now.year} ({now.strftime('%Y-%m-%d')})"
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
@@ -75,9 +96,122 @@ def _load_config() -> dict:
     prompt_path = CONFIG_DIR / "system_prompt.txt"
     tools_path = CONFIG_DIR / "tools.json"
     instructions = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+    instructions = instructions.replace("{{TODAY}}", _today_fr())
     tools_raw = tools_path.read_text(encoding="utf-8") if tools_path.exists() else "[]"
     tools = json.loads(Template(tools_raw).safe_substitute(os.environ))
     return {"instructions": instructions, "tools": tools}
+
+
+def _load_restaurant() -> dict:
+    """Fiche restaurant (web/config/restaurant.json), hot-reloaded comme le prompt."""
+    path = CONFIG_DIR / "restaurant.json"
+    if not path.exists():
+        return {"error": "restaurant.json introuvable"}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+async def _composio_execute(url: str, arguments: dict) -> dict:
+    """POST un tool execute Composio. Retourne le body JSON (ou un dict d'erreur)."""
+    if not COMPOSIO_API_KEY:
+        return {"successful": False, "error": "COMPOSIO_API_KEY not set"}
+    payload = {"user_id": COMPOSIO_USER_ID, "arguments": arguments}
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.post(
+            url,
+            headers={"x-api-key": COMPOSIO_API_KEY, "Content-Type": "application/json"},
+            json=payload,
+        )
+    try:
+        return r.json()
+    except Exception:
+        return {"successful": False, "error": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+
+def _parse_event_window(ev: dict) -> tuple[datetime, datetime] | None:
+    """Extrait (start, end) d'un événement Google Calendar (dateTime ou date)."""
+    try:
+        s = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date")
+        e = ev.get("end", {}).get("dateTime") or ev.get("end", {}).get("date")
+        if not s or not e:
+            return None
+        sd = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        ed = datetime.fromisoformat(e.replace("Z", "+00:00"))
+        if sd.tzinfo is None:
+            sd = sd.replace(tzinfo=TZ)
+        if ed.tzinfo is None:
+            ed = ed.replace(tzinfo=TZ)
+        return sd.astimezone(TZ), ed.astimezone(TZ)
+    except Exception:
+        return None
+
+
+async def _list_events_window(day_start: datetime, day_end: datetime) -> list[tuple[datetime, datetime]] | None:
+    """Liste les réservations du calendrier resto sur une fenêtre. None = erreur API."""
+    # Le slug Composio EVENTS_LIST accepte les paramètres style Google (camelCase) ;
+    # fallback snake_case si la validation refuse.
+    for args in (
+        {"calendarId": RESTAURANT_CALENDAR_ID,
+         "timeMin": day_start.isoformat(), "timeMax": day_end.isoformat(),
+         "singleEvents": True, "maxResults": 250},
+        {"calendar_id": RESTAURANT_CALENDAR_ID,
+         "time_min": day_start.isoformat(), "time_max": day_end.isoformat(),
+         "single_events": True, "max_results": 250},
+    ):
+        body = await _composio_execute(COMPOSIO_LIST_URL, args)
+        if body.get("successful"):
+            rd = body.get("data", {}).get("response_data", body.get("data", {})) or {}
+            items = rd.get("items") or rd.get("events") or []
+            windows = []
+            for ev in items:
+                if str(ev.get("status", "")).lower() == "cancelled":
+                    continue
+                w = _parse_event_window(ev)
+                if w:
+                    windows.append(w)
+            return windows
+        print(f"[calendar] EVENTS_LIST refusé ({json.dumps(args)[:80]}…) : {str(body.get('error'))[:200]}")
+    return None
+
+
+def _count_overlaps(windows: list[tuple[datetime, datetime]], start: datetime, end: datetime) -> int:
+    return sum(1 for (s, e) in windows if s < end and e > start)
+
+
+async def _check_availability(args: dict) -> dict:
+    """Disponibilité multi-tables : un créneau est libre tant que moins de
+    CAPACITY_PER_SLOT réservations (durée TABLE_DURATION_MIN) le chevauchent.
+    Si complet : propose jusqu'à 2 alternatives dans le même service."""
+    try:
+        start = datetime.strptime(f"{args.get('date','')} {args.get('time','')}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
+    except ValueError:
+        return {"status": "error", "message": "Date ou heure invalide (attendu YYYY-MM-DD et HH:MM)."}
+    duration = timedelta(minutes=TABLE_DURATION_MIN)
+    end = start + duration
+
+    day_start = start.replace(hour=0, minute=0)
+    day_end = day_start + timedelta(days=1)
+    windows = await _list_events_window(day_start, day_end)
+    if windows is None:
+        return {"status": "error",
+                "message": "Le livre de réservations est momentanément inaccessible. Propose qu'un membre de l'équipe rappelle."}
+
+    booked = _count_overlaps(windows, start, end)
+    free = max(0, CAPACITY_PER_SLOT - booked)
+    if free > 0:
+        return {"status": "ok", "available": True, "tables_libres": free}
+
+    # Complet : chercher des alternatives dans les fenêtres de service du jour.
+    alternatives: list[str] = []
+    for win_start, win_last in SERVICE_WINDOWS:
+        t = datetime.strptime(f"{args.get('date','')} {win_start}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
+        last = datetime.strptime(f"{args.get('date','')} {win_last}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
+        while t <= last and len(alternatives) < 2:
+            if t != start and _count_overlaps(windows, t, t + duration) < CAPACITY_PER_SLOT:
+                # privilégier les créneaux proches de la demande
+                if abs((t - start).total_seconds()) <= 2 * 3600:
+                    alternatives.append(t.strftime("%H:%M"))
+            t += timedelta(minutes=30)
+    return {"status": "ok", "available": False, "tables_libres": 0, "alternatives": alternatives}
 
 
 async def _create_calendar_event(args: dict) -> dict:
@@ -94,27 +228,26 @@ async def _create_calendar_event(args: dict) -> dict:
             "status": "error",
             "message": "INVALID_PHONE: aucun numéro valide fourni — demande au client un vrai numéro de téléphone et rappelle book_reservation avec.",
         }
-    payload = {
-        "user_id": COMPOSIO_USER_ID,
-        "arguments": {
-            "calendar_id": "primary",
-            "summary": f"Réservation : {args.get('name','?')} ({args.get('party_size','?')})",
-            "description": f"Téléphone : {args.get('phone','?')}\nNotes : {args.get('notes') or '—'}",
-            "start_datetime": f"{args.get('date','')}T{args.get('time','')}:00",
-            "event_duration_hour": 1,
-            "event_duration_minutes": 30,
-            "timezone": RESTAURANT_TIMEZONE,
-        },
-    }
-    async with httpx.AsyncClient(timeout=20) as client:
-        r = await client.post(
-            COMPOSIO_EXEC_URL,
-            headers={"x-api-key": COMPOSIO_API_KEY, "Content-Type": "application/json"},
-            json=payload,
-        )
-    body = r.json()
+    # Garde anti-surbooking : re-vérifie la capacité juste avant de créer.
+    avail = await _check_availability(args)
+    if avail.get("status") == "ok" and not avail.get("available"):
+        return {
+            "status": "full",
+            "message": "Ce créneau vient de se remplir.",
+            "alternatives": avail.get("alternatives", []),
+        }
+
+    body = await _composio_execute(COMPOSIO_EXEC_URL, {
+        "calendar_id": RESTAURANT_CALENDAR_ID,
+        "summary": f"Réservation : {args.get('name','?')} ({args.get('party_size','?')} pers.)",
+        "description": f"Téléphone : {args.get('phone','?')}\nNotes : {args.get('notes') or '—'}\nPrise par Margot (agent vocal Corsica Studio)",
+        "start_datetime": f"{args.get('date','')}T{args.get('time','')}:00",
+        "event_duration_hour": TABLE_DURATION_MIN // 60,
+        "event_duration_minutes": TABLE_DURATION_MIN % 60,
+        "timezone": RESTAURANT_TIMEZONE,
+    })
     if not body.get("successful"):
-        return {"status": "error", "message": body.get("error") or "unknown error"}
+        return {"status": "error", "message": str(body.get("error") or "unknown error")[:300]}
     rd = body.get("data", {}).get("response_data", {})
     return {
         "status": "confirmed",
@@ -130,8 +263,12 @@ async def _server_tool_call(name: str, args: dict) -> dict:
     Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools."""
     if name == "book_reservation":
         return await _create_calendar_event(args)
-    if name == "get_restaurant_hours":
-        return RESTAURANT_HOURS
+    if name == "check_availability":
+        return await _check_availability(args)
+    if name == "get_restaurant_info":
+        return _load_restaurant()
+    if name == "get_restaurant_hours":  # compat legacy
+        return _load_restaurant().get("horaires", RESTAURANT_HOURS)
     if name == "end_call":
         # Actual hang-up is deferred to the relay loop so we don't cut off the
         # goodbye mid-word; this just acknowledges so the model continues.
@@ -206,6 +343,22 @@ class Reservation(BaseModel):
 @app.post("/api/calendar/book")
 async def book(res: Reservation) -> JSONResponse:
     return JSONResponse(await _create_calendar_event(res.model_dump()), status_code=200)
+
+
+class AvailabilityQuery(BaseModel):
+    date: str         # YYYY-MM-DD
+    time: str         # HH:MM (24h)
+    party_size: int = 2
+
+
+@app.post("/api/calendar/availability")
+async def availability(q: AvailabilityQuery) -> JSONResponse:
+    return JSONResponse(await _check_availability(q.model_dump()), status_code=200)
+
+
+@app.get("/api/restaurant")
+async def restaurant_info() -> JSONResponse:
+    return JSONResponse(_load_restaurant())
 
 
 # ---------------------------------------------------------------------------
@@ -329,9 +482,9 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 "type": "response.create",
                                 "response": {
                                     "instructions": (
-                                        "Salue brièvement en français comme une hôtesse parisienne "
-                                        "pressée. Ex : 'Le Petit Bistro, Margot, j'écoute.' "
-                                        "Une seule phrase courte."
+                                        "Salue en français, avec l'élégance chaleureuse d'une hôtesse "
+                                        "de belle maison provençale. Ex : 'LOU PATIO, bonjour, Margot "
+                                        "à votre écoute.' Une seule phrase, posée."
                                     ),
                                 },
                             }))

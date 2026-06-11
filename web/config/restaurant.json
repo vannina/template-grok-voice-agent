@@ -1,0 +1,86 @@
+{
+  "nom": "LOU PATIO",
+  "tagline": "La Table du Saint-Rémy",
+  "etablissement": "Hôtel Le Saint-Rémy (5 étoiles)",
+  "chef": "Nathan Helo",
+  "cuisine": "Cuisine provençale contemporaine, sensible et de saison, ancrée dans le terroir des Alpilles. Produits locaux, assiettes modernes et généreuses.",
+  "adresse": "16 boulevard Victor Hugo, 13210 Saint-Rémy-de-Provence",
+  "situation": "Au cœur de Saint-Rémy-de-Provence, dans l'hôtel Le Saint-Rémy, à deux pas du centre ancien. On dîne sous la verrière ou sur la terrasse ombragée par les platanes centenaires.",
+  "telephone_affiche": "04 84 51 04 51",
+  "saison": "Ouvert du 2 avril au 2 novembre 2026",
+  "horaires": {
+    "restaurant": "Lou Patio est ouvert midi et soir, du jeudi au lundi. Fermé le mardi et le mercredi.",
+    "services": {
+      "dejeuner": "12h00 à 14h00 (dernière réservation 13h30)",
+      "diner": "19h30 à 21h30 (dernière réservation 21h00)"
+    },
+    "bar": "Achille's Bar : tous les jours de 11h à 23h (bar feutré, rooftop avec vue sur les Alpilles, pool bar)",
+    "petit_dejeuner": "Tous les jours de 7h30 à 10h30 (buffet de produits locaux)"
+  },
+  "menus": [
+    {
+      "nom": "Menu Inspiration",
+      "service": "déjeuner uniquement",
+      "prix": "49 € (entrée, plat, dessert) ou 34 € (entrée-plat ou plat-dessert)",
+      "contenu": "Œuf de poule bio (cresson, pleurotes, œufs de poisson fumé) · Agneau de 9 heures (blettes, haricots blancs, menthe, curcuma) · Soufflé chocolat Guanaja 70 %, glace au romarin",
+      "accord_vins": "Accord mets & vins 3 verres : 30 €"
+    },
+    {
+      "nom": "Menu Expression",
+      "service": "midi et soir",
+      "prix": "89 €",
+      "contenu": "Focaccia maison · Petits pois chartreuse · Asperges vertes au barbecue, citron noir · Muge de Méditerranée en bouillabaisse · Kiwi menthe-gingembre · Agrumes de Méditerranée",
+      "accord_vins": "Accord mets & vins 5 verres : 50 €"
+    },
+    {
+      "nom": "Menu Évasion",
+      "service": "midi et soir",
+      "prix": "139 €",
+      "contenu": "Focaccia · Petits pois · Asperges vertes · Gnocchi au crabe bleu · Muge de Méditerranée · Ris de veau, artichaut, kumquat · Kiwi · Rhubarbe fondante, fraise du pays",
+      "accord_vins": "Accord mets & vins 7 verres : 70 €"
+    }
+  ],
+  "carte": {
+    "entrees": [
+      "Œuf de poule bio, cresson des fontaines, pleurotes, œufs de poisson fumé — 18 €",
+      "Asperges vertes au barbecue, citron noir, mimosas, oseille (végétarien) — 29 €",
+      "Gnocchi, crabe bleu, noisette, estragon — 25 €"
+    ],
+    "plats": [
+      "Muge de Méditerranée, bouillabaisse, carottes, fenouil, safran, rouille — 36 €",
+      "Agneau de 9 heures, blettes, haricots blancs, menthe, curcuma — 34 €",
+      "Ris de veau, artichaut, reine des prés, kumquat — 42 €"
+    ],
+    "pieces_a_partager": [
+      "Pour 2 personnes, servies avec smashed potatoes aux herbes fraîches :",
+      "Sole grillée meunière — 65 € par personne",
+      "Poisson grillé selon arrivage (≈ 1,2 kg à partager) — 125 €",
+      "Côte de bœuf maturée française — 135 €",
+      "Tomahawk de bœuf français — 150 €",
+      "T-bone de veau français — 160 €",
+      "Côte de cochon fermier français — 105 €",
+      "Sides (légumes grillés, riz aux herbes, tian de légumes confits) — 9 €"
+    ],
+    "desserts": [
+      "Planche de fromages, miel, confitures — 16 €",
+      "Rhubarbe fondante, fraise du pays, vanille de Madagascar, hibiscus — 16 €",
+      "Agrumes de Méditerranée, huile d'olive, thym, verveine — 16 €",
+      "Soufflé chocolat Guanaja 70 %, glace au romarin des collines — 14 €"
+    ],
+    "plat_signature": "Le Muge de Méditerranée en bouillabaisse, et l'Agneau de 9 heures du Chef Nathan Helo"
+  },
+  "services": [
+    "Terrasse ombragée sous les platanes centenaires et verrière",
+    "Rooftop Achille's Bar avec vue sur les Alpilles",
+    "Options végétariennes sur demande",
+    "Accords mets & vins sur tous les menus",
+    "Animaux de compagnie acceptés",
+    "Salons pour réunions et événements (l'hôtel accueille séminaires et réceptions)"
+  ],
+  "capacite": {
+    "tables_par_creneau": 10,
+    "duree_table_minutes": 90,
+    "taille_groupe_max": 12,
+    "note": "Au-delà de 12 couverts, proposer de rappeler la réception au 04 84 51 04 51."
+  }
+}

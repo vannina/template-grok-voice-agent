@@ -1,26 +1,41 @@
 [
-  { "type": "web_search" },
   {
-    "type": "mcp",
-    "server_url": "${COMPOSIO_MCP_URL}",
-    "server_label": "google_calendar",
-    "server_description": "Read-only Google Calendar access via Composio. Use GOOGLECALENDAR_FIND_FREE_SLOTS to check availability before quoting a time. Do NOT use this for creating events — use the book_reservation function tool instead.",
-    "headers": { "x-api-key": "${COMPOSIO_API_KEY}" },
-    "allowed_tools": ["GOOGLECALENDAR_FIND_FREE_SLOTS"]
+    "type": "function",
+    "name": "get_restaurant_info",
+    "description": "Renvoie la fiche complète du restaurant LOU PATIO : carte détaillée avec prix, menus, horaires, services, adresse, chef. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'une table dans le livre de réservations pour une date, une heure et un nombre de couverts. À appeler AVANT book_reservation. Renvoie available (bool), tables_libres (int) et alternatives (heures proches disponibles) si complet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date souhaitée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure souhaitée, format HH:MM en 24h" },
+        "party_size": { "type": "integer", "description": "Nombre de couverts (1-12)" }
+      },
+      "required": ["date", "time", "party_size"]
+    }
   },
   {
     "type": "function",
     "name": "book_reservation",
-    "description": "Book a table in the restaurant's Google Calendar. Call ONLY after the caller has confirmed all details out loud.",
+    "description": "Enregistre la réservation dans le livre de réservations du restaurant. À appeler uniquement après une disponibilité confirmée par check_availability et avec les 5 informations complètes.",
     "parameters": {
       "type": "object",
       "properties": {
-        "name":       { "type": "string",  "description": "Guest full name" },
-        "phone":      { "type": "string",  "description": "Phone number" },
-        "date":       { "type": "string",  "description": "ISO date YYYY-MM-DD" },
-        "time":       { "type": "string",  "description": "24h time HH:MM" },
-        "party_size": { "type": "integer", "description": "Number of guests (1-12)" },
-        "notes":      { "type": "string",  "description": "Allergies / preferences, or empty" }
+        "name": { "type": "string", "description": "Nom du client" },
+        "phone": { "type": "string", "description": "Numéro de téléphone du client" },
+        "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
+        "party_size": { "type": "integer", "description": "Nombre de couverts (1-12)" },
+        "notes": { "type": "string", "description": "Notes éventuelles (allergies, terrasse, anniversaire). Vide si rien." }
       },
       "required": ["name", "phone", "date", "time", "party_size"]
     }
@@ -28,7 +43,11 @@
   {
     "type": "function",
     "name": "end_call",
-    "description": "End the call and hang up. Call ONLY after saying goodbye out loud. Do not call mid-conversation, only when the caller has clearly indicated the conversation is over (reservation confirmed and goodbyes exchanged, or caller said 'merci au revoir', etc.).",
-    "parameters": { "type": "object", "properties": {}, "required": [] }
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
   }
 ]

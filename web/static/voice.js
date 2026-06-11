@@ -1,18 +1,20 @@
-// Browser client for the xAI Voice Agent realtime API.
-// - Loads /config (system prompt + tools), mints /token (ephemeral secret).
-// - Captures mic at 24 kHz, ships PCM16 base64 frames as input_audio_buffer.append.
-// - Renders a chat: user transcripts, assistant transcripts, tool calls.
-// - Handles client-side function tools (mock implementations below).
+// Client navigateur — Démo Agent Vocal Corsica Studio (Margot, LOU PATIO).
+// - Charge /config (prompt + tools), mint /token (secret éphémère xAI).
+// - Micro 24 kHz, frames PCM16 base64 en input_audio_buffer.append.
+// - Affiche la conversation, gère les function tools côté client.
+// Règle du template : chaque function de tools.json a un handler ici (navigateur)
+// ET dans _server_tool_call de web/server.py (téléphone).
 
 const SAMPLE_RATE = 24000;
 const MODEL = "grok-voice-think-fast-1.0";
-const VOICE = "69smp8rm";   // Composio voice library id — French speaker
+const VOICE = "69smp8rm";   // voix française
 
 const $toggle      = document.getElementById("toggle");
 const $toggleLabel = $toggle.querySelector(".cta-label");
 const $status      = document.getElementById("status");
 const $chat        = document.getElementById("chat");
 const $configInfo  = document.getElementById("config-info");
+const $afterCall   = document.getElementById("after-call");
 
 let running = false;
 let ws = null;
@@ -23,9 +25,9 @@ let playhead = 0;
 let earlyBuffer = [];
 let wsOpen = false;
 
-let assistantBubble = null;   // current streaming assistant bubble
-let userBubble = null;        // current streaming user transcript bubble
-let pendingEndCall = false;   // set by end_call tool, acted on at response.done
+let assistantBubble = null;
+let pendingEndCall = false;
+let hadConversation = false;
 
 const setStatus = s => { $status.textContent = s; };
 
@@ -82,11 +84,17 @@ function schedulePlayback(float32) {
   playhead += buf.duration;
 }
 
-// ---- mock client-side function implementations ----------------------------
-// These run in the browser. In a real app they'd call your backend / DB.
-// Add a handler whenever you add a `function` tool in tools.json.
+// ---- function tools (chemin navigateur) ------------------------------------
 
 const FUNCTIONS = {
+  check_availability: async (args) => {
+    const r = await fetch("/api/calendar/availability", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    return await r.json();
+  },
   book_reservation: async (args) => {
     const r = await fetch("/api/calendar/book", {
       method: "POST",
@@ -95,30 +103,58 @@ const FUNCTIONS = {
     });
     return await r.json();
   },
-  get_restaurant_hours: async () => ({
-    monday:    "closed",
-    tuesday:   "17:00-22:00",
-    wednesday: "17:00-22:00",
-    thursday:  "17:00-22:00",
-    friday:    "17:00-23:00",
-    saturday:  "11:00-23:00",
-    sunday:    "11:00-21:00",
-  }),
+  get_restaurant_info: async () => {
+    const r = await fetch("/api/restaurant");
+    return await r.json();
+  },
   end_call: async () => {
-    // Don't stop right now — Margot may still be speaking. Flag it; the
-    // response.done handler will drain the audio buffer and then call stop().
     pendingEndCall = true;
     return { status: "ok", message: "Hang-up scheduled after current utterance." };
   },
 };
 
+// Bulles lisibles pour le grand public (le JSON brut reste en console).
+function toolBubbleStart(name, args) {
+  if (name === "check_availability") {
+    return `🔎 Margot vérifie les disponibilités du ${args.date || ""} à ${args.time || ""}…`;
+  }
+  if (name === "book_reservation") {
+    return `📅 Enregistrement de la réservation au nom de ${args.name || "…"} (${args.party_size || "?"} pers.)…`;
+  }
+  if (name === "get_restaurant_info") {
+    return "📖 Margot consulte la carte et les informations du restaurant…";
+  }
+  if (name === "end_call") return "👋 Fin d'appel demandée.";
+  return `→ ${name}`;
+}
+
+function toolBubbleEnd(name, result) {
+  if (name === "book_reservation" && result && result.status === "confirmed") {
+    return "✅ Réservation enregistrée dans l'agenda du restaurant.";
+  }
+  if (name === "book_reservation" && result && result.status === "full") {
+    return "📋 Créneau complet — Margot propose une alternative.";
+  }
+  if (name === "check_availability" && result && typeof result.available !== "undefined") {
+    return result.available
+      ? `✅ Des tables sont disponibles (${result.tables_libres ?? "?"} libre(s) sur ce créneau).`
+      : "📋 Créneau complet — Margot cherche une alternative.";
+  }
+  if (result && result.status === "error") {
+    return "⚠️ Petit souci technique côté agenda — Margot s'adapte.";
+  }
+  return null; // pas de bulle de fin
+}
+
 // ---- main ------------------------------------------------------------------
 
 async function start() {
   running = true;
-  $toggleLabel.textContent = "Stop";
+  hadConversation = true;
+  $toggleLabel.textContent = "Raccrocher";
   $toggle.classList.add("recording");
-  setStatus("requesting mic + token + config…");
+  $afterCall.classList.remove("visible");
+  setStatus("préparation…");
 
   const micPromise    = navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, sampleRate: SAMPLE_RATE, echoCancellation: true, noiseSuppression: true }
@@ -134,13 +170,12 @@ async function start() {
     tokenResp?.client_secret?.value ||
     tokenResp?.client_secret;
   if (!secret || typeof secret !== "string") {
-    addBubble("system", "Unexpected /token response: " + JSON.stringify(tokenResp));
+    console.error("Unexpected /token response:", tokenResp);
+    addBubble("system", "La démo est momentanément indisponible. Réessayez dans un instant.");
     throw new Error("no ephemeral secret");
   }
 
-  $configInfo.textContent = `tools: ${config.tools.length} • prompt: ${config.instructions.length} chars`;
-  const toolSummary = config.tools.map(t => t.type === "mcp" ? `mcp:${t.server_label}` : t.type).join(", ");
-  addBubble("system", `Session opening — voice "${VOICE}", ${config.tools.length} tool(s) loaded from /config: ${toolSummary}.`);
+  console.log(`[config] tools: ${config.tools.length} • prompt: ${config.instructions.length} chars`);
 
   audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
   const source = audioCtx.createMediaStreamSource(stream);
@@ -156,7 +191,7 @@ async function start() {
     else earlyBuffer.push(msg);
   };
 
-  setStatus("connecting to xAI…");
+  setStatus("connexion…");
   ws = new WebSocket(
     `wss://api.x.ai/v1/realtime?model=${encodeURIComponent(MODEL)}`,
     [`xai-client-secret.${secret}`]
@@ -164,7 +199,7 @@ async function start() {
 
   ws.onopen = () => {
     wsOpen = true;
-    setStatus("connected");
+    setStatus("en ligne — dites bonjour !");
     ws.send(JSON.stringify({
       type: "session.update",
       session: {
@@ -172,7 +207,6 @@ async function start() {
         instructions: config.instructions,
         tools: config.tools,
         turn_detection: { type: "server_vad" },
-        // Ask the API to transcribe the user's audio so we can show it in chat.
         input_audio_transcription: { model: "whisper-1" },
         audio: {
           input:  { format: { type: "audio/pcm", rate: SAMPLE_RATE } },
@@ -187,20 +221,18 @@ async function start() {
   ws.onmessage = ev => {
     let event;
     try { event = JSON.parse(ev.data); } catch { return; }
-    // Deep debug: every event lands in the JS console. Filter in DevTools by "[ws]".
     if (event.type !== "response.audio.delta" && event.type !== "response.output_audio.delta") {
       console.log("[ws]", event.type, event);
     }
     handleEvent(event);
   };
 
-  ws.onerror = e => addBubble("system", "ws error: " + (e?.message || "unknown"));
-  ws.onclose = e => { wsOpen = false; setStatus("closed: " + (e.reason || e.code)); };
+  ws.onerror = e => { console.error("ws error", e); setStatus("connexion interrompue"); };
+  ws.onclose = e => { wsOpen = false; if (running) setStatus("appel terminé"); };
 }
 
 function handleEvent(event) {
   switch (event.type) {
-    // ---------- assistant audio + transcript --------------------------------
     case "response.output_audio.delta":
     case "response.audio.delta": {
       schedulePlayback(base64PCM16ToFloat32(event.delta));
@@ -221,61 +253,43 @@ function handleEvent(event) {
       assistantBubble = null;
       if (event.type === "response.done" && pendingEndCall) {
         pendingEndCall = false;
-        // Wait for the queued audio to finish playing so we don't cut off
-        // Margot's "au revoir" mid-word. playhead is the audioCtx time of
-        // the last scheduled chunk's end; add a small safety margin.
         const drainMs = Math.max(0, (playhead - audioCtx.currentTime) * 1000) + 400;
-        addBubble("system", `Margot raccroche dans ${Math.round(drainMs)} ms…`);
         setTimeout(() => stop(), drainMs);
       }
       break;
     }
 
-    // ---------- user transcript --------------------------------------------
     case "conversation.item.input_audio_transcription.completed": {
       const text = event.transcript || "";
-      if (text.trim()) addBubble("user", text, "You");
+      if (text.trim()) addBubble("user", text, "Vous");
       break;
     }
 
-    // ---------- VAD events --------------------------------------------------
     case "input_audio_buffer.speech_started":
-      setStatus("you're speaking…");
+      setStatus("vous parlez…");
       break;
     case "input_audio_buffer.speech_stopped":
-      setStatus("thinking…");
+      setStatus("Margot réfléchit…");
       break;
 
-    // ---------- tool calls --------------------------------------------------
     case "response.function_call_arguments.done":
       handleFunctionCall(event);
       break;
 
     case "session.created":
     case "response.created":
-      // quiet
+    case "session.updated":
+      // détail en console uniquement (public non technique)
       break;
-
-    case "session.updated": {
-      // Echo the tools xAI actually registered — if MCP tool was rejected,
-      // it will be missing from session.tools and we'll see it here.
-      const tools = (event.session && event.session.tools) || [];
-      addBubble("system",
-        `session.updated — ${tools.length} tool(s) accepted by xAI:\n` +
-        tools.map(t => `  • ${t.type}${t.server_label ? ` (${t.server_label})` : ""}${t.name ? ` (${t.name})` : ""}`).join("\n"));
-      break;
-    }
 
     case "error":
-      addBubble("system", "ERROR: " + JSON.stringify(event.error || event));
+      console.error("[xai] ERROR", event.error || event);
+      setStatus("petit souci technique — relancez l'appel");
       break;
 
     default:
-      // Bubble anything tool-/mcp-/error-related so we don't need DevTools
-      // to debug. Everything else still lands in the JS console.
-      if (/mcp|tool|fail|error/i.test(event.type)) {
-        const compact = JSON.stringify(event, null, 2);
-        addBubble("tool", `[${event.type}]\n${compact.length > 1200 ? compact.slice(0, 1200) + "…" : compact}`);
+      if (/fail|error/i.test(event.type)) {
+        console.error("[ws]", event.type, event);
       }
       break;
   }
@@ -287,7 +301,8 @@ async function handleFunctionCall(event) {
   let args = {};
   try { args = JSON.parse(event.arguments || "{}"); } catch {}
 
-  addBubble("tool", `→ ${name}(${JSON.stringify(args)})`);
+  console.log(`[tool] → ${name}`, args);
+  addBubble("tool", toolBubbleStart(name, args), "Agenda");
 
   const handler = FUNCTIONS[name];
   let result;
@@ -298,7 +313,9 @@ async function handleFunctionCall(event) {
     result = { error: `No client handler for tool "${name}"` };
   }
 
-  addBubble("tool", `← ${name} → ${JSON.stringify(result)}`);
+  console.log(`[tool] ← ${name}`, result);
+  const endText = toolBubbleEnd(name, result);
+  if (endText) addBubble("tool", endText, "Agenda");
 
   ws.send(JSON.stringify({
     type: "conversation.item.create",
@@ -313,20 +330,20 @@ async function handleFunctionCall(event) {
 
 async function stop() {
   running = false;
-  $toggleLabel.textContent = "Start conversation";
+  $toggleLabel.textContent = "🎙️ Parler à Margot";
   $toggle.classList.remove("recording");
-  setStatus("stopping…");
+  setStatus("appel terminé");
   try { ws?.close(); } catch {}
   try { micNode?.disconnect(); } catch {}
   try { micStream?.getTracks().forEach(t => t.stop()); } catch {}
   try { await audioCtx?.close(); } catch {}
   ws = null; micNode = null; micStream = null; audioCtx = null;
   wsOpen = false; earlyBuffer = []; playhead = 0;
-  assistantBubble = null; userBubble = null;
-  setStatus("idle");
+  assistantBubble = null;
+  if (hadConversation && $afterCall) $afterCall.classList.add("visible");
 }
 
 $toggle.addEventListener("click", () => {
-  if (running) stop().catch(e => addBubble("system", String(e)));
-  else start().catch(e => { addBubble("system", "start failed: " + (e.message || e)); stop(); });
+  if (running) stop().catch(e => console.error(e));
+  else start().catch(e => { console.error("start failed:", e); setStatus("micro refusé ou indisponible"); stop(); });
 });
