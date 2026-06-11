@@ -418,11 +418,31 @@ body.on-call .voice-eq i:nth-child(9) { animation-delay: 0.42s; }
 .menu-paper-mini .menu-item { font-size: 12px; margin-bottom: 9px; gap: 7px; }
 .menu-paper-mini .menu-note { font-size: 11.5px; }
 
-/* ---------- infos pratiques ---------- */
+/* ---------- argumentaire commercial (3 cartes) ---------- */
+.pitch { margin: 72px 0 0; }
+.pitch-title {
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: clamp(24px, 3.6vw, 34px); font-weight: 600;
+  text-align: center; color: var(--fg); line-height: 1.25;
+  max-width: 700px; margin: 0 auto 40px;
+}
+.pitch-title .coral { color: var(--accent); }
 .infos {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
   margin: 28px 0 0;
 }
+.info-card.offer {
+  border-color: rgba(255,110,68,0.55);
+  background: linear-gradient(160deg, rgba(255,110,68,0.12), rgba(255,110,68,0.04)), var(--bg-card);
+  display: flex; flex-direction: column;
+}
+.offer-price {
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: 17px; color: var(--fg-muted);
+  margin: 0 0 12px;
+}
+.offer-price b { color: var(--accent); font-size: 26px; font-weight: 700; }
+.offer-cta { margin-top: 18px; align-self: flex-start; }
 .info-card {
   background: var(--bg-card);
   border: 1px solid var(--border);

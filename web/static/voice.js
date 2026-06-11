@@ -480,26 +480,8 @@ async function loadRestaurantPage() {
       ${section("Desserts", c.desserts)}`;
   }
 
-  const fill = (id, items) => {
-    const ul = document.querySelector(`#${id} ul`);
-    if (ul) ul.innerHTML = items.filter(Boolean).map(t => `<li>${t}</li>`).join("");
-  };
-  const h = r.horaires || {}, sh = r.services_hotel || {};
-  fill("info-horaires", [
-    `<b>Déjeuner</b> · ${h.services?.dejeuner || ""}`,
-    `<b>Dîner</b> · ${h.services?.diner || ""}`,
-    h.restaurant,
-    h.bar,
-    r.saison,
-  ]);
-  fill("info-acces", [
-    `<b>${r.adresse}</b>`,
-    sh.acces,
-    sh.parking,
-    sh.voiturier,
-    `Réservations : <b>${r.telephone_affiche}</b> ou demandez à Margot ci-dessus`,
-  ]);
-  fill("info-services", (r.services || []).concat([sh.spa ? "Spa Sothys et piscine de l'hôtel" : null, sh.conciergerie ? "Conciergerie (transferts, activités)" : null]));
+  // (les 3 cartes sous les téléphones sont commerciales et statiques :
+  //  avantages, secteurs, offre — voir index.html, demande Vannina 11/06)
 }
 
 loadRestaurantPage();
