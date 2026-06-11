@@ -70,15 +70,51 @@
 
     <section id="recap" class="recap" hidden></section>
 
-    <!-- ======== LA CARTE (générée depuis la fiche du restaurant) ======== -->
-    <section class="menu-board" id="menu">
-      <div class="menu-paper">
-        <header class="menu-head">
-          <span class="menu-orn">❦</span>
-          <h2>La Carte</h2>
-          <p class="menu-sub" id="menu-sub">Chef Nathan Helo · Produits des Alpilles</p>
-        </header>
-        <div id="menu-content" class="menu-content"><!-- rempli depuis /api/restaurant --></div>
+    <!-- ======== LE RESTO COMME SUR UN TÉLÉPHONE (immersion) ======== -->
+    <section class="phones" id="menu">
+      <h2 class="phones-title">Le restaurant, comme vos clients le voient</h2>
+      <div class="phones-row">
+
+        <figure class="phone reveal">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <div class="phone-screen screen-home">
+              <div class="home-hero">
+                <span class="home-logo">LP</span>
+                <span class="home-stars">★★★★★</span>
+                <h3 class="home-name">Lou Patio</h3>
+                <p class="home-tag">La Table du Saint-Rémy</p>
+              </div>
+              <div class="home-info">
+                <p>📍 16 bd Victor Hugo<br/>Saint-Rémy-de-Provence</p>
+                <p>👨‍🍳 Chef Nathan Helo<br/>Cuisine provençale de saison</p>
+              </div>
+              <div class="home-actions">
+                <span class="home-btn">☎ Appeler</span>
+                <span class="home-btn ghost">Réserver</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>L'accueil</figcaption>
+        </figure>
+
+        <figure class="phone reveal delay">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <div class="phone-screen screen-menu">
+              <div class="menu-paper-mini">
+                <header class="menu-head">
+                  <span class="menu-orn">❦</span>
+                  <h2>La Carte</h2>
+                  <p class="menu-sub">Chef Nathan Helo · Produits des Alpilles</p>
+                </header>
+                <div id="menu-content" class="menu-content"><!-- rempli depuis /api/restaurant --></div>
+              </div>
+            </div>
+          </div>
+          <figcaption>La carte · faites défiler</figcaption>
+        </figure>
+
       </div>
     </section>
 

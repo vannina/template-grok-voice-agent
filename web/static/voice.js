@@ -481,3 +481,11 @@ async function loadRestaurantPage() {
 }
 
 loadRestaurantPage();
+
+// apparition en douceur des éléments .reveal (mockups téléphone…)
+const revealObserver = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    if (e.isIntersecting) { e.target.classList.add("visible"); revealObserver.unobserve(e.target); }
+  }
+}, { threshold: 0.18 });
+document.querySelectorAll(".reveal").forEach(el => revealObserver.observe(el));
