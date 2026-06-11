@@ -607,10 +607,13 @@ async def twilio_stream(ws: WebSocket) -> None:
 
 @app.get("/", response_class=HTMLResponse)
 async def root() -> HTMLResponse:
-    """Serve index.html with a ?v=<mtime> cache-buster on voice.js."""
+    """Serve index.html with ?v=<mtime> cache-busters on voice.js and style.css."""
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    ver = int((STATIC_DIR / "voice.js").stat().st_mtime)
-    return HTMLResponse(html.replace('src="/voice.js"', f'src="/voice.js?v={ver}"'))
+    ver_js = int((STATIC_DIR / "voice.js").stat().st_mtime)
+    ver_css = int((STATIC_DIR / "style.css").stat().st_mtime)
+    html = html.replace('src="/voice.js"', f'src="/voice.js?v={ver_js}"')
+    html = html.replace('href="/style.css"', f'href="/style.css?v={ver_css}"')
+    return HTMLResponse(html)
 
 
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
