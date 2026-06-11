@@ -448,16 +448,42 @@ body.on-call .voice-eq i:nth-child(9) { animation-delay: 0.42s; }
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 26px 26px 22px;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
+/* micro-interaction au survol (même esprit que les cartes du site Framer) */
+.info-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255,110,68,0.55);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.35);
+}
+.card-icon { transition: transform 0.25s ease, background 0.25s ease; }
+.info-card:hover .card-icon {
+  transform: scale(1.12) rotate(-4deg);
+  background: rgba(255,110,68,0.18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .info-card, .card-icon { transition: none; }
+  .info-card:hover { transform: none; }
+  .info-card:hover .card-icon { transform: none; }
+}
+.card-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; margin-bottom: 16px;
+  border-radius: 13px;
+  background: var(--accent-bg);
+  border: 1px solid rgba(255,110,68,0.35);
+  color: var(--accent);
+}
+.card-icon svg { width: 23px; height: 23px; }
 .info-card h3 {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px; font-weight: 600; margin: 0 0 14px;
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: 20px; font-weight: 600; margin: 0 0 14px;
   color: var(--fg);
 }
 .info-card ul { list-style: none; margin: 0; padding: 0; }
 .info-card li {
-  font-size: 14px; line-height: 1.55; color: var(--fg-muted);
-  padding: 7px 0; border-bottom: 1px solid var(--border);
+  font-size: 15.5px; line-height: 1.6; color: var(--fg-muted);
+  padding: 9px 0; border-bottom: 1px solid var(--border);
 }
 .info-card li:last-child { border-bottom: none; }
 .info-card li b { color: var(--fg); font-weight: 600; }
