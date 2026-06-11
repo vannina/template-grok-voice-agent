@@ -39,7 +39,7 @@ XAI_API_KEY = os.environ.get("XAI_API_KEY")
 XAI_TOKEN_URL = "https://api.x.ai/v1/realtime/client_secrets"
 XAI_REALTIME_WS = "wss://api.x.ai/v1/realtime"
 MODEL = "grok-voice-think-fast-1.0"
-VOICE = "69smp8rm"  # Composio voice library id — French speaker
+VOICE = "69smp8rm"  # voix française « Camille » (bibliothèque Grok Voice)
 
 COMPOSIO_API_KEY = os.environ.get("COMPOSIO_API_KEY")
 COMPOSIO_EXEC_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_CREATE_EVENT"

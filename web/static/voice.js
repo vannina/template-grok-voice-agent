@@ -7,7 +7,7 @@
 
 const SAMPLE_RATE = 24000;
 const MODEL = "grok-voice-think-fast-1.0";
-const VOICE = "69smp8rm";   // voix française
+const VOICE = "69smp8rm";   // voix française « Camille » (bibliothèque Grok Voice)
 
 const $toggle      = document.getElementById("toggle");
 const $toggleLabel = $toggle.querySelector(".cta-label");
