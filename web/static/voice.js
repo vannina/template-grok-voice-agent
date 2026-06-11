@@ -19,6 +19,25 @@ const $callCard    = document.getElementById("call-card");
 const $callBar     = document.getElementById("call-bar");
 const $callBarStatus = document.getElementById("call-bar-status");
 const $hangup      = document.getElementById("hangup");
+const $callTimer   = document.getElementById("call-timer");
+const $phoneHangup = document.getElementById("phone-hangup");
+
+// chrono de l'écran d'appel (mockup téléphone)
+let callTimerInterval = null;
+function startCallTimer() {
+  const t0 = Date.now();
+  if ($callTimer) $callTimer.textContent = "00:00";
+  callTimerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    if ($callTimer) $callTimer.textContent = `${mm}:${ss}`;
+  }, 1000);
+}
+function stopCallTimer() {
+  clearInterval(callTimerInterval);
+  callTimerInterval = null;
+}
 
 let running = false;
 let ws = null;
@@ -186,6 +205,7 @@ async function start() {
   $callCard.classList.remove("ended");
   $callBar.hidden = false;
   document.body.classList.add("on-call");
+  startCallTimer();
   $callCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setStatus("préparation…");
 
@@ -404,6 +424,7 @@ async function stop() {
   $callCard.classList.add("ended");
   $chat.innerHTML = "";
   document.body.classList.remove("on-call");
+  stopCallTimer();
   showRecap();
   setStatus("appel terminé");
   try { ws?.close(); } catch {}
@@ -422,6 +443,7 @@ $toggle.addEventListener("click", () => {
 });
 
 $hangup.addEventListener("click", () => { if (running) stop().catch(e => console.error(e)); });
+if ($phoneHangup) $phoneHangup.addEventListener("click", () => { if (running) stop().catch(e => console.error(e)); });
 
 // ---- page resto : carte du menu + infos pratiques (depuis /api/restaurant) ---
 // Une seule source de vérité : web/config/restaurant.json. Dupliquer le template

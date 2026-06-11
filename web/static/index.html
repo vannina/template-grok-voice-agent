@@ -27,35 +27,79 @@
 
   <main class="app-main">
 
-    <!-- ======== LA PAGE DU RESTAURANT (immersion) ======== -->
-    <section class="resto-hero">
-      <p class="resto-over">Hôtel Le Saint-Rémy ★★★★★ · Saint-Rémy-de-Provence</p>
-      <h1 class="resto-name">Lou Patio</h1>
-      <p class="resto-tagline">La Table du Saint-Rémy · Chef Nathan Helo</p>
-      <p class="resto-desc">
-        Cuisine provençale contemporaine, sensible et de saison, ancrée dans le terroir
-        des Alpilles. On dîne sous la verrière ou sur la terrasse ombragée par les
-        platanes centenaires.
+    <!-- ======== SCÈNE DÉMO : deux téléphones, le CTA au centre ======== -->
+    <section class="demo-stage">
+      <h1 class="stage-title">Appelez le restaurant.<br/><span class="coral">Margot décroche.</span></h1>
+      <p class="stage-sub">
+        Une vraie conversation au téléphone d'un restaurant, une vraie réservation
+        dans l'agenda. Parlez-lui naturellement.
       </p>
 
-      <div class="actions">
-        <button id="toggle" class="cta-pill primary">
-          <span class="voice-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-          <span class="cta-label">☎ Appeler le restaurant</span>
-        </button>
-        <a class="cta-pill ghost-link" href="#menu">Voir la carte</a>
-        <span id="status" class="status">prêt</span>
-        <span id="config-info" class="muted small"></span>
-      </div>
+      <div class="stage-row">
 
-      <p class="demo-strip">
-        🎙️ C'est <b>Margot</b>, l'hôtesse vocale, qui décroche, comme au téléphone du
-        restaurant. Parlez-lui naturellement.
-      </p>
-      <div class="chips">
-        <span class="chip">Essayez : <b>« Une table pour 4 samedi soir »</b></span>
-        <span class="chip"><b>« Quel est le plat signature ? »</b></span>
-        <span class="chip"><b>« Vous avez un parking ? »</b></span>
+        <!-- Téléphone gauche : page du resto → écran d'appel pendant la conversation -->
+        <figure class="phone phone-left reveal">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <div class="phone-screen screen-home">
+              <img class="home-photo" src="/img/resto-salle.jpg" alt="Salle du restaurant" />
+              <div class="home-body">
+                <span class="home-stars">★★★★★</span>
+                <h3 class="home-name">Lou Patio</h3>
+                <p class="home-tag">Saint-Rémy-de-Provence</p>
+                <div class="home-actions">
+                  <span class="home-btn">☎ Appeler</span>
+                  <span class="home-btn ghost">Réserver</span>
+                </div>
+              </div>
+            </div>
+            <div class="phone-screen screen-call" aria-hidden="true">
+              <p class="call-resto">LOU PATIO</p>
+              <div class="call-center">
+                <div class="call-avatar">M</div>
+                <p class="call-name">Margot</p>
+                <p class="call-state" id="call-timer">00:00</p>
+                <span class="voice-eq big accent" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+              <button class="call-end" id="phone-hangup" aria-label="Raccrocher"><span>📞</span></button>
+            </div>
+          </div>
+        </figure>
+
+        <!-- Centre : le CTA de la démo -->
+        <div class="stage-center">
+          <button id="toggle" class="cta-pill primary big">
+            <span class="voice-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="cta-label">☎ Appeler le restaurant</span>
+          </button>
+          <span id="status" class="status">prêt</span>
+          <span id="config-info" class="muted small"></span>
+          <p class="stage-margot">🎙️ <b>Margot</b>, l'hôtesse vocale, vous répond en direct.</p>
+          <div class="chips stage-chips">
+            <span class="chip">Essayez : <b>« Une table pour 4 samedi soir »</b></span>
+            <span class="chip"><b>« Quel est le plat signature ? »</b></span>
+            <span class="chip"><b>« Vous avez un parking ? »</b></span>
+          </div>
+        </div>
+
+        <!-- Téléphone droit : la carte qui défile -->
+        <figure class="phone phone-right reveal delay" id="menu">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <div class="phone-screen screen-menu">
+              <div class="menu-paper-mini">
+                <img class="menu-photo" src="/img/resto-plat.jpg" alt="Plat du chef" />
+                <header class="menu-head">
+                  <span class="menu-orn">❦</span>
+                  <h2>La Carte</h2>
+                  <p class="menu-sub">Chef Nathan Helo · Produits des Alpilles</p>
+                </header>
+                <div id="menu-content" class="menu-content"><!-- rempli depuis /api/restaurant --></div>
+              </div>
+            </div>
+          </div>
+        </figure>
+
       </div>
     </section>
 
@@ -69,54 +113,6 @@
     </section>
 
     <section id="recap" class="recap" hidden></section>
-
-    <!-- ======== LE RESTO COMME SUR UN TÉLÉPHONE (immersion) ======== -->
-    <section class="phones" id="menu">
-      <h2 class="phones-title">Le restaurant, comme vos clients le voient</h2>
-      <div class="phones-row">
-
-        <figure class="phone reveal">
-          <div class="phone-frame">
-            <span class="phone-notch"></span>
-            <div class="phone-screen screen-home">
-              <div class="home-hero">
-                <span class="home-logo">LP</span>
-                <span class="home-stars">★★★★★</span>
-                <h3 class="home-name">Lou Patio</h3>
-                <p class="home-tag">La Table du Saint-Rémy</p>
-              </div>
-              <div class="home-info">
-                <p>📍 16 bd Victor Hugo<br/>Saint-Rémy-de-Provence</p>
-                <p>👨‍🍳 Chef Nathan Helo<br/>Cuisine provençale de saison</p>
-              </div>
-              <div class="home-actions">
-                <span class="home-btn">☎ Appeler</span>
-                <span class="home-btn ghost">Réserver</span>
-              </div>
-            </div>
-          </div>
-          <figcaption>L'accueil</figcaption>
-        </figure>
-
-        <figure class="phone reveal delay">
-          <div class="phone-frame">
-            <span class="phone-notch"></span>
-            <div class="phone-screen screen-menu">
-              <div class="menu-paper-mini">
-                <header class="menu-head">
-                  <span class="menu-orn">❦</span>
-                  <h2>La Carte</h2>
-                  <p class="menu-sub">Chef Nathan Helo · Produits des Alpilles</p>
-                </header>
-                <div id="menu-content" class="menu-content"><!-- rempli depuis /api/restaurant --></div>
-              </div>
-            </div>
-          </div>
-          <figcaption>La carte · faites défiler</figcaption>
-        </figure>
-
-      </div>
-    </section>
 
     <!-- ======== INFOS PRATIQUES ======== -->
     <section class="infos" id="infos">

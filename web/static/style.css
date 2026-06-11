@@ -137,48 +137,9 @@ code.accent {
   padding: 5px 14px;
 }
 
-.resto-hero { text-align: center; margin-bottom: 64px; }
-.resto-over {
-  font-size: 13px; letter-spacing: 0.26em; font-weight: 600;
-  color: var(--fg-faint); text-transform: uppercase;
-  margin: 0 0 18px;
-}
-.resto-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(54px, 9vw, 96px);
-  font-weight: 600; letter-spacing: 0.02em;
-  line-height: 1;
-  margin: 0 0 10px;
-  color: var(--fg);
-}
-.resto-tagline {
-  font-family: 'Cormorant Garamond', serif;
-  font-style: italic;
-  font-size: clamp(19px, 2.6vw, 24px);
-  color: var(--accent);
-  margin: 0 0 22px;
-}
-.resto-desc {
-  font-size: 17px; color: var(--fg-muted);
-  max-width: 620px; line-height: 1.7;
-  margin: 0 auto 36px;
-}
-.actions {
-  display: flex; align-items: center; justify-content: center;
-  gap: 18px; flex-wrap: wrap;
-}
-.ghost-link {
-  border-color: var(--border-strong);
-  color: var(--fg-muted);
-}
-.status { color: var(--fg-muted); font-size: 13px; width: 100%; }
+.status { color: var(--fg-muted); font-size: 13px; }
 .muted   { color: var(--fg-faint); }
 .small   { font-size: 12px; }
-.demo-strip {
-  font-size: 14.5px; color: var(--fg-muted);
-  margin: 30px auto 0; max-width: 560px; line-height: 1.6;
-}
-.demo-strip b { color: var(--accent); }
 
 /* ---------- égaliseur vocal animé ---------- */
 .voice-eq {
@@ -223,29 +184,45 @@ body.on-call .voice-eq i:nth-child(5) { animation-delay: 0.48s; }
 .recap-check { font-size: 20px; line-height: 1.3; }
 .recap-note { display: block; color: var(--fg-muted); font-size: 13.5px; margin-top: 4px; }
 
-/* ---------- mockups téléphone (immersion resto) ---------- */
-.phones { margin: 88px 0 0; }
-.phones-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(26px, 4vw, 36px); font-weight: 600;
-  text-align: center; color: var(--fg);
-  margin: 0 0 44px;
+/* ---------- scène démo : deux téléphones, CTA au centre ---------- */
+.demo-stage {
+  text-align: center; margin-bottom: 48px;
+  /* breakout : la scène déborde du conteneur 980px pour laisser la place aux 2 téléphones */
+  width: min(1240px, calc(100vw - 48px));
+  margin-left: 50%;
+  transform: translateX(-50%);
 }
-.phones-row {
-  display: flex; justify-content: center; align-items: flex-start;
-  gap: clamp(28px, 6vw, 64px); flex-wrap: wrap;
+.stage-title {
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: clamp(30px, 4.6vw, 46px);
+  font-weight: 600; line-height: 1.12;
+  margin: 0 0 14px; color: var(--fg);
 }
+.stage-title .coral { color: var(--accent); }
+.stage-sub {
+  font-size: 16.5px; color: var(--fg-muted);
+  max-width: 560px; line-height: 1.6;
+  margin: 0 auto 48px;
+}
+.stage-row {
+  display: flex; justify-content: center; align-items: center;
+  gap: clamp(22px, 4.5vw, 60px); flex-wrap: wrap;
+}
+.stage-center {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; max-width: 360px;
+}
+.cta-pill.primary.big { font-size: 17px; padding: 18px 34px; }
+.stage-margot { font-size: 14px; color: var(--fg-muted); margin: 6px 0 0; }
+.stage-margot b { color: var(--accent); }
+.stage-chips { margin-top: 6px; justify-content: center; }
+
 .phone { margin: 0; text-align: center; }
-.phone figcaption {
-  margin-top: 16px; font-size: 13px; color: var(--fg-faint);
-  letter-spacing: 0.08em; font-style: italic;
-}
 .phone-frame {
-  width: min(300px, 82vw); height: 600px;
+  width: min(272px, 80vw); height: 552px;
   background: #16252f;
   border: 3px solid #3a5163;
   border-radius: 42px;
-  padding: 12px;
   box-shadow: 0 24px 70px rgba(0,0,0,0.5);
   position: relative;
   animation: float 6s ease-in-out infinite;
@@ -258,46 +235,39 @@ body.on-call .voice-eq i:nth-child(5) { animation-delay: 0.48s; }
 .phone-notch {
   position: absolute; top: 22px; left: 50%;
   transform: translateX(-50%);
-  width: 96px; height: 9px; border-radius: 6px;
-  background: #0d1820; z-index: 2;
+  width: 92px; height: 9px; border-radius: 6px;
+  background: #0d1820; z-index: 3;
 }
 .phone-screen {
-  height: 100%; border-radius: 30px; overflow: hidden;
-  position: relative;
+  position: absolute; inset: 11px;
+  border-radius: 32px; overflow: hidden;
 }
 
-/* écran 1 : accueil du restaurant */
+/* écran accueil : photo du resto + infos, comme une vraie page mobile */
 .screen-home {
-  background: linear-gradient(168deg, #1F3441 0%, #2B4150 46%, #51738C 130%);
+  background: #1F3441;
   display: flex; flex-direction: column;
+  transition: opacity 0.45s ease;
+}
+.home-photo {
+  width: 100%; height: 47%; object-fit: cover; display: block;
+}
+.home-body {
+  flex: 1; display: flex; flex-direction: column;
   justify-content: space-between;
-  padding: 56px 24px 26px;
-  text-align: center;
+  padding: 18px 20px 20px; text-align: center;
 }
-.home-logo {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 72px; height: 72px; margin: 0 auto 14px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,252,245,0.55);
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 30px; font-weight: 600; color: #FFFCF5;
-  background: rgba(255,252,245,0.07);
-}
-.home-stars { display: block; color: var(--accent); font-size: 12px; letter-spacing: 0.45em; margin-bottom: 10px; }
+.home-stars { display: block; color: var(--accent); font-size: 11px; letter-spacing: 0.45em; margin-bottom: 6px; }
 .home-name {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 38px; font-weight: 600; color: #FFFCF5;
-  margin: 0 0 4px; line-height: 1;
+  font-size: 34px; font-weight: 600; color: #FFFCF5;
+  margin: 0 0 2px; line-height: 1;
 }
 .home-tag {
   font-family: 'Cormorant Garamond', serif; font-style: italic;
-  font-size: 16px; color: #BFD4DA; margin: 0;
+  font-size: 15px; color: #BFD4DA; margin: 0;
 }
-.home-info p {
-  font-size: 13px; line-height: 1.55; color: #BFD4DA;
-  margin: 12px 0;
-}
-.home-actions { display: flex; gap: 10px; justify-content: center; }
+.home-actions { display: flex; gap: 10px; }
 .home-btn {
   flex: 1; padding: 12px 0; border-radius: 12px;
   background: var(--accent); color: #FFFCF5;
@@ -308,16 +278,75 @@ body.on-call .voice-eq i:nth-child(5) { animation-delay: 0.48s; }
   border: 1px solid rgba(255,252,245,0.4);
 }
 
-/* écran 2 : la carte, scrollable comme sur un vrai téléphone */
+/* écran d'appel en cours : prend la place de l'accueil pendant la conversation */
+.screen-call {
+  background: linear-gradient(180deg, #14222c 0%, #1F3441 60%, #243a48 100%);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: space-between;
+  padding: 54px 22px 30px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+body.on-call .phone-left .screen-call { opacity: 1; pointer-events: auto; }
+body.on-call .phone-left .screen-home { opacity: 0; }
+.call-resto {
+  font-size: 11px; letter-spacing: 0.3em; font-weight: 700;
+  color: var(--fg-faint); margin: 0;
+}
+.call-center { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.call-avatar {
+  width: 92px; height: 92px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, #FF6E44, #ff8e6b);
+  color: #FFFCF5;
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: 40px; font-weight: 700;
+}
+body.on-call .call-avatar { animation: ring 2s ease-in-out infinite; }
+@keyframes ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,110,68,0.45); }
+  50%      { box-shadow: 0 0 0 18px rgba(255,110,68,0); }
+}
+.call-name {
+  font-family: 'MuseoModerno', sans-serif;
+  font-size: 24px; font-weight: 600; color: #FFFCF5; margin: 0;
+}
+.call-state { font-size: 14px; color: var(--fg-muted); margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+.voice-eq.big { height: 44px; gap: 5px; }
+.voice-eq.big i { width: 5px; border-radius: 3px; }
+.voice-eq.big i:nth-child(6) { height: 85%; }
+.voice-eq.big i:nth-child(7) { height: 55%; }
+.voice-eq.big i:nth-child(8) { height: 70%; }
+.voice-eq.big i:nth-child(9) { height: 42%; }
+body.on-call .voice-eq i:nth-child(6) { animation-delay: 0.18s; }
+body.on-call .voice-eq i:nth-child(7) { animation-delay: 0.3s; }
+body.on-call .voice-eq i:nth-child(8) { animation-delay: 0.06s; }
+body.on-call .voice-eq i:nth-child(9) { animation-delay: 0.42s; }
+.call-end {
+  width: 62px; height: 62px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: #e5484d; color: #fff;
+  font-size: 24px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s, background 0.15s;
+}
+.call-end span { display: block; transform: rotate(135deg); }
+.call-end:hover { transform: scale(1.08); background: #f25b60; }
+
+/* écran carte : scrollable comme sur un vrai téléphone */
 .screen-menu { background: #FFFCF5; }
 .menu-paper-mini {
   height: 100%; overflow-y: auto;
   color: #2B4150;
-  padding: 50px 20px 28px;
+  padding: 44px 18px 26px;
   overscroll-behavior: contain;
 }
 .menu-paper-mini::-webkit-scrollbar { width: 5px; }
 .menu-paper-mini::-webkit-scrollbar-thumb { background: rgba(43,65,80,0.25); border-radius: 4px; }
+.menu-photo {
+  width: 100%; height: 116px; object-fit: cover;
+  border-radius: 12px; display: block; margin-bottom: 14px;
+}
 
 /* apparition au scroll */
 .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
@@ -613,6 +642,13 @@ body.on-call { padding-bottom: 116px; }
 .page-guide table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
 .page-guide th, .page-guide td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-muted); margin-bottom: 24px; letter-spacing: 0.08em; }
+
+@media (max-width: 980px) {
+  /* mobile/tablette : le CTA d'abord, puis les téléphones côte à côte si possible */
+  .stage-center { order: -1; flex-basis: 100%; }
+  .stage-row { gap: 28px; }
+  .phone-frame { width: min(250px, 76vw); height: 508px; }
+}
 
 @media (max-width: 760px) {
   .menu-fixed { grid-template-columns: 1fr; gap: 28px; }
