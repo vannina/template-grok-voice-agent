@@ -71,12 +71,25 @@
   },
   "services": [
     "Terrasse ombragée sous les platanes centenaires et verrière",
-    "Rooftop Achille's Bar avec vue sur les Alpilles",
+    "Rooftop Achille's Bar avec vue sur les Alpilles (carte tapas, pool bar)",
     "Options végétariennes sur demande",
     "Accords mets & vins sur tous les menus",
-    "Animaux de compagnie acceptés",
-    "Salons pour réunions et événements (l'hôtel accueille séminaires et réceptions)"
+    "Animaux de compagnie acceptés (sauf rooftop et espace piscine)",
+    "Salons pour réunions et événements (séminaires jusqu'à 16 personnes, restaurant et bar aménageables)"
   ],
+  "services_hotel": {
+    "voiturier": "Service de voiturier optionnel : 15 €",
+    "parking": "Parking privé sécurisé : 30 € par nuit (clients de l'hôtel). Stationnement également possible dans le centre de Saint-Rémy à proximité.",
+    "reception": "Réception ouverte 24h/24",
+    "conciergerie": "Conciergerie à disposition : activités, transferts depuis ou vers la gare et l'aéroport, demandes particulières",
+    "spa": "Spa avec soins Sothys : massages, soins du visage, rituels. Accueil 10h-19h, soins 13h-19h sur rendez-vous. Journées Spa ouvertes aussi aux personnes extérieures à l'hôtel.",
+    "piscine": "Piscine extérieure tempérée, transats et parasols (réservée aux clients de l'hôtel)",
+    "fitness": "Salle de fitness équipée",
+    "baby_sitting": "Baby-sitting sur demande (préavis d'une semaine minimum)",
+    "pmr": "Deux chambres aménagées pour les personnes à mobilité réduite",
+    "acces": "À 30 minutes de la gare d'Avignon TGV, 1 heure de l'aéroport de Marseille-Provence",
+    "paiement": "Cartes Visa et Mastercard, espèces"
+  },
   "capacite": {
     "tables_par_creneau": 10,
     "duree_table_minutes": 90,

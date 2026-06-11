@@ -15,6 +15,10 @@ const $status      = document.getElementById("status");
 const $chat        = document.getElementById("chat");
 const $configInfo  = document.getElementById("config-info");
 const $afterCall   = document.getElementById("after-call");
+const $callCard    = document.getElementById("call-card");
+const $callBar     = document.getElementById("call-bar");
+const $callBarStatus = document.getElementById("call-bar-status");
+const $hangup      = document.getElementById("hangup");
 
 let running = false;
 let ws = null;
@@ -28,8 +32,27 @@ let wsOpen = false;
 let assistantBubble = null;
 let pendingEndCall = false;
 let hadConversation = false;
+let lastBooking = null;   // mémorise la dernière résa confirmée pour le récap de fin d'appel
 
-const setStatus = s => { $status.textContent = s; };
+// Filet de sécurité (même liste que le chemin Twilio dans server.py) :
+// Margot dit souvent « au revoir » sans émettre end_call → on raccroche nous-mêmes.
+const GOODBYES = [
+  "au revoir", "bonne soirée", "bonne journée",
+  "à très vite", "à bientôt", "bonne fin de",
+  "merci d'avoir appelé", "à plus tard",
+];
+
+const setStatus = s => {
+  $status.textContent = s;
+  if ($callBarStatus) $callBarStatus.textContent = s;
+};
+
+// Auto-scroll DANS la carte conversation uniquement (jamais la page entière),
+// et seulement si le lecteur est déjà près du bas (il peut relire sans être arraché).
+function scrollChat(force = false) {
+  const nearBottom = $chat.scrollHeight - $chat.scrollTop - $chat.clientHeight < 140;
+  if (force || nearBottom) $chat.scrollTop = $chat.scrollHeight;
+}
 
 function addBubble(kind, text = "", labelText = null) {
   const row = document.createElement("div");
@@ -43,7 +66,7 @@ function addBubble(kind, text = "", labelText = null) {
   row.appendChild(role);
   row.appendChild(body);
   $chat.appendChild(row);
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  scrollChat();
   return body;
 }
 
@@ -133,15 +156,15 @@ function toolBubbleEnd(name, result) {
     return "✅ Réservation enregistrée dans l'agenda du restaurant.";
   }
   if (name === "book_reservation" && result && result.status === "full") {
-    return "📋 Créneau complet — Margot propose une alternative.";
+    return "📋 Créneau complet : Margot propose une alternative.";
   }
   if (name === "check_availability" && result && typeof result.available !== "undefined") {
     return result.available
       ? `✅ Des tables sont disponibles (${result.tables_libres ?? "?"} libre(s) sur ce créneau).`
-      : "📋 Créneau complet — Margot cherche une alternative.";
+      : "📋 Créneau complet : Margot cherche une alternative.";
   }
   if (result && result.status === "error") {
-    return "⚠️ Petit souci technique côté agenda — Margot s'adapte.";
+    return "⚠️ Petit souci technique côté agenda : Margot s'adapte.";
   }
   return null; // pas de bulle de fin
 }
@@ -154,6 +177,16 @@ async function start() {
   $toggleLabel.textContent = "Raccrocher";
   $toggle.classList.add("recording");
   $afterCall.classList.remove("visible");
+  // Nouvelle conversation : carte visible et vidée, barre d'appel fixe affichée.
+  $chat.innerHTML = "";
+  lastBooking = null;
+  const $recap = document.getElementById("recap");
+  if ($recap) $recap.hidden = true;
+  $callCard.hidden = false;
+  $callCard.classList.remove("ended");
+  $callBar.hidden = false;
+  document.body.classList.add("on-call");
+  $callCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
   setStatus("préparation…");
 
   const micPromise    = navigator.mediaDevices.getUserMedia({
@@ -199,7 +232,7 @@ async function start() {
 
   ws.onopen = () => {
     wsOpen = true;
-    setStatus("en ligne — dites bonjour !");
+    setStatus("en ligne, dites bonjour !");
     ws.send(JSON.stringify({
       type: "session.update",
       session: {
@@ -244,12 +277,19 @@ function handleEvent(event) {
     case "response.output_text.delta": {
       if (!assistantBubble) assistantBubble = addBubble("assistant", "", "Margot");
       assistantBubble.textContent += event.delta || "";
-      window.scrollTo({ top: document.body.scrollHeight });
+      scrollChat();
       break;
     }
     case "response.audio_transcript.done":
     case "response.output_audio_transcript.done":
     case "response.done": {
+      // Auto-raccrochage : si l'au revoir est dans le transcript, on arme le hang-up
+      // (même si le modèle oublie end_call). Déclenché à response.done, après drain audio.
+      const spoken = (event.transcript || assistantBubble?.textContent || "").toLowerCase();
+      if (!pendingEndCall && spoken && GOODBYES.some(g => spoken.includes(g))) {
+        console.log("[call] auto-hangup armé (au revoir détecté)");
+        pendingEndCall = true;
+      }
       assistantBubble = null;
       if (event.type === "response.done" && pendingEndCall) {
         pendingEndCall = false;
@@ -284,7 +324,7 @@ function handleEvent(event) {
 
     case "error":
       console.error("[xai] ERROR", event.error || event);
-      setStatus("petit souci technique — relancez l'appel");
+      setStatus("petit souci technique, relancez l'appel");
       break;
 
     default:
@@ -314,6 +354,9 @@ async function handleFunctionCall(event) {
   }
 
   console.log(`[tool] ← ${name}`, result);
+  if (name === "book_reservation" && result && result.status === "confirmed") {
+    lastBooking = { ...args };   // pour le récap affiché après le raccrochage
+  }
   const endText = toolBubbleEnd(name, result);
   if (endText) addBubble("tool", endText, "Agenda");
 
@@ -328,10 +371,40 @@ async function handleFunctionCall(event) {
   ws.send(JSON.stringify({ type: "response.create" }));
 }
 
+// La conversation est effacée au raccrochage : seul un récap des infos
+// importantes reste (réservation confirmée : couverts, date, heure, nom).
+function showRecap() {
+  const $recap = document.getElementById("recap");
+  if (!$recap) return;
+  if (!lastBooking) { $recap.hidden = true; return; }
+  let when = lastBooking.date || "";
+  try {
+    const d = new Date(`${lastBooking.date}T${(lastBooking.time || "12:00")}:00`);
+    when = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  } catch {}
+  const heure = (lastBooking.time || "").replace(":", "h");
+  $recap.innerHTML = `
+    <span class="recap-check">✅</span>
+    <div>
+      <b>Réservation confirmée</b> : table pour ${lastBooking.party_size || "?"},
+      ${when} à ${heure}${lastBooking.name ? `, au nom de ${lastBooking.name}` : ""}.
+      <span class="recap-note">Elle est déjà dans l'agenda du restaurant.</span>
+    </div>`;
+  $recap.hidden = false;
+}
+
 async function stop() {
   running = false;
   $toggleLabel.textContent = "🎙️ Parler à Margot";
   $toggle.classList.remove("recording");
+  // Raccrochage : la barre disparaît, la conversation est effacée,
+  // seul le récap (si réservation) reste à l'écran.
+  $callBar.hidden = true;
+  $callCard.hidden = true;
+  $callCard.classList.add("ended");
+  $chat.innerHTML = "";
+  document.body.classList.remove("on-call");
+  showRecap();
   setStatus("appel terminé");
   try { ws?.close(); } catch {}
   try { micNode?.disconnect(); } catch {}
@@ -347,3 +420,64 @@ $toggle.addEventListener("click", () => {
   if (running) stop().catch(e => console.error(e));
   else start().catch(e => { console.error("start failed:", e); setStatus("micro refusé ou indisponible"); stop(); });
 });
+
+$hangup.addEventListener("click", () => { if (running) stop().catch(e => console.error(e)); });
+
+// ---- page resto : carte du menu + infos pratiques (depuis /api/restaurant) ---
+// Une seule source de vérité : web/config/restaurant.json. Dupliquer le template
+// pour un autre établissement = changer ce JSON, la page suit.
+
+function menuItem(raw) {
+  const [label, price] = raw.split(" — ");
+  if (!price) return `<p class="menu-note">${raw}</p>`;
+  return `<div class="menu-item"><span>${label}</span><span class="dots"></span><span class="price">${price}</span></div>`;
+}
+
+async function loadRestaurantPage() {
+  let r;
+  try { r = await (await fetch("/api/restaurant")).json(); }
+  catch (e) { console.error("[resto] fiche indisponible", e); return; }
+
+  const $menu = document.getElementById("menu-content");
+  if ($menu && r.menus) {
+    const fixed = r.menus.map(m => `
+      <div class="menu-box">
+        <h4>${m.nom}</h4>
+        <span class="menu-price">${m.prix}${m.service && m.service !== "midi et soir" ? " · " + m.service : ""}</span>
+        <p>${m.contenu.replaceAll(" · ", "<br/>")}</p>
+        <span class="menu-wine">${m.accord_vins || ""}</span>
+      </div>`).join("");
+    const c = r.carte || {};
+    const section = (titre, items) => items?.length
+      ? `<div class="menu-section"><h4>${titre}</h4>${items.map(menuItem).join("")}</div>` : "";
+    $menu.innerHTML = `
+      <div class="menu-fixed">${fixed}</div>
+      ${section("Entrées", c.entrees)}
+      ${section("Plats", c.plats)}
+      ${section("Pièces à partager", c.pieces_a_partager)}
+      ${section("Desserts", c.desserts)}`;
+  }
+
+  const fill = (id, items) => {
+    const ul = document.querySelector(`#${id} ul`);
+    if (ul) ul.innerHTML = items.filter(Boolean).map(t => `<li>${t}</li>`).join("");
+  };
+  const h = r.horaires || {}, sh = r.services_hotel || {};
+  fill("info-horaires", [
+    `<b>Déjeuner</b> · ${h.services?.dejeuner || ""}`,
+    `<b>Dîner</b> · ${h.services?.diner || ""}`,
+    h.restaurant,
+    h.bar,
+    r.saison,
+  ]);
+  fill("info-acces", [
+    `<b>${r.adresse}</b>`,
+    sh.acces,
+    sh.parking,
+    sh.voiturier,
+    `Réservations : <b>${r.telephone_affiche}</b> ou demandez à Margot ci-dessus`,
+  ]);
+  fill("info-services", (r.services || []).concat([sh.spa ? "Spa Sothys et piscine de l'hôtel" : null, sh.conciergerie ? "Conciergerie (transferts, activités)" : null]));
+}
+
+loadRestaurantPage();
