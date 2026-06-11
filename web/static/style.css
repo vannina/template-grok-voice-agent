@@ -109,6 +109,7 @@ code.accent {
   letter-spacing: 0.02em;
 }
 .back-site:hover { color: var(--accent); }
+.tel-label { margin-left: 2px; }
 .cta-pill.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -728,13 +729,19 @@ body.on-call { padding-bottom: 116px; }
 }
 
 @media (max-width: 640px) {
-  .topbar { padding: 14px 18px; }
+  .topbar { padding: 10px 14px; gap: 8px; flex-wrap: nowrap; }
   .topnav { display: none; }
   .demo-badge { display: none; }
-  .topbar-right { gap: 10px; }
+  .brand { gap: 8px; }
+  .brand-mark { width: 32px; height: 32px; font-size: 17px; border-radius: 9px; }
+  .brand-name { font-size: 14px; white-space: nowrap; }
+  .topbar-right { gap: 8px; flex: none; }
+  .back-site { font-size: 12px; white-space: nowrap; }
   .back-site span { display: inline; }
-  .topbar .cta-pill { padding: 10px 14px; font-size: 13px; }
-  .app-main { padding: 60px 20px 72px; }
+  .topbar .cta-pill { padding: 9px 12px; font-size: 12px; white-space: nowrap; }
+  .topbar .tel-label { display: none; }  /* mobile : icône seule, le numéro reste cliquable */
+  .app-main { padding: 76px 18px 72px; }
+  .stage-title { font-size: 28px; }
   .row { max-width: 88%; }
   .transcript { padding: 18px 16px 22px; max-height: 52vh; }
   .call-card-head { padding: 13px 16px; }
