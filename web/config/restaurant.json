@@ -77,9 +77,14 @@
     "Animaux de compagnie acceptés (sauf rooftop et espace piscine)",
     "Salons pour réunions et événements (séminaires jusqu'à 16 personnes, restaurant et bar aménageables)"
   ],
+  "stationnement_restaurant": {
+    "voiturier": "Service de voiturier en option : 15 € (la bonne réponse pour un client qui vient déjeuner ou dîner)",
+    "a_proximite": "Stationnement facile dans le centre de Saint-Rémy, à deux pas du restaurant (parkings publics et places en bordure)",
+    "note": "Le parking privé à 30 € la nuit ne concerne QUE les clients qui dorment à l'hôtel : ne pas le proposer pour un simple repas."
+  },
   "services_hotel": {
     "voiturier": "Service de voiturier optionnel : 15 €",
-    "parking": "Parking privé sécurisé : 30 € par nuit (clients de l'hôtel). Stationnement également possible dans le centre de Saint-Rémy à proximité.",
+    "parking": "Parking privé sécurisé : 30 € par nuit, réservé aux clients qui séjournent à l'hôtel. Pour un repas au restaurant : voiturier en option (15 €) ou stationnement dans le centre à proximité.",
     "reception": "Réception ouverte 24h/24",
     "conciergerie": "Conciergerie à disposition : activités, transferts depuis ou vers la gare et l'aéroport, demandes particulières",
     "spa": "Spa avec soins Sothys : massages, soins du visage, rituels. Accueil 10h-19h, soins 13h-19h sur rendez-vous. Journées Spa ouvertes aussi aux personnes extérieures à l'hôtel.",
@@ -89,6 +94,14 @@
     "pmr": "Deux chambres aménagées pour les personnes à mobilité réduite",
     "acces": "À 30 minutes de la gare d'Avignon TGV, 1 heure de l'aéroport de Marseille-Provence",
     "paiement": "Cartes Visa et Mastercard, espèces"
+  },
+  "questions_frequentes": {
+    "fumeurs": "Le restaurant et les espaces intérieurs sont non-fumeurs. Un espace de la terrasse du bar est réservé aux fumeurs.",
+    "groupes_evenements": "Au-delà de 12 couverts ou pour un événement : salle jusqu'à 16 personnes, restaurant et bar aménageables. Margot propose de mettre en relation avec la réception (04 84 51 04 51).",
+    "allergies_regimes": "Options végétariennes à la carte. Allergies, intolérances ou régimes : Margot le note dans la réservation (champ notes) et la cuisine en tient compte.",
+    "enfants": "Les familles sont les bienvenues. Pour un besoin précis (chaise haute, menu adapté), Margot le note dans la réservation et l'équipe confirme à l'arrivée.",
+    "horaires_variables": "Les horaires peuvent varier selon la saison.",
+    "reservation_en_ligne": "Réservation possible par téléphone avec Margot, ou sur le site le-saint-remy.fr."
   },
   "capacite": {
     "tables_par_creneau": 10,

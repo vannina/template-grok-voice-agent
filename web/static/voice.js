@@ -5,7 +5,10 @@
 // Règle du template : chaque function de tools.json a un handler ici (navigateur)
 // ET dans _server_tool_call de web/server.py (téléphone).
 
-const SAMPLE_RATE = 24000;
+// 24 kHz par défaut ; iOS Safari peut refuser un sampleRate forcé → on retombe
+// sur le rate natif de l'appareil (souvent 48 kHz) et on le DÉCLARE à xAI.
+const PREFERRED_RATE = 24000;
+let sampleRate = PREFERRED_RATE;
 const MODEL = "grok-voice-think-fast-1.0";
 const VOICE = "69smp8rm";   // voix française « Camille » (bibliothèque Grok Voice)
 
@@ -115,7 +118,7 @@ function base64PCM16ToFloat32(b64) {
 
 function schedulePlayback(float32) {
   if (!audioCtx) return;
-  const buf = audioCtx.createBuffer(1, float32.length, SAMPLE_RATE);
+  const buf = audioCtx.createBuffer(1, float32.length, sampleRate);
   buf.copyToChannel(float32, 0);
   const src = audioCtx.createBufferSource();
   src.buffer = buf;
@@ -158,32 +161,32 @@ const FUNCTIONS = {
 // Bulles lisibles pour le grand public (le JSON brut reste en console).
 function toolBubbleStart(name, args) {
   if (name === "check_availability") {
-    return `🔎 Margot vérifie les disponibilités du ${args.date || ""} à ${args.time || ""}…`;
+    return `Margot vérifie les disponibilités du ${args.date || ""} à ${args.time || ""}…`;
   }
   if (name === "book_reservation") {
-    return `📅 Enregistrement de la réservation au nom de ${args.name || "…"} (${args.party_size || "?"} pers.)…`;
+    return `Enregistrement de la réservation au nom de ${args.name || "…"} (${args.party_size || "?"} pers.)…`;
   }
   if (name === "get_restaurant_info") {
-    return "📖 Margot consulte la carte et les informations du restaurant…";
+    return "Margot consulte la carte et les informations du restaurant…";
   }
-  if (name === "end_call") return "👋 Fin d'appel demandée.";
+  if (name === "end_call") return "Fin d'appel demandée.";
   return `→ ${name}`;
 }
 
 function toolBubbleEnd(name, result) {
   if (name === "book_reservation" && result && result.status === "confirmed") {
-    return "✅ Réservation enregistrée dans l'agenda du restaurant.";
+    return "Réservation enregistrée dans l'agenda du restaurant.";
   }
   if (name === "book_reservation" && result && result.status === "full") {
-    return "📋 Créneau complet : Margot propose une alternative.";
+    return "Créneau complet : Margot propose une alternative.";
   }
   if (name === "check_availability" && result && typeof result.available !== "undefined") {
     return result.available
-      ? `✅ Des tables sont disponibles (${result.tables_libres ?? "?"} libre(s) sur ce créneau).`
-      : "📋 Créneau complet : Margot cherche une alternative.";
+      ? `Des tables sont disponibles (${result.tables_libres ?? "?"} libre(s) sur ce créneau).`
+      : "Créneau complet : Margot cherche une alternative.";
   }
   if (result && result.status === "error") {
-    return "⚠️ Petit souci technique côté agenda : Margot s'adapte.";
+    return "Petit souci technique côté agenda : Margot s'adapte.";
   }
   return null; // pas de bulle de fin
 }
@@ -206,11 +209,13 @@ async function start() {
   $callBar.hidden = false;
   document.body.classList.add("on-call");
   startCallTimer();
-  $callCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const callTarget = window.matchMedia("(max-width: 980px)").matches
+    ? document.querySelector(".phone-left") : $callCard;
+  (callTarget || $callCard).scrollIntoView({ behavior: "smooth", block: "center" });
   setStatus("préparation…");
 
   const micPromise    = navigator.mediaDevices.getUserMedia({
-    audio: { channelCount: 1, sampleRate: SAMPLE_RATE, echoCancellation: true, noiseSuppression: true }
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
   });
   const tokenPromise  = fetch("/token",  { method: "POST" }).then(r => { if (!r.ok) throw new Error("token "+r.status); return r.json(); });
   const configPromise = fetch("/config").then(r => { if (!r.ok) throw new Error("config "+r.status); return r.json(); });
@@ -230,7 +235,12 @@ async function start() {
 
   console.log(`[config] tools: ${config.tools.length} • prompt: ${config.instructions.length} chars`);
 
-  audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  // iOS Safari : un sampleRate forcé peut jeter une exception → fallback natif.
+  try { audioCtx = new AudioContext({ sampleRate: PREFERRED_RATE }); }
+  catch { audioCtx = new AudioContext(); }
+  sampleRate = audioCtx.sampleRate;
+  if (audioCtx.state === "suspended") { try { await audioCtx.resume(); } catch {} }
+  console.log(`[audio] sampleRate=${sampleRate}`);
   const source = audioCtx.createMediaStreamSource(stream);
   micNode = audioCtx.createScriptProcessor(4096, 1, 1);
   source.connect(micNode);
@@ -262,8 +272,8 @@ async function start() {
         turn_detection: { type: "server_vad" },
         input_audio_transcription: { model: "whisper-1" },
         audio: {
-          input:  { format: { type: "audio/pcm", rate: SAMPLE_RATE } },
-          output: { format: { type: "audio/pcm", rate: SAMPLE_RATE } }
+          input:  { format: { type: "audio/pcm", rate: sampleRate } },
+          output: { format: { type: "audio/pcm", rate: sampleRate } }
         }
       }
     }));
@@ -403,8 +413,9 @@ function showRecap() {
     when = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   } catch {}
   const heure = (lastBooking.time || "").replace(":", "h");
+  $recap.classList.remove("error");
   $recap.innerHTML = `
-    <span class="recap-check">✅</span>
+    <span class="recap-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></span>
     <div>
       <b>Réservation confirmée</b> : table pour ${lastBooking.party_size || "?"},
       ${when} à ${heure}${lastBooking.name ? `, au nom de ${lastBooking.name}` : ""}.
@@ -415,7 +426,7 @@ function showRecap() {
 
 async function stop() {
   running = false;
-  $toggleLabel.textContent = "🎙️ Parler à Margot";
+  $toggleLabel.textContent = "Appeler le restaurant";
   $toggle.classList.remove("recording");
   // Raccrochage : la barre disparaît, la conversation est effacée,
   // seul le récap (si réservation) reste à l'écran.
@@ -438,8 +449,20 @@ async function stop() {
 }
 
 $toggle.addEventListener("click", () => {
-  if (running) stop().catch(e => console.error(e));
-  else start().catch(e => { console.error("start failed:", e); setStatus("micro refusé ou indisponible"); stop(); });
+  if (running) { stop().catch(e => console.error(e)); return; }
+  start().catch(e => {
+    console.error("start failed:", e);
+    const msg = (e && (e.name === "NotAllowedError" || e.name === "SecurityError"))
+      ? "micro refusé : autorise le micro pour parler à Margot (icône AA ou Réglages > Safari > Micro)"
+      : "démarrage impossible : " + (e && e.message ? e.message : "réessaie dans un instant");
+    stop().catch(() => {});
+    setStatus(msg);
+    const r = document.getElementById("recap");
+    if (r) {
+      r.innerHTML = `<span class="recap-check warn">!</span><div><b>L'appel n'a pas pu démarrer.</b> ${msg}.</div>`;
+      r.hidden = false; r.classList.add("error");
+    }
+  });
 });
 
 $hangup.addEventListener("click", () => { if (running) stop().catch(e => console.error(e)); });

@@ -96,6 +96,19 @@ code.accent {
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .cta-pill:hover { border-color: var(--fg); }
+
+/* icônes SVG inline (tracés Lucide, comme la bibliothèque du site) */
+.ic { width: 1.05em; height: 1.05em; flex: none; vertical-align: -0.14em; }
+.stage-margot .ic { color: var(--accent); }
+
+/* retour vers le site principal (indispensable sur mobile : pas de menu ici) */
+.topbar-right { display: flex; align-items: center; gap: 18px; }
+.back-site {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 600; color: var(--fg-muted);
+  letter-spacing: 0.02em;
+}
+.back-site:hover { color: var(--accent); }
 .cta-pill.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -181,7 +194,20 @@ body.on-call .voice-eq i:nth-child(5) { animation-delay: 0.48s; }
 }
 .recap[hidden] { display: none; }
 .recap b { color: var(--fg); }
-.recap-check { font-size: 20px; line-height: 1.3; }
+.recap-check {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; flex: none;
+  color: #4caf7d;
+}
+.recap-check svg { width: 100%; height: 100%; }
+.recap.error {
+  background: rgba(255,110,68,0.10);
+  border-color: rgba(255,110,68,0.5);
+}
+.recap-check.warn {
+  color: var(--accent); font-weight: 800; font-size: 19px;
+  border: 2px solid var(--accent); border-radius: 50%;
+}
 .recap-note { display: block; color: var(--fg-muted); font-size: 13.5px; margin-top: 4px; }
 
 /* ---------- scène démo : deux téléphones, CTA au centre ---------- */
@@ -705,7 +731,10 @@ body.on-call { padding-bottom: 116px; }
   .topbar { padding: 14px 18px; }
   .topnav { display: none; }
   .demo-badge { display: none; }
-  .app-main { padding: 40px 20px 72px; }
+  .topbar-right { gap: 10px; }
+  .back-site span { display: inline; }
+  .topbar .cta-pill { padding: 10px 14px; font-size: 13px; }
+  .app-main { padding: 60px 20px 72px; }
   .row { max-width: 88%; }
   .transcript { padding: 18px 16px 22px; max-height: 52vh; }
   .call-card-head { padding: 13px 16px; }
