@@ -64,6 +64,63 @@ XAI_RATE_PER_MIN = float(os.environ.get("XAI_RATE_PER_MIN", "0.05"))  # ~0,05 $/
 XAI_CREDIT_TOTAL = float(os.environ.get("XAI_CREDIT_TOTAL", "40"))    # 40 $ équipe Alpha
 AVG_SESSION_MIN = 1.5  # estimation pour les sessions sans durée remontée
 
+# Alertes Telegram conso : palier tous les 10 $ + alerte "reste 10 $".
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+ALERT_STEP_USD = 10.0
+
+
+async def _telegram_send(text: str) -> None:
+    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
+        print("[usage] telegram non configuré, alerte sautée")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"},
+            )
+    except Exception as e:  # noqa: BLE001
+        print(f"[usage] telegram send failed: {e}")
+
+
+def _alerts_fired() -> set[int]:
+    fired: set[int] = set()
+    if USAGE_LOG.exists():
+        for line in USAGE_LOG.read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+                if e.get("event") == "alert":
+                    fired.add(int(e["palier"]))
+            except Exception:  # noqa: BLE001
+                continue
+    return fired
+
+
+async def _check_credit_alerts() -> None:
+    """Après chaque fin d'appel : franchit-on un nouveau palier de 10 $ ?"""
+    agg = _aggregate_usage()
+    cost = agg["cout_estime_usd"]
+    restant = agg["credit_restant_estime_usd"]
+    fired = _alerts_fired()
+    # paliers consommés : 10, 20, 30… sous le total
+    paliers = [int(p) for p in range(int(ALERT_STEP_USD), int(XAI_CREDIT_TOTAL), int(ALERT_STEP_USD))]
+    for p in paliers:
+        if cost >= p and p not in fired:
+            reste10 = (XAI_CREDIT_TOTAL - p) <= ALERT_STEP_USD + 0.01
+            if reste10:
+                msg = (f"🔴 <b>Crédit Grok bientôt épuisé</b>\n"
+                       f"Démo agent vocal : <b>{cost:.2f} $</b> consommés sur {XAI_CREDIT_TOTAL:.0f} $.\n"
+                       f"Il ne reste plus que <b>{restant:.2f} $</b> ({agg['sessions_total']} appels).\n"
+                       f"→ recharger le compte xAI de l'équipe.")
+            else:
+                msg = (f"🟠 <b>Conso Grok : palier {p} $</b>\n"
+                       f"Démo agent vocal : <b>{cost:.2f} $</b> consommés sur {XAI_CREDIT_TOTAL:.0f} $.\n"
+                       f"Reste ~<b>{restant:.2f} $</b> ({agg['sessions_total']} appels, {agg['minutes_estimees']} min).")
+            await _telegram_send(msg)
+            _usage_append({"event": "alert", "palier": p, "cost": round(cost, 2)})
+            fired.add(p)
+
 
 def _usage_append(event: dict) -> None:
     """Append-only, best-effort : ne jamais casser un appel à cause du log."""
@@ -355,6 +412,7 @@ async def usage_end(u: UsageEnd) -> JSONResponse:
     """La SPA remonte la durée réelle de l'appel au raccrochage (sendBeacon)."""
     secs = max(0.0, min(u.seconds, 3600))  # garde-fou : 1 h max
     _usage_append({"event": "end", "path": "browser", "seconds": round(secs, 1)})
+    await _check_credit_alerts()
     return JSONResponse({"ok": True})
 
 
