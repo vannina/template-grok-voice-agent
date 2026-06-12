@@ -45,6 +45,7 @@ function stopCallTimer() {
   if (callStartedAt) {
     const seconds = (Date.now() - callStartedAt) / 1000;
     callStartedAt = 0;
+    track("demo_completed", { duration_s: Math.round(seconds), booked: !!lastBooking });
     try {
       const blob = new Blob([JSON.stringify({ seconds })], { type: "application/json" });
       navigator.sendBeacon("/usage/end", blob);
@@ -78,6 +79,12 @@ const setStatus = s => {
   $status.textContent = s;
   if ($callBarStatus) $callBarStatus.textContent = s;
 };
+
+// GA4 : entonnoir de la démo (demo_started / demo_completed / reservation_booked)
+function track(event, params = {}) {
+  try { if (typeof gtag === "function") gtag("event", event, params); }
+  catch (e) { /* GA absent, on ignore */ }
+}
 
 // Auto-scroll DANS la carte conversation uniquement (jamais la page entière),
 // et seulement si le lecteur est déjà près du bas (il peut relire sans être arraché).
@@ -206,6 +213,7 @@ function toolBubbleEnd(name, result) {
 async function start() {
   running = true;
   hadConversation = true;
+  track("demo_started");
   $toggleLabel.textContent = "Raccrocher";
   $toggle.classList.add("recording");
   $afterCall.classList.remove("visible");
@@ -396,6 +404,7 @@ async function handleFunctionCall(event) {
   console.log(`[tool] ← ${name}`, result);
   if (name === "book_reservation" && result && result.status === "confirmed") {
     lastBooking = { ...args };   // pour le récap affiché après le raccrochage
+    track("reservation_booked", { party_size: args.party_size || 0 });
   }
   const endText = toolBubbleEnd(name, result);
   if (endText) addBubble("tool", endText, "Agenda");
