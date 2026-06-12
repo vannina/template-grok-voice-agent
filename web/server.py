@@ -56,6 +56,25 @@ TABLE_DURATION_MIN = int(os.environ.get("TABLE_DURATION_MIN", "90"))
 # Fenêtres de service (heures locales) pour proposer des alternatives crédibles.
 SERVICE_WINDOWS = [("12:00", "13:30"), ("19:30", "21:00")]  # dernière réservation
 
+# --- Suivi de consommation xAI (le crédit est sur le compte de l'équipe, pas
+#     celui de Vannina, donc on l'estime nous-mêmes côté serveur) ---------------
+USAGE_LOG = Path(os.environ.get("USAGE_LOG_PATH", "/app/data/usage.jsonl"))
+USAGE_TOKEN = os.environ.get("USAGE_TOKEN", "cs-margot")   # protège GET /usage
+XAI_RATE_PER_MIN = float(os.environ.get("XAI_RATE_PER_MIN", "0.05"))  # ~0,05 $/min
+XAI_CREDIT_TOTAL = float(os.environ.get("XAI_CREDIT_TOTAL", "40"))    # 40 $ équipe Alpha
+AVG_SESSION_MIN = 1.5  # estimation pour les sessions sans durée remontée
+
+
+def _usage_append(event: dict) -> None:
+    """Append-only, best-effort : ne jamais casser un appel à cause du log."""
+    try:
+        USAGE_LOG.parent.mkdir(parents=True, exist_ok=True)
+        event["ts"] = datetime.now(TZ).isoformat()
+        with USAGE_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except Exception as e:  # noqa: BLE001
+        print(f"[usage] write failed: {e}")
+
 FR_DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 FR_MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
              "août", "septembre", "octobre", "novembre", "décembre"]
@@ -323,7 +342,66 @@ async def mint_token() -> JSONResponse:
         )
     if r.status_code >= 300:
         raise HTTPException(r.status_code, f"xAI token mint failed: {r.text}")
+    _usage_append({"event": "start", "path": "browser"})
     return JSONResponse({"client_secret": r.json(), "model": MODEL})
+
+
+class UsageEnd(BaseModel):
+    seconds: float = 0.0
+
+
+@app.post("/usage/end")
+async def usage_end(u: UsageEnd) -> JSONResponse:
+    """La SPA remonte la durée réelle de l'appel au raccrochage (sendBeacon)."""
+    secs = max(0.0, min(u.seconds, 3600))  # garde-fou : 1 h max
+    _usage_append({"event": "end", "path": "browser", "seconds": round(secs, 1)})
+    return JSONResponse({"ok": True})
+
+
+def _aggregate_usage() -> dict:
+    sessions = 0
+    durations: list[float] = []
+    today = datetime.now(TZ).date().isoformat()
+    today_sessions = 0
+    by_day: dict[str, int] = {}
+    if USAGE_LOG.exists():
+        for line in USAGE_LOG.read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except Exception:  # noqa: BLE001
+                continue
+            day = (e.get("ts") or "")[:10]
+            if e.get("event") == "start":
+                sessions += 1
+                by_day[day] = by_day.get(day, 0) + 1
+                if day == today:
+                    today_sessions += 1
+            elif e.get("event") == "end" and e.get("seconds"):
+                durations.append(float(e["seconds"]))
+    # minutes mesurées (sessions terminées proprement) + estimation pour le reste
+    measured_min = sum(durations) / 60.0
+    unmeasured = max(0, sessions - len(durations))
+    est_min = measured_min + unmeasured * AVG_SESSION_MIN
+    est_cost = est_min * XAI_RATE_PER_MIN
+    return {
+        "sessions_total": sessions,
+        "sessions_today": today_sessions,
+        "minutes_estimees": round(est_min, 1),
+        "cout_estime_usd": round(est_cost, 2),
+        "credit_total_usd": XAI_CREDIT_TOTAL,
+        "credit_restant_estime_usd": round(max(0.0, XAI_CREDIT_TOTAL - est_cost), 2),
+        "pourcent_consomme": round(100 * est_cost / XAI_CREDIT_TOTAL, 1) if XAI_CREDIT_TOTAL else None,
+        "tarif_min_usd": XAI_RATE_PER_MIN,
+        "par_jour": dict(sorted(by_day.items())),
+        "note": "Estimation côté serveur (le solde exact reste sur console.x.ai du compte équipe).",
+    }
+
+
+@app.get("/usage")
+async def usage_report(key: str = "") -> JSONResponse:
+    if key != USAGE_TOKEN:
+        raise HTTPException(403, "clé d'accès invalide (paramètre ?key=)")
+    return JSONResponse(_aggregate_usage())
 
 
 @app.get("/config")

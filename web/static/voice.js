@@ -27,11 +27,12 @@ const $phoneHangup = document.getElementById("phone-hangup");
 
 // chrono de l'écran d'appel (mockup téléphone)
 let callTimerInterval = null;
+let callStartedAt = 0;
 function startCallTimer() {
-  const t0 = Date.now();
+  callStartedAt = Date.now();
   if ($callTimer) $callTimer.textContent = "00:00";
   callTimerInterval = setInterval(() => {
-    const s = Math.floor((Date.now() - t0) / 1000);
+    const s = Math.floor((Date.now() - callStartedAt) / 1000);
     const mm = String(Math.floor(s / 60)).padStart(2, "0");
     const ss = String(s % 60).padStart(2, "0");
     if ($callTimer) $callTimer.textContent = `${mm}:${ss}`;
@@ -40,6 +41,15 @@ function startCallTimer() {
 function stopCallTimer() {
   clearInterval(callTimerInterval);
   callTimerInterval = null;
+  // remonter la durée réelle au serveur (suivi conso xAI), sans bloquer le raccrochage
+  if (callStartedAt) {
+    const seconds = (Date.now() - callStartedAt) / 1000;
+    callStartedAt = 0;
+    try {
+      const blob = new Blob([JSON.stringify({ seconds })], { type: "application/json" });
+      navigator.sendBeacon("/usage/end", blob);
+    } catch (e) { /* best-effort */ }
+  }
 }
 
 let running = false;
