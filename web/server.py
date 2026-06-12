@@ -143,6 +143,19 @@ def _today_fr() -> str:
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+# Auth REST par clé API (SK + secret) — recommandé par Twilio, plus sûr que
+# l'Auth Token. Si présents, on les utilise ; sinon fallback AccountSID+AuthToken.
+TWILIO_API_KEY_SID = os.environ.get("TWILIO_API_KEY_SID")
+TWILIO_API_KEY_SECRET = os.environ.get("TWILIO_API_KEY_SECRET")
+
+
+def _twilio_rest_auth() -> tuple[str, str] | None:
+    """Couple (user, pass) pour l'API REST Twilio : clé API en priorité."""
+    if TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET:
+        return (TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET)
+    if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        return (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    return None
 
 ROOT = Path(__file__).parent
 STATIC_DIR = ROOT / "static"
@@ -357,11 +370,12 @@ async def _twilio_hangup(call_sid: str) -> None:
     Closing the media-stream WebSocket alone doesn't end the call — Twilio
     keeps the PSTN leg open and the caller hears silence. This is the clean
     way to actually drop the line."""
-    if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and call_sid):
+    auth = _twilio_rest_auth()
+    if not (TWILIO_ACCOUNT_SID and auth and call_sid):
         return
     url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls/{call_sid}.json"
     try:
-        async with httpx.AsyncClient(timeout=10, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)) as client:
+        async with httpx.AsyncClient(timeout=10, auth=auth) as client:
             await client.post(url, data={"Status": "completed"})
     except Exception as e:
         print(f"[twilio] hangup REST call failed: {e}")
