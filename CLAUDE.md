@@ -57,6 +57,38 @@ The app has **two entry points** sharing the same agent config:
    - `web/config/tools.json` — tool definitions sent to xAI. Mix of xAI built-ins (`web_search`, `mcp`) and `function` tools.
    - For each `function` tool you add to `tools.json`, you **must** add a handler in **two places** — keep them in sync: (a) the `FUNCTIONS` object in `web/static/voice.js` for the browser path, and (b) `_server_tool_call` in `web/server.py` for the Twilio path. The browser handler can fetch a server endpoint; the server handler must do the work inline.
 
+## Multi-métier (socle « un agent par métier ») — depuis 2026-06-13
+
+Une **seule** app sert plusieurs métiers (restaurant, hôtel, médical, immobilier,
+artisan, coach, beauté). Le métier est résolu **par requête** depuis le Host :
+
+- `demo-<metier>.corsica-studio.com` → `<metier>` ; `demo.corsica-studio.com`,
+  `localhost`, IP → `DEFAULT_METIER` (env `METIER`, défaut `restaurant`).
+  Override de test local : `?metier=<slug>`. Voir `_resolve_metier()` dans `server.py`.
+- Tout ce qui varie vit dans **`web/config/metiers/<metier>/`** :
+  `system_prompt.txt` + `tools.json` + `business.json` + `profile.json`.
+  Si le dossier n'existe pas, fallback sur `web/config/*` (rétro-compat ; c'est
+  pourquoi la prod restaurant n'a pas bougé). `web/config/metiers/restaurant/` est
+  le **gabarit de référence** à dupliquer.
+- `profile.json` = libellés UI + SEO + paramètres d'agenda. **Aucun secret.** Champs :
+  `agent`, `agent_initial`, `agent_role`, `secteur`, `objet`, `cta_label`, `hero_*`,
+  `home_*`, `call_header`, `chip_1..3`, `showcase_title/sub`, `showcase_kind`
+  (`menu` = rendu carte resto ; `fiche` = rendu générique depuis `business.json.showcase`),
+  `card1_title/bullets`, `conversion_*`, `mailto_subject`, `bubbles{}` (gabarits avec
+  `{agent}{date}{time}{name}{party}{free}`), `recap_*`, `event_summary_label`,
+  `calendar_note`, `calendar_id` (vide → `RESTAURANT_CALENDAR_ID`), `capacity_per_slot`,
+  `slot_duration_min`, `greeting_instruction`. Valeurs par défaut = restaurant dans
+  `_PROFILE_DEFAULTS` (server.py) → la page s'affiche correctement même sans profil.
+- Le serveur injecte le profil dans `index.html` de deux façons : remplacement des
+  placeholders texte `{{CLE_MAJ}}` (clés du profil en MAJUSCULES) **et**
+  `window.__PROFILE__` (objet complet lu par `voice.js`). Endpoints : `GET /config`,
+  `GET /api/profile`, `GET /api/business` (+ alias `/api/restaurant`) — tous résolus
+  par Host. Le chemin Twilio résout le métier via `ws.headers["host"]`.
+- L'agenda est paramétré par métier (`_metier_ctx`) : `calendar_id`, `capacity`,
+  `duration`, `summary_label`, `event_note`. Un calendrier Google partagé
+  « Démo Agent Vocal » pour les 6 nouveaux métiers ; le restaurant garde « Resto ».
+- Smoke test : `./.venv/bin/python _s1_test.py` (22 checks : rendu, fallback, merge profil).
+
 ## Sample rates (don't mix them)
 
 - **Browser path** — 24 kHz everywhere: `SAMPLE_RATE = 24000` in `voice.js`, declared on `getUserMedia`, `AudioContext`, and `session.audio.{input,output}.format.rate`. Mismatched rates produce choppy/sped-up audio.
