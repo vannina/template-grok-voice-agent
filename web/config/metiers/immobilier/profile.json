@@ -8,29 +8,29 @@
   "objet_pluriel": "rendez-vous",
   "action_verbe": "prendre rendez-vous",
 
-  "meta_title": "Démo Agent Vocal IA · Corsica Studio",
-  "meta_description": "Parlez à Clara, la chargée d'accueil vocale IA d'une agence immobilière : renseignements sur les biens, les services, et prise de rendez-vous de visite en direct. Une démo Corsica Studio.",
-  "og_title": "Démo Agent Vocal IA · Corsica Studio",
-  "og_description": "Clara répond au téléphone de l'agence immobilière : biens, honoraires, secteurs et rendez-vous de visite. Faites le test en direct.",
+  "meta_title": "Démo Agent Vocal IA · La Belle Agence · Corsica Studio",
+  "meta_description": "Parlez à Clara, la chargée d'accueil vocale IA de La Belle Agence (Nice, Côte d'Azur) : renseignements sur les biens, l'estimation, les secteurs et prise de rendez-vous de visite en direct. Une démo Corsica Studio.",
+  "og_title": "Démo Agent Vocal IA · La Belle Agence · Corsica Studio",
+  "og_description": "Clara répond au téléphone de La Belle Agence à Nice : biens, estimation, honoraires, secteurs et rendez-vous de visite. Faites le test en direct.",
   "og_image": "",
 
-  "hero_title": "Appelez votre agence.",
+  "hero_title": "Appelez l'agence.",
   "hero_accent": "Clara décroche.",
-  "hero_sub": "Une vraie conversation au téléphone d'une agence immobilière, un vrai rendez-vous dans l'agenda. Posez vos questions, planifiez votre visite.",
-  "home_name": "",
-  "home_tag": "",
+  "hero_sub": "Chaque appel devient un lead qualifié et une visite programmée.",
+  "home_name": "La Belle Agence",
+  "home_tag": "Nice · Côte d'Azur",
   "home_btn_secondary": "Prendre RDV",
-  "call_header": "",
+  "call_header": "LA BELLE AGENCE",
   "cta_label": "Appeler l'agence",
-  "chip_1": "Essayez : <b>« Je voudrais visiter un appartement »</b>",
+  "chip_1": "Essayez : <b>« Je cherche un T3 à Nice centre, budget 350 000 »</b>",
   "chip_2": "<b>« Vous faites des estimations ? »</b>",
-  "chip_3": "<b>« Ce bien est-il toujours disponible ? »</b>",
+  "chip_3": "<b>« Quels secteurs couvrez-vous ? »</b>",
   "showcase_title": "L'agence",
-  "showcase_sub": "Nos biens, nos services et nos secteurs",
+  "showcase_sub": "La Belle Agence · Nice et la Côte d'Azur",
   "showcase_kind": "fiche",
 
   "card1_title": "Zéro lead perdu",
-  "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en clientèle ou en visite, 7j/7</li><li>Capte chaque acheteur et chaque locataire, sans en laisser filer un seul</li><li>Qualifie la demande : achat ou location, type de bien, secteur, budget</li><li>Prend les rendez-vous de visite directement <b>dans votre agenda</b></li><li>Renseigne sur les biens, les honoraires, les secteurs couverts et l'accès</li>",
+  "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en clientèle ou en visite, 7j/7</li><li>Capte et qualifie chaque lead acheteur ou vendeur 24h/24</li><li>Qualifie la demande : achat ou vente, type de bien, secteur, budget</li><li>Programme les rendez-vous de visite directement <b>dans votre agenda</b></li><li>Renseigne sur les biens, l'estimation, les honoraires et les secteurs couverts</li>",
 
   "conversion_title": "Et si Clara répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> agence ?",
   "conversion_text": "Cette page est une démonstration : Clara décroche à chaque appel, qualifie vos contacts et remplit votre agenda de visites, même quand vous êtes en rendez-vous. <b>Installation offerte, premier mois offert.</b>",
@@ -39,8 +39,8 @@
   "bubbles": {
     "info_start": "{agent} consulte les informations de l'agence…",
     "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
-    "book_start": "Enregistrement du rendez-vous au nom de {name}…",
-    "book_confirmed": "Rendez-vous enregistré dans l'agenda de l'agence.",
+    "book_start": "Enregistrement du rendez-vous de visite au nom de {name}…",
+    "book_confirmed": "Rendez-vous de visite enregistré dans l'agenda de l'agence.",
     "book_full": "Créneau complet : {agent} propose une alternative.",
     "check_yes": "Des créneaux sont disponibles ({free} libre(s) sur ce créneau).",
     "check_no": "Créneau complet : {agent} cherche une alternative.",
@@ -54,9 +54,9 @@
 
   "event_summary_label": "RDV visite",
   "calendar_note": "Pris par Clara (agent vocal Corsica Studio)",
-  "calendar_id": "",
+  "calendar_id": "89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com",
   "capacity_per_slot": 3,
   "slot_duration_min": 45,
 
-  "greeting_instruction": "Salue en français, avec le dynamisme professionnel d'une chargée d'accueil d'agence immobilière. Présente-toi sans nommer l'agence : 'Bonjour, Clara à votre écoute.' Une seule phrase, posée et engageante."
+  "greeting_instruction": "Salue en français, avec la chaleur professionnelle d'une chargée d'accueil de belle agence niçoise. Présente-toi AVEC le nom de l'agence : 'La Belle Agence, bonjour, Clara à votre écoute.' Une seule phrase, posée, avenante et soignée."
 }

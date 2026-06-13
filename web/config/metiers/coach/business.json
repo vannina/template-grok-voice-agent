@@ -1,0 +1,137 @@
+{
+  "nom": "ABC Coach Sportif",
+  "tagline": "Définissons ensemble vos objectifs",
+  "positionnement": "Équipe de coachs sportifs diplômés pour un accompagnement personnalisé, en sport-santé, à domicile, en extérieur, en visio ou en ligne. Approche globale : entraînement et nutrition.",
+  "anciennete": "18 ans d'expérience, depuis 2007. Plus de 6000 clients accompagnés.",
+  "telephone_affiche": "06 69 09 91 16",
+  "email": "contact@abc-coach-sportif.com",
+  "zones": "Paris, Lille, Marseille, Aix-en-Provence, Bordeaux et Toulouse.",
+  "horaires": {
+    "telephone": "Joignable 6 jours sur 7, de 7h à 21h.",
+    "seances": "Les séances sont planifiées selon vos disponibilités et celles du coach, dans les zones couvertes."
+  },
+  "lieux": [
+    "À domicile : le coach se déplace chez vous avec le matériel nécessaire (haltères, TRX, élastiques).",
+    "En extérieur : séance en plein air selon votre objectif.",
+    "En ligne : programme d'entraînement à distance.",
+    "En visioconférence : bilan ou séance encadrée à distance."
+  ],
+  "prestations": {
+    "particuliers": [
+      "Coaching sportif à domicile, personnalisé et individuel",
+      "Coaching en ligne et accompagnement à distance",
+      "Bilan de forme en visioconférence",
+      "Coaching en duo ou petit groupe (jusqu'à 4 personnes)"
+    ],
+    "entreprises": [
+      "Cours collectifs hebdomadaires en entreprise",
+      "Team-building sportif (Olympiades, Koh-Lanta, Fort-Boyard)",
+      "Séminaires et événements sport-santé"
+    ]
+  },
+  "disciplines": [
+    "Renforcement musculaire et musculation",
+    "Cardio-training et cross-training",
+    "Boxe",
+    "Yoga, Pilates, stretching",
+    "Sophrologie",
+    "TRX",
+    "Running, préparation course et triathlon",
+    "Nutrition et coaching minceur",
+    "Activité Physique Adaptée (APA)"
+  ],
+  "publics": [
+    "Remise en forme et perte de poids",
+    "Femmes enceintes et post-accouchement",
+    "Seniors",
+    "Enfants et adolescents",
+    "Préparation à une course (running, triathlon)",
+    "Coaching APA (sport-santé)"
+  ],
+  "deroule_seance": "Chaque séance comprend un échauffement, le corps de la séance puis un retour au calme avec étirements si nécessaire. Le coach apporte le matériel.",
+  "bilan_offert": "Un bilan de forme gratuit et sans engagement est proposé, au domicile ou en visioconférence : il sert à définir vos objectifs, choisir votre coach, sélectionner l'activité et fixer la fréquence.",
+  "tarifs": {
+    "seance_unique": "53,50 euros TTC la séance, sans engagement.",
+    "forfaits": [
+      "Forfait 5 séances : 50 euros TTC la séance, soit 250 euros.",
+      "Forfait 10 séances : 48,50 euros TTC la séance, soit 485 euros.",
+      "Forfait 20 séances : 45,50 euros TTC la séance, soit 910 euros.",
+      "Forfait 30 séances : 43 euros TTC la séance, soit 1290 euros.",
+      "Forfait 40 séances : 38 euros TTC la séance, soit 1520 euros."
+    ],
+    "groupe": "Coaching en groupe : 10 euros TTC par personne supplémentaire, jusqu'à 4 personnes.",
+    "credit_impot": "Les tarifs affichés incluent déjà l'avance immédiate de 50% de crédit d'impôt Service à la personne.",
+    "paiement": "Virement, chèque, CESU, chèques et coupons sport ANCV. Règlement échelonnable sans frais."
+  },
+  "points_forts": [
+    "25 coachs diplômés STAPS (Bac+3 minimum)",
+    "18 ans d'expérience, plus de 6000 clients accompagnés",
+    "97% de renouvellement des contrats en 2023",
+    "Note Google 4,9 sur 5 (180 avis)",
+    "Collaborations médicales : ostéopathe, kinésithérapeute, diététicienne",
+    "Approche sport-santé personnalisée, entraînement et nutrition"
+  ],
+  "questions_frequentes": {
+    "essai": "Le bilan de forme est gratuit et sans engagement, à domicile ou en visio : c'est le bon point de départ pour découvrir l'accompagnement.",
+    "domicile": "Oui, le coach se déplace à votre domicile avec le matériel nécessaire. La séance est entièrement personnalisée.",
+    "en_ligne": "Oui, un accompagnement en ligne et en visioconférence est proposé pour s'entraîner à distance.",
+    "credit_impot": "Les tarifs affichés intègrent déjà l'avance immédiate de 50% de crédit d'impôt Service à la personne.",
+    "duo_groupe": "Oui, la séance peut se faire en duo ou en petit groupe, jusqu'à 4 personnes, avec un supplément de 10 euros par personne.",
+    "diplomes": "Les coachs sont diplômés STAPS, niveau Bac+3 minimum, avec plusieurs années d'expérience.",
+    "objectif": "Perte de poids, remise en forme, préparation à une course, sport-santé, accompagnement senior ou post-grossesse : le programme est calé sur votre objectif lors du bilan.",
+    "medical": "Pour une douleur, une blessure ou une contre-indication, le coach en est informé avant la séance. ABC Coach Sportif collabore avec un ostéopathe, un kinésithérapeute et une diététicienne."
+  },
+  "showcase": [
+    {
+      "titre": "Formules de coaching",
+      "items": [
+        "Séance à l'unité - 53,50 euros TTC, sans engagement",
+        "Forfait 10 séances - 48,50 euros TTC la séance",
+        "Forfait 20 séances - 45,50 euros TTC la séance",
+        "Forfait 40 séances - 38 euros TTC la séance"
+      ]
+    },
+    {
+      "titre": "Le bilan offert",
+      "items": [
+        "Bilan de forme gratuit et sans engagement",
+        "À domicile ou en visioconférence",
+        "On définit vos objectifs et votre coach",
+        "On fixe l'activité et la fréquence"
+      ]
+    },
+    {
+      "titre": "Où et comment",
+      "items": [
+        "À domicile, matériel apporté par le coach",
+        "En extérieur, en visio ou 100% en ligne",
+        "En solo, en duo ou en petit groupe (jusqu'à 4)",
+        "Zones : Paris, Lille, Marseille, Aix, Bordeaux, Toulouse"
+      ]
+    },
+    {
+      "titre": "Disciplines",
+      "items": [
+        "Renforcement, cardio, cross-training, boxe",
+        "Yoga, Pilates, stretching, sophrologie",
+        "Running, préparation course et triathlon",
+        "Nutrition, coaching minceur et APA sport-santé"
+      ]
+    },
+    {
+      "titre": "Pourquoi ABC",
+      "items": [
+        "25 coachs diplômés STAPS (Bac+3 minimum)",
+        "18 ans d'expérience, plus de 6000 clients",
+        "Note Google 4,9 sur 5 (180 avis)",
+        "Crédit d'impôt Service à la personne déjà déduit"
+      ]
+    }
+  ],
+  "capacite": {
+    "places_par_creneau": 6,
+    "duree_seance_minutes": 60,
+    "taille_groupe_max": 4,
+    "note": "Au-delà de 4 participants ou pour une prestation entreprise, proposer de faire rappeler par l'équipe au 06 69 09 91 16."
+  }
+}

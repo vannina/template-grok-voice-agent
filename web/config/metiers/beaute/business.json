@@ -1,0 +1,108 @@
+{
+  "nom": "L'Artisan Coiffeur by M",
+  "tagline": "Transformer chaque mèche en oeuvre d'art",
+  "positionnement": "Salon de coiffure artisanal et mixte, pour toute la famille. Coiffeurs experts, conseil personnalisé, ambiance chaleureuse et professionnelle. Marques partenaires : Schwarzkopf, Authentic Beauty Concept, Saryna Key, American Crew.",
+  "ville": "Marseille",
+  "salon_principal": {
+    "nom": "Salon Périer",
+    "adresse": "5 boulevard Périer, 13008 Marseille",
+    "telephone_affiche": "04 91 53 55 64"
+  },
+  "autres_salons": [
+    {
+      "nom": "Salon La Valentine",
+      "adresse": "4 avenue César Boy, 13011 Marseille"
+    },
+    {
+      "nom": "Salon Paradis",
+      "adresse": "180 rue Paradis, 13006 Marseille",
+      "telephone_affiche": "09 87 35 21 16"
+    },
+    {
+      "nom": "Salon Sainte",
+      "adresse": "51 rue Sainte, 13001 Marseille",
+      "telephone_affiche": "09 87 35 21 16"
+    }
+  ],
+  "telephone_affiche": "04 91 53 55 64",
+  "horaires": "Les horaires d'ouverture ne sont pas affichés sur le site. Inès le note dans le rendez-vous et le salon confirme, ou propose qu'on vous rappelle.",
+  "prestations": {
+    "coiffure": [
+      "Coupe femme",
+      "Coupe homme",
+      "Coupe enfant",
+      "Brushing",
+      "Coiffage et mise en forme"
+    ],
+    "couleur": [
+      "Coloration",
+      "Ombré (ombré hair)",
+      "Mèches",
+      "Balayage"
+    ],
+    "soins": [
+      "Soins capillaires (rituels et soins profonds)",
+      "Soins selon les marques partenaires : Schwarzkopf, Authentic Beauty Concept, Saryna Key, American Crew"
+    ],
+    "autres": [
+      "Beauté des ongles",
+      "Beauté du regard"
+    ],
+    "note": "Le détail des prestations et leurs tarifs ne sont pas affichés sur le site. Inès renseigne sur ce qu'elle sait et, pour un tarif précis non affiché, propose de le noter dans le rendez-vous ou qu'on vous rappelle. Elle n'invente jamais un prix."
+  },
+  "points_forts": [
+    "Salon de coiffure artisanal, le coiffeur idéal pour toute la famille",
+    "Salon mixte : femmes, hommes, enfants",
+    "Conseil personnalisé : analyse de la texture, de la couleur et de la forme du cheveu",
+    "Coiffeurs expérimentés, ambiance chaleureuse et professionnelle",
+    "Marques partenaires haut de gamme : Schwarzkopf, Authentic Beauty Concept, Saryna Key, American Crew",
+    "Quatre adresses à Marseille (Périer 8e, La Valentine 11e, Paradis 6e, Sainte 1er)"
+  ],
+  "reservation": {
+    "telephone": "Prise de rendez-vous par téléphone avec Inès.",
+    "en_ligne": "Réservation en ligne également possible via Treatwell pour chaque salon.",
+    "instagram": "@lartisancoiffeurbym"
+  },
+  "questions_frequentes": {
+    "tarifs": "Les tarifs ne sont pas affichés sur le site. Inès indique ce qu'elle sait, et pour un prix précis elle le note dans le rendez-vous ou propose qu'on vous rappelle. Elle n'annonce jamais un tarif inventé.",
+    "horaires": "Les horaires d'ouverture ne sont pas affichés sur le site. Inès le note dans le rendez-vous et le salon confirme, ou propose qu'on vous rappelle.",
+    "salons": "Quatre salons à Marseille : Périer (5 boulevard Périer, 13008), La Valentine (4 avenue César Boy, 13011), Paradis (180 rue Paradis, 13006) et Sainte (51 rue Sainte, 13001). Le salon principal de cette démonstration est le Salon Périer.",
+    "famille": "Salon mixte et familial : femmes, hommes et enfants sont les bienvenus. Inès note la prestation souhaitée pour chaque personne dans le rendez-vous.",
+    "coiffeur_attitre": "Si vous souhaitez un coiffeur ou une coiffeuse en particulier, Inès le note dans le rendez-vous (champ notes) et le salon en tient compte.",
+    "reservation_en_ligne": "Réservation possible par téléphone avec Inès, ou en ligne via Treatwell."
+  },
+  "showcase": [
+    {
+      "titre": "Coiffure",
+      "items": [
+        "Coupe femme, homme et enfant",
+        "Brushing et coiffage",
+        "Conseil personnalisé selon votre cheveu"
+      ]
+    },
+    {
+      "titre": "Couleur",
+      "items": [
+        "Coloration",
+        "Ombré hair et mèches",
+        "Balayage"
+      ]
+    },
+    {
+      "titre": "Soins & beauté",
+      "items": [
+        "Soins capillaires profonds",
+        "Beauté des ongles",
+        "Beauté du regard"
+      ]
+    },
+    {
+      "titre": "La maison",
+      "items": [
+        "Salon artisanal et mixte, pour toute la famille",
+        "Marques : Schwarzkopf, Authentic Beauty Concept, Saryna Key, American Crew",
+        "4 adresses à Marseille"
+      ]
+    }
+  ]
+}

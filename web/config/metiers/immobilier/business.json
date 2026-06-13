@@ -1,0 +1,83 @@
+{
+  "nom": "La Belle Agence",
+  "tagline": "L'immobilier comme nulle part ailleurs",
+  "positionnement": "Agence immobilière de la Côte d'Azur. Une véritable expérience, une belle histoire où l'humain est au centre. Trois valeurs : l'excellence, l'humanité et la conscience professionnelle.",
+  "valeurs": "Rigueur, passion, efficience. Empathie, bienveillance, humanité. Transparence, minutie, dévotion.",
+  "adresse": "15 rue Alberti, 06000 Nice",
+  "zone": "Nice et toute la Côte d'Azur : Antibes, Cannes, Cagnes-sur-Mer, Saint-Laurent-du-Var, Menton, Vence, Villeneuve-Loubet, et les villages de l'arrière-pays niçois (Carros, Contes, Drap, Falicon, L'Escarène, Tourrette-Levens).",
+  "telephone_affiche": "04 83 66 16 90",
+  "email": "assistante@labelleagence.immo",
+  "horaires": "Horaires d'ouverture non communiqués sur le site. Clara propose un rendez-vous et l'agence confirme le créneau.",
+  "site": "labelleagence.immo",
+  "instagram": "la.belle.agence",
+  "services": [
+    "Vente de biens : appartements, maisons, villas, sur Nice et la Côte d'Azur",
+    "Achat : accompagnement des acquéreurs de A à Z, sélection de biens selon le projet",
+    "Estimation de votre bien, précise et professionnelle (forfait 200 euros TTC)",
+    "Accompagnement de A à Z, avec une responsable financière dédiée et un courtier partenaire pour le financement"
+  ],
+  "honoraires": {
+    "estimation": "Estimation d'un bien : 200 euros TTC.",
+    "vente_appartements_maisons_villas": "Honoraires de vente (appartements, maisons, villas) : de zéro à trente mille euros, forfait de 3000 euros. De trente mille à cinquante mille euros, forfait de 4000 euros. De cinquante mille à cent cinquante mille euros, 7,5 % en mandat simple, 7 % en mandat Excellence. Au-delà de cent cinquante mille euros, 6,5 % en mandat simple, 6 % en mandat Excellence.",
+    "vente_garages_parkings_terrains_commerces": "Garages, parkings, locaux commerciaux, terrains, fonds de commerce : 10,5 % en mandat simple, 10 % en mandat Excellence.",
+    "note": "Pour le détail d'un mandat ou d'un cas précis, Clara note la demande et un conseiller rappelle."
+  },
+  "mandats": "Deux formules de mandat : le mandat simple et le mandat Excellence (honoraires réduits, accompagnement renforcé).",
+  "points_forts": [
+    "L'humain au centre : on rejoint une belle et grande famille immobilière",
+    "Une vente en moins de dix visites en moyenne, grâce à une estimation juste et une stratégie de diffusion soignée",
+    "Une responsable financière dédiée et un courtier partenaire pour sécuriser le financement des acquéreurs",
+    "Estimation gratuite et sans engagement à l'entrée du projet, estimation détaillée au forfait",
+    "Une équipe de consultants qui couvre Nice, la Côte d'Azur et l'arrière-pays"
+  ],
+  "equipe": [
+    "Gregory Piscitello, consultant senior associé",
+    "Sébastien Picard, consultant associé",
+    "Maxime Nallino, consultant immobilier",
+    "Élodie Fiorucci, consultante",
+    "Sébastien Mariotti, consultant",
+    "Plusieurs autres consultants, Audrey Viala (assistante de direction) et Ludivine Courret (responsable financière)"
+  ],
+  "questions_frequentes": {
+    "estimation_gratuite": "L'estimation d'entrée de projet est gratuite et sans engagement. L'estimation détaillée et professionnelle est au forfait de 200 euros TTC.",
+    "secteurs": "L'agence couvre Nice, la Côte d'Azur (Antibes, Cannes, Cagnes-sur-Mer, Saint-Laurent-du-Var, Menton, Vence, Villeneuve-Loubet) et les villages de l'arrière-pays niçois.",
+    "delai_vente": "L'agence vise une vente en moins de dix visites en moyenne, grâce à une estimation juste et une diffusion travaillée.",
+    "financement": "Une responsable financière dédiée et un courtier partenaire accompagnent les acquéreurs sur le financement.",
+    "bien_precis": "Pour la disponibilité, le prix exact ou l'état d'un bien précis, Clara note la demande dans le rendez-vous et un conseiller confirme.",
+    "location_gestion": "Le site met en avant la vente, l'achat et l'estimation. Pour une demande de location ou de gestion locative, Clara note la demande et un conseiller rappelle pour confirmer."
+  },
+  "showcase": [
+    {
+      "titre": "Ce que fait l'agence",
+      "items": [
+        "Vente : appartements, maisons, villas",
+        "Achat : sélection et accompagnement de A à Z",
+        "Estimation précise et professionnelle de votre bien"
+      ]
+    },
+    {
+      "titre": "Nos secteurs",
+      "items": [
+        "Nice et toute la Côte d'Azur",
+        "Antibes, Cannes, Cagnes-sur-Mer, Menton, Vence",
+        "Les villages de l'arrière-pays niçois"
+      ]
+    },
+    {
+      "titre": "Honoraires clairs",
+      "items": [
+        "Estimation détaillée : 200 euros TTC",
+        "Vente jusqu'à 150 000 euros : 7,5 % (7 % en Excellence)",
+        "Vente au-delà de 150 000 euros : 6,5 % (6 % en Excellence)"
+      ]
+    },
+    {
+      "titre": "Pourquoi La Belle Agence",
+      "items": [
+        "L'humain au centre, une belle famille immobilière",
+        "Une vente en moins de dix visites en moyenne",
+        "Responsable financière dédiée et courtier partenaire"
+      ]
+    }
+  ]
+}

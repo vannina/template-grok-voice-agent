@@ -1,0 +1,132 @@
+{
+  "nom": "Hôtel Crillon le Brave",
+  "tagline": "L'art de vivre provençal",
+  "positionnement": "Hôtel de luxe 5 étoiles, membre des Maisons Pariente, niché dans un village médiéval perché au pied du Mont Ventoux. Une multitude de maisons anciennes décorées par l'architecte d'intérieur Charles Zana, où le charme provençal rencontre une élégance contemporaine.",
+  "adresse": "Place de l'Église, 84410 Crillon le Brave, France",
+  "zone": "Au cœur du Vaucluse, en Provence, au pied du Mont Ventoux. À l'écart de l'agitation, entre les Alpilles et le Luberon.",
+  "telephone_affiche": "+33 4 90 65 61 61",
+  "telephone_spa": "+33 4 90 65 99 14",
+  "email": "reservation@crillonlebrave.com",
+  "directeurs": "Dagmar et Guy Lombard, Directeurs Généraux",
+  "saison": "Ouvert du 3 avril au 31 octobre 2026, puis du jeudi au samedi jusqu'à la fin de l'année. L'établissement a rouvert en avril 2026 après la création de 9 chambres supplémentaires, d'une seconde piscine et d'un lieu dédié aux ateliers culinaires et aux retraites bien-être.",
+  "chambres": {
+    "presentation": "26 chambres et 17 suites, chacune unique, aux meubles chinés et antiquités choisies. Tomettes rouges anciennes typiques de Provence, décoration contemporaine et chaleureuse signée Charles Zana. Vue sur le Mont Ventoux et la vallée pour de nombreuses chambres.",
+    "categories": [
+      "Chambre Supérieure",
+      "Chambre Supérieure Ventoux",
+      "Chambre Deluxe Ventoux",
+      "Chambre Prestige",
+      "Chambre Prestige Ventoux",
+      "Junior Suite Deluxe Ventoux",
+      "Junior Suite Deluxe Terrasse",
+      "Suite Deluxe Ventoux",
+      "Suite Deluxe 2 chambres (maison indépendante de 2 étages, idéale pour une famille)",
+      "Suite Prestige Ventoux",
+      "Suite Signature Ventoux"
+    ],
+    "services_en_chambre": [
+      "Lit king size ou lits jumeaux",
+      "Service de ménage deux fois par jour",
+      "Room service disponible 24h sur 24",
+      "Service de blanchisserie quotidien, linge retourné sous 24h",
+      "Draps en satin de coton Garnier-Thiébaut, literie Simmons",
+      "Téléviseur écran plat, chaînes satellite et Chromecast",
+      "Accès WiFi gratuit",
+      "Minibar avec boissons non alcoolisées offertes",
+      "Climatisation réglable individuellement",
+      "Produits d'accueil Diptyque, sèche-cheveux"
+    ],
+    "note_tarifs": "Les tarifs des chambres ne sont pas affichés publiquement : ils dépendent de la catégorie et de la période. L'équipe réservations communique le meilleur tarif garanti, sans frais supplémentaire."
+  },
+  "restaurant": {
+    "nom": "La Table du Ventoux",
+    "chef": "Thomas Lesage",
+    "cuisine": "Cuisine bistronomique provençale, riche en couleurs et en nuances, fondée sur le meilleur des produits du terroir et de saison. Légumes du maraîcher, volaille de Mazan, riz de Camargue, chèvre du Ventoux, fraises de Carpentras. Au déjeuner, plats de partage aux accents provençaux servis en continu ; au dîner, une carte bistronomique réinventée.",
+    "philosophie": "Selon le Chef Thomas Lesage, l'essence d'une recette n'est pas de transformer le produit, mais de l'accompagner et de le sublimer dans son goût originel.",
+    "reouverture": "Le restaurant rouvre le 3 avril 2026.",
+    "horaires": {
+      "petit_dejeuner": "de 7h30 à 10h30",
+      "dejeuner": "de 12h00 à 15h00, en continu",
+      "diner": "de 19h00 à 21h00",
+      "brunch": "le dimanche, à 11h30 ou 13h30"
+    },
+    "brunch_tarif": "Brunch du dimanche : 68 € par personne hors boissons, 35 € par enfant de 5 à 11 ans (jus inclus), offert pour les enfants de moins de 5 ans.",
+    "le_bar": "Le Bar, atmosphère chaleureuse et intimiste, pour se prélasser, se détendre et se retrouver.",
+    "cours_de_cuisine": "Cours de cuisine à la Maison Tilleul, autour d'un menu en trois plats, le jeudi et le samedi en fin de journée ou le lundi au déjeuner. Ouverts aux résidents comme aux visiteurs extérieurs, en format collectif ou privé. L'expérience peut débuter au marché de Bédoin."
+  },
+  "bien_etre": {
+    "spa": "Le Spa des Écuries, sous les caves voûtées des anciennes écuries en pierre du XVIIIe siècle. Atmosphère tamisée et intimiste. Trois cabines de soins, dont une double, hammam, sauna, jacuzzi et bains froids.",
+    "marques": "Soins signés Tata Harper (soins du visage en exclusivité), SeeMy Cosmetics (technologie Airbrush RubyCell) et Maison Caulières (huiles végétales d'exception). Massages, soins du corps, soins du visage et du cuir chevelu, en solo, en duo ou entre amis.",
+    "horaires_spa": "Espace bien-être et soins ouverts de 10h00 à 20h00.",
+    "piscines": "Deux piscines : l'une avec vue imprenable sur la Provence, l'autre nouvellement créée. Ouvertes de 8h à 20h, exclusivement réservées à la clientèle résidente.",
+    "fitness": "Salle de fitness aménagée dans l'ancienne chapelle du village, équipements Technogym, ouverte de 8h à 20h pour les résidents. Un coach est disponible sur demande (yoga, pilates, renforcement musculaire).",
+    "telephone_spa": "+33 4 90 65 99 14"
+  },
+  "services": [
+    "Concierge Clefs d'Or et Experience Manager, pour anticiper chaque envie",
+    "Room service 24h sur 24, réception et conciergerie dédiées",
+    "Restaurant : petit-déjeuner, déjeuner, dîner et brunch du dimanche",
+    "Deux piscines extérieures et salle de fitness (clientèle résidente)",
+    "Spa des Écuries, soins et rituels bien-être",
+    "Dégustations de vins",
+    "Cours de cuisine à la Maison Tilleul",
+    "Blanchisserie et nettoyage à sec, ménage deux fois par jour",
+    "Parking avec service voiturier et bornes de recharge électrique",
+    "Sélection de jeux de société"
+  ],
+  "points_forts": [
+    "Maison d'exception 5 étoiles, membre des Maisons Pariente",
+    "Vue panoramique sur le Mont Ventoux et la vallée provençale",
+    "Village médiéval perché du XIIe siècle, calme préservé à l'écart des foules",
+    "Décoration signée Charles Zana, chaque chambre unique",
+    "Le sens du service des grandes maisons : anticiper sans jamais s'imposer"
+  ],
+  "acces": {
+    "voiture": "Place de l'Église, 84410 Crillon le Brave. Depuis Paris environ 7h (696 km), depuis Lyon environ 3h (235 km), depuis Genève environ 4h20 (380 km).",
+    "avion": "Aéroport Marseille Provence (MRS) à 106 km, environ 1h20 en taxi. Aéroport Avignon Provence (AVN) à 44 km, environ 45 minutes en taxi.",
+    "train": "Gare d'Avignon TGV à 43 km, environ 50 minutes en taxi. Gare de Marseille Saint-Charles à 126 km, environ 1h32 en taxi.",
+    "location_voiture": "Les principales agences de location de voiture sont présentes à la gare d'Avignon TGV et à l'aéroport Marseille Provence."
+  },
+  "questions_frequentes": {
+    "animaux": "Pour toute demande particulière concernant un animal de compagnie, Chloé le note dans la réservation et la réception confirme.",
+    "enfants_familles": "Les familles sont les bienvenues. Au brunch, 35 € par enfant de 5 à 11 ans, offert pour les moins de 5 ans. La Suite Deluxe 2 chambres, véritable maison indépendante de 2 étages, est idéale pour une famille.",
+    "spa_exterieurs": "Le spa et les cours de cuisine sont ouverts aux résidents comme aux visiteurs extérieurs. Les piscines et la salle de fitness sont réservées à la clientèle résidente.",
+    "check_in_out": "Les horaires précis de check-in et de check-out ne sont pas affichés publiquement. Chloé le note dans la réservation et la réception confirme, ou propose qu'on rappelle l'appelant.",
+    "tarifs_chambres": "Les tarifs des chambres ne sont pas affichés publiquement. Pour un tarif précis selon la catégorie et les dates, Chloé note la demande et l'équipe réservations confirme le meilleur tarif garanti.",
+    "reservation": "Réservation par téléphone au +33 4 90 65 61 61, par e-mail à reservation@crillonlebrave.com, ou sur le site officiel (meilleur prix garanti, aucun frais supplémentaire, transaction sécurisée)."
+  },
+  "showcase": [
+    {
+      "titre": "Chambres & Suites",
+      "items": [
+        "26 chambres et 17 suites uniques - décoration Charles Zana",
+        "Vue Mont Ventoux - tomettes anciennes et matières naturelles",
+        "Room service 24h/24 - ménage deux fois par jour"
+      ]
+    },
+    {
+      "titre": "La Table du Ventoux",
+      "items": [
+        "Cuisine bistronomique provençale - Chef Thomas Lesage",
+        "Déjeuner en continu de 12h à 15h, dîner de 19h à 21h",
+        "Brunch du dimanche - 68 € par personne, 35 € enfant"
+      ]
+    },
+    {
+      "titre": "Spa des Écuries",
+      "items": [
+        "Anciennes écuries voûtées du XVIIIe siècle - 10h à 20h",
+        "Soins Tata Harper, SeeMy Cosmetics, Maison Caulières",
+        "Hammam, sauna, jacuzzi et deux piscines avec vue"
+      ]
+    },
+    {
+      "titre": "Le sens du service",
+      "items": [
+        "Concierge Clefs d'Or et Experience Manager",
+        "Parking avec voiturier et bornes de recharge",
+        "Cours de cuisine à la Maison Tilleul, dégustations de vins"
+      ]
+    }
+  ]
+}

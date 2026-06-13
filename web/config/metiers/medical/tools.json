@@ -2,7 +2,7 @@
   {
     "type": "function",
     "name": "get_business_info",
-    "description": "Renvoie la fiche complète du cabinet : nom, praticiens et spécialités, adresse et accès, horaires, conventionnement et tarifs, documents à apporter. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "description": "Renvoie la fiche complète du centre de santé : nom, disciplines, praticiens et spécialités, adresse et accès, horaires, soins à domicile, conventionnement et tarifs, documents à apporter. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
     "parameters": {
       "type": "object",
       "properties": {},
@@ -25,7 +25,7 @@
   {
     "type": "function",
     "name": "book_reservation",
-    "description": "Enregistre le rendez-vous de consultation dans l'agenda du cabinet (un créneau = un patient). À appeler uniquement après une disponibilité confirmée par check_availability et avec les informations complètes.",
+    "description": "Enregistre le rendez-vous de consultation dans l'agenda du centre de santé (un créneau = un patient). À appeler uniquement après une disponibilité confirmée par check_availability et avec les informations complètes.",
     "parameters": {
       "type": "object",
       "properties": {

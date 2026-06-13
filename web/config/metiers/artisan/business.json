@@ -1,0 +1,103 @@
+{
+  "nom": "Neos Bâtiment",
+  "tagline": "Votre expert en rénovation tous corps d'état",
+  "positionnement": "Entreprise de rénovation tous corps d'état à Marseille. Accompagnement clé en main, des appartements et villas aux bureaux et locaux commerciaux. Plus de vingt ans de métier sur le bâti marseillais, de l'ancien à rénover jusqu'aux extensions.",
+  "specialite": "Rénovation tous corps d'état : un seul interlocuteur du gros œuvre aux finitions. Spécialité de l'ancien et du bien délabré, et de l'amélioration énergétique.",
+  "experience": "Plus de vingt ans d'expérience sur le bâti des Bouches-du-Rhône.",
+  "adresse": "9 rue Levat, 13003 Marseille",
+  "zone_intervention": "Marseille et l'ensemble des Bouches-du-Rhône. Aix-en-Provence également couverte (rénovation de maison et salle de bain).",
+  "telephone_affiche": "04 91 34 43 72",
+  "telephone_mobile": "06 60 41 49 77",
+  "email": "contact@neosbatiment.fr",
+  "horaires": {
+    "note": "Les horaires ne sont pas affichés sur le site. Paul ne les invente pas : il propose de faire confirmer par l'entreprise ou de caler un rendez-vous sur place."
+  },
+  "prestations": {
+    "types_de_biens": [
+      "Appartement",
+      "Maison et villa",
+      "Bureaux et locaux commerciaux",
+      "Bien ancien ou délabré à rénover",
+      "Agrandissement, extension, surélévation"
+    ],
+    "corps_de_metier": [
+      "Maçonnerie et gros œuvre",
+      "Plomberie : raccordement eau chaude et froide, évacuations",
+      "Électricité : raccordement, mise en conformité du tableau",
+      "Chauffage",
+      "Isolation et amélioration énergétique",
+      "Menuiserie : fenêtres, portes, volets, stores, pergolas",
+      "Peinture : préparation des surfaces et finitions",
+      "Revêtements de sol : parquet, carrelage, lino, béton ciré, dalles",
+      "Cloisons : amovibles, sèches, verrières, japonaises",
+      "Plafonds : faux plafond, toile de verre, papier peint",
+      "Façade et ravalement",
+      "Rénovation de salle de bain : douche, baignoire, lavabo"
+    ]
+  },
+  "points_forts": [
+    "Tous corps d'état : un seul interlocuteur du gros œuvre aux finitions",
+    "Accompagnement clé en main, suivi du chantier de A à Z",
+    "Solutions personnalisées selon le besoin et le budget",
+    "Respect des délais et transparence",
+    "Travail dans le respect des normes de sécurité et des règles du bâtiment",
+    "Spécialiste de l'ancien, du délabré et de l'amélioration énergétique"
+  ],
+  "processus": [
+    "Analyse du besoin, étude de faisabilité et devis",
+    "Démolition et évacuation",
+    "Gros œuvre puis second œuvre",
+    "Nettoyage et réception du chantier clé en main"
+  ],
+  "devis": {
+    "modalite": "Devis gratuit et personnalisé. La demande se fait par téléphone ou via le formulaire de contact du site, pour que l'entreprise étudie le projet.",
+    "rendez_vous": "Paul peut organiser une visite technique ou un rappel de l'entreprise pour établir le devis."
+  },
+  "tarifs_indicatifs": {
+    "note": "Seules fourchettes affichées publiquement sur le site, à titre indicatif. Tout chiffrage précis est confirmé par l'entreprise après étude.",
+    "rafraichissement": "Entre 250 et 600 euros par mètre carré pour un rafraîchissement",
+    "renovation_complete": "Entre 800 et 1500 euros par mètre carré pour une rénovation complète"
+  },
+  "questions_frequentes": {
+    "devis_gratuit": "Oui, le devis est gratuit et personnalisé. Paul organise une visite technique ou un rappel de l'entreprise pour l'établir.",
+    "zone": "L'entreprise intervient sur Marseille et l'ensemble des Bouches-du-Rhône, ainsi qu'à Aix-en-Provence.",
+    "type_de_travaux": "Rénovation tous corps d'état : appartement, maison, villa, bureaux et locaux commerciaux, du simple rafraîchissement à la rénovation complète, jusqu'aux extensions et surélévations.",
+    "tarifs": "Le site affiche des fourchettes indicatives (250 à 600 euros par mètre carré pour un rafraîchissement, 800 à 1500 euros pour une rénovation complète). Le chiffrage exact est établi au devis, gratuit, après étude du projet.",
+    "delais": "Les délais dépendent de la nature et de l'ampleur du chantier. Paul ne s'engage pas sur un délai de lui-même : il le fait confirmer par l'entreprise.",
+    "ancien": "L'entreprise est spécialisée dans la rénovation de l'ancien et des biens délabrés, ainsi que dans l'amélioration énergétique."
+  },
+  "showcase": [
+    {
+      "titre": "Rénovation tous corps d'état",
+      "items": [
+        "Un seul interlocuteur - du gros œuvre aux finitions",
+        "Appartement, maison, villa, bureaux et locaux",
+        "Spécialiste de l'ancien et du délabré"
+      ]
+    },
+    {
+      "titre": "Nos métiers",
+      "items": [
+        "Maçonnerie, plomberie, électricité, chauffage",
+        "Menuiserie, peinture, carrelage, parquet",
+        "Cloisons, plafonds, façade et ravalement"
+      ]
+    },
+    {
+      "titre": "Clé en main",
+      "items": [
+        "Devis gratuit et personnalisé",
+        "Suivi du chantier de A à Z",
+        "Respect des délais et transparence"
+      ]
+    },
+    {
+      "titre": "Zone d'intervention",
+      "items": [
+        "Marseille et tout le 13",
+        "Aix-en-Provence",
+        "Plus de 20 ans sur le bâti local"
+      ]
+    }
+  ]
+}

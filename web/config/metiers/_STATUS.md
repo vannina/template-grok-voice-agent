@@ -1,19 +1,30 @@
 # État des packs métier — socle « agent vocal par métier »
 
-MAJ 2026-06-13. Voir l'archi dans `../../CLAUDE.md` (section Multi-métier).
+MAJ 2026-06-13 (packs finalisés sur vrais établissements + calendrier partagé branché).
+Voir l'archi dans `../../CLAUDE.md` (section Multi-métier).
 
 Chaque métier vit dans `web/config/metiers/<metier>/` :
-`profile.json` + `system_prompt.txt` + `tools.json` (+ `business.json` à ajouter).
+`profile.json` + `system_prompt.txt` + `tools.json` + `business.json`.
 
-| Métier | Agent | Fondations (profil+prompt+tools) | `business.json` | Champs établissement à remplir | Déployable |
+| Métier | Agent | Établissement réel | Pack complet (profil+prompt+tools+business) | calendar_id | Déployable |
 |---|---|---|---|---|---|
-| restaurant | Margot | ✅ (réf.) | ✅ Lou Patio | — | ✅ (prod) |
-| hotel | Chloé | ✅ | ⏳ | home_name, home_tag, call_header, og_image, calendar_id | après business.json |
-| medical | Léa | ✅ | ⏳ | idem | après business.json |
-| immobilier | Clara | ✅ | ⏳ | idem | après business.json |
-| artisan | Paul | ✅ | ⏳ | idem | après business.json |
-| coach | Hugo | ✅ | ⏳ | idem | après business.json |
-| beaute | Inès | ✅ | ⏳ | idem | après business.json |
+| restaurant | Margot | Lou Patio (St-Rémy) | ✅ (réf.) | "" → `RESTAURANT_CALENDAR_ID` (Resto) | ✅ (prod) |
+| hotel | Chloé | Crillon le Brave (Provence) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+| medical | Léa | Espace Santé L'Annonciade (Marseille) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+| immobilier | Clara | La Belle Agence (Nice) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+| artisan | Paul | Néos Bâtiment (Marseille) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+| coach | Hugo | ABC Coach Sportif (multi-villes) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+| beaute | Inès | L'Artisan Coiffeur by M (Marseille) | ✅ | partagé « Démo Agent Vocal » | ⏳ VPS |
+
+Calendrier partagé « Démo Agent Vocal » créé le 2026-06-13 (compte Google contact.corsicastudio@gmail.com,
+fuseau Europe/Paris) : `89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com`.
+Reste pour le déploiement (S3) : DNS sous-domaines `demo-<metier>.corsica-studio.com` + push VPS 1 conteneur.
+⚠️ Avant mise en ligne publique : OK Vannina pour mettre en avant les établissements nommés (Crillon le Brave, etc.).
+
+### Bémols connus (non bloquants)
+- Photo du mockup téléphone = image resto (plat/salle) pour tous les métiers (codée en dur dans `index.html`).
+  Pour brancher une vraie photo par établissement, ajouter une clé `hero_image`/`showcase_image` au profil + override `index.html`.
+- hotel : `capacity_per_slot=8` / `slot_duration_min=60` (gabarit) peu réalistes pour un 5★ de 43 clés (ajuster si besoin).
 
 ## Pour finaliser un métier (quand Vannina donne le vrai établissement)
 1. Récupérer les infos sur le site de l'établissement (comme `restaurant/business.json`)

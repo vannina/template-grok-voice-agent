@@ -1,0 +1,115 @@
+{
+  "nom": "Espace Santé L'Annonciade",
+  "tagline": "Un concept de soins innovant, avec une kinésithérapie pensée différemment",
+  "type_etablissement": "Centre de santé pluridisciplinaire (paramédical et bien-être)",
+  "positionnement": "Espace de soins moderne de 200 m2, climatisé et lumineux, qui réunit plusieurs professionnels autour d'une prise en charge globale du patient.",
+  "adresse": "302 rue Albert Einstein, 13013 Marseille (quartier de Château-Gombert)",
+  "situation": "Le centre se situe au premier étage. L'accès se fait par l'arrière du bâtiment.",
+  "telephone_affiche": "04 88 80 12 34",
+  "email": "contact@espacesantelannonciade.fr",
+  "horaires": {
+    "ouverture": "Du lundi au vendredi, de 8h00 à 20h00.",
+    "week_end": "Fermé le samedi et le dimanche."
+  },
+  "disciplines": [
+    "Kinésithérapie multispécialités",
+    "Infirmerie",
+    "Diététique",
+    "Naturopathie",
+    "Coaching sportif",
+    "Yoga",
+    "Pilates, dont Pilates prénatal",
+    "Massages thérapeutiques et drainage lymphatique"
+  ],
+  "specialites_kine": [
+    "Kinésithérapie du sport et récupération sportive",
+    "Périnatalité : suivi pré-natal et post-natal",
+    "Pédiatrie : plagiocéphalie, torticolis, déformations du pied",
+    "Kinésithérapie respiratoire : bronchiolite, asthme, mucoviscidose",
+    "Rééducation orthopédique, post-traumatique et post-opératoire",
+    "Rééducation abdominale post-partum et traitement du diastasis abdominal",
+    "Prise en charge de l'endométriose"
+  ],
+  "techniques": [
+    "Técarthérapie",
+    "Ondes de choc",
+    "Cryothérapie",
+    "Méthode McKenzie",
+    "Drainage lymphatique",
+    "Massages thérapeutiques"
+  ],
+  "praticiens": [
+    "Morgane Der Arsenian (créatrice et gérante du centre)",
+    "Aurélie Deiber Riviere",
+    "Emmanuel Ros",
+    "Oumayma Boussak",
+    "Noémie Di Biagio",
+    "Victor Fabre",
+    "Erwan Josselin",
+    "Charlotte Durand",
+    "Caroline Mendes (infirmière)"
+  ],
+  "points_forts": [
+    "Espace moderne de 200 m2, climatisé et lumineux",
+    "Structure pluridisciplinaire : plusieurs professionnels réunis au même endroit",
+    "Prise en charge globale du patient",
+    "Plateau technique développé (técarthérapie, ondes de choc, cryothérapie)",
+    "Soins à domicile possibles pour les patients qui ne peuvent pas se déplacer",
+    "Environnement médical de proximité : permanence, pharmacie, ophtalmologue, dentiste, laboratoire"
+  ],
+  "soins_a_domicile": "Certains soins, notamment de kinésithérapie, peuvent être réalisés au domicile du patient, sur rendez-vous, lorsque celui-ci ne peut pas se déplacer.",
+  "prise_de_rdv": "La prise de rendez-vous se fait par téléphone avec Léa, ou en ligne sur Doctolib.",
+  "questions_frequentes": {
+    "rdv_en_ligne": "Les rendez-vous peuvent être pris par téléphone avec Léa, ou en ligne sur la fiche Doctolib du centre.",
+    "domicile": "Pour un patient qui ne peut pas se déplacer, certains soins de kinésithérapie peuvent être assurés à domicile, sur rendez-vous. Léa note la demande et un praticien confirme.",
+    "acces": "Le centre est au premier étage, l'accès se fait par l'arrière du bâtiment, au 302 rue Albert Einstein, 13013 Marseille.",
+    "premiere_visite": "Pour une première séance, il est utile d'apporter la prescription du médecin si vous en avez une, ainsi que votre carte Vitale et votre mutuelle. Léa note si c'est une première venue ou un suivi.",
+    "disciplines": "Le centre réunit kinésithérapie, infirmerie, diététique, naturopathie, coaching sportif, yoga, Pilates et massages thérapeutiques.",
+    "conventionnement_tarifs": "Pour le détail du conventionnement et des tarifs d'une discipline précise, Léa le note et le secrétariat confirme : ces informations ne sont pas reprises ici."
+  },
+  "showcase": [
+    {
+      "titre": "Le centre",
+      "items": [
+        "Espace santé pluridisciplinaire - 200 m2, Château-Gombert, Marseille 13e",
+        "Du lundi au vendredi, de 8h à 20h",
+        "Prise en charge globale, plusieurs praticiens réunis"
+      ]
+    },
+    {
+      "titre": "Kinésithérapie",
+      "items": [
+        "Kiné du sport et récupération sportive",
+        "Périnatalité - suivi pré et post-natal",
+        "Pédiatrie - plagiocéphalie, torticolis",
+        "Kiné respiratoire - bronchiolite, asthme"
+      ]
+    },
+    {
+      "titre": "Plateau technique",
+      "items": [
+        "Técarthérapie",
+        "Ondes de choc",
+        "Cryothérapie",
+        "Méthode McKenzie et drainage lymphatique"
+      ]
+    },
+    {
+      "titre": "Santé et bien-être",
+      "items": [
+        "Diététique et naturopathie",
+        "Coaching sportif",
+        "Yoga et Pilates, dont Pilates prénatal",
+        "Massages thérapeutiques"
+      ]
+    },
+    {
+      "titre": "Praticiens et accès",
+      "items": [
+        "Équipe pluridisciplinaire menée par Morgane Der Arsenian",
+        "Soins à domicile possibles, sur rendez-vous",
+        "1er étage, accès par l'arrière du bâtiment"
+      ]
+    }
+  ]
+}
