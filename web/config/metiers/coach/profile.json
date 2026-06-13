@@ -7,13 +7,11 @@
   "objet": "séance",
   "objet_pluriel": "séances",
   "action_verbe": "réserver",
-
   "meta_title": "Démo Agent Vocal IA · ABC Coach Sportif · Corsica Studio",
   "meta_description": "Parlez à Hugo, l'accueil vocal IA d'ABC Coach Sportif : formules de coaching, disciplines, tarifs, et réservation de votre bilan de forme offert en direct. Une démo Corsica Studio.",
   "og_title": "Démo Agent Vocal IA · ABC Coach Sportif",
   "og_description": "Hugo répond au téléphone d'ABC Coach Sportif : formules, tarifs, et bilan de forme offert réservé dans l'agenda. Faites le test en direct.",
   "og_image": "",
-
   "hero_title": "Appelez le coach.",
   "hero_accent": "Hugo décroche.",
   "hero_sub": "Pendant que vous coachez, Hugo transforme les appels en nouvelles séances.",
@@ -28,14 +26,11 @@
   "showcase_title": "Formules & coaching",
   "showcase_sub": "ABC Coach Sportif · Accompagnement personnalisé",
   "showcase_kind": "fiche",
-
   "card1_title": "Zéro appel manqué",
   "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en plein entraînement, 24h/24 et 7j/7</li><li>Réserve les séances directement <b>dans votre agenda</b></li><li>Qualifie les <b>prospects motivés</b> et fixe le bilan de forme</li><li>Renseigne : formules, tarifs, disciplines et lieux</li><li>Zéro opportunité perdue pendant vos séances</li>",
-
   "conversion_title": "Et si Hugo répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> activité de coaching ?",
   "conversion_text": "Cette page est une démonstration : Hugo décroche à chaque appel, qualifie vos prospects et remplit votre agenda, même pendant un entraînement. <b>Installation offerte, premier mois offert.</b>",
   "mailto_subject": "Agent%20vocal%20pour%20mon%20activit%C3%A9%20de%20coaching",
-
   "bubbles": {
     "info_start": "{agent} consulte les formules et les informations du coach…",
     "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
@@ -51,12 +46,12 @@
   "recap_title": "Séance confirmée",
   "recap_unit": "séance pour",
   "recap_note": "Elle est déjà dans l'agenda du coach.",
-
   "event_summary_label": "Séance",
   "calendar_note": "Prise par Hugo (agent vocal Corsica Studio)",
   "calendar_id": "89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com",
   "capacity_per_slot": 6,
   "slot_duration_min": 60,
-
-  "greeting_instruction": "Salue en français, avec l'énergie chaleureuse et motivante d'un coach sportif, mais en restant professionnel et en vouvoyant. Ex : 'ABC Coach Sportif, bonjour, Hugo à votre écoute.' Une seule phrase, posée et dynamique."
+  "greeting_instruction": "Salue en français, avec l'énergie chaleureuse et motivante d'un coach sportif, mais en restant professionnel et en vouvoyant. Ex : 'ABC Coach Sportif, bonjour, Hugo à votre écoute.' Une seule phrase, posée et dynamique.",
+  "home_photo": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80&auto=format&fit=crop",
+  "showcase_photo": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80&auto=format&fit=crop"
 }

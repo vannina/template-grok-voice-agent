@@ -7,13 +7,11 @@
   "objet": "rendez-vous",
   "objet_pluriel": "rendez-vous",
   "action_verbe": "prendre rendez-vous",
-
   "meta_title": "Démo Agent Vocal IA · Espace Santé L'Annonciade · Corsica Studio",
   "meta_description": "Parlez à Léa, la secrétaire vocale de l'Espace Santé L'Annonciade : disciplines, kinésithérapie, horaires, accès et prise de rendez-vous en direct. Une démo Corsica Studio.",
   "og_title": "Démo Agent Vocal IA · Espace Santé L'Annonciade",
   "og_description": "Léa répond au téléphone du centre de santé : renseignements pratiques et prise de rendez-vous dans l'agenda. Faites le test en direct.",
   "og_image": "",
-
   "hero_title": "Appelez le centre de santé.",
   "hero_accent": "Léa décroche.",
   "hero_sub": "La prise de rendez-vous continue, même sans secrétaire.",
@@ -28,14 +26,11 @@
   "showcase_title": "Le centre",
   "showcase_sub": "Espace Santé L'Annonciade · Marseille 13e",
   "showcase_kind": "fiche",
-
   "card1_title": "Zéro rendez-vous manqué",
   "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même quand l'équipe est en soin, 24h/24 et 7j/7</li><li>Prend les rendez-vous directement <b>dans votre agenda</b></li><li>Renseigne vos patients : disciplines, horaires, accès et soins à domicile</li><li>Gère les messages et fait rappeler par le centre pour les demandes sensibles</li><li>Vos créneaux se remplissent <b>sans abonnement à une plateforme type Doctolib</b></li>",
-
   "conversion_title": "Et si Léa répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> centre de santé ?",
   "conversion_text": "Cette page est une démonstration : Léa décroche à chaque appel, renseigne vos patients et remplit votre agenda, même quand l'équipe est en soin. <b>Installation offerte, premier mois offert.</b>",
   "mailto_subject": "Agent%20vocal%20pour%20mon%20centre%20de%20sant%C3%A9",
-
   "bubbles": {
     "info_start": "{agent} consulte les informations du centre…",
     "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
@@ -51,12 +46,12 @@
   "recap_title": "Rendez-vous confirmé",
   "recap_unit": "rendez-vous pour",
   "recap_note": "Il est déjà dans l'agenda du centre.",
-
   "event_summary_label": "RDV",
   "calendar_note": "Pris par Léa (agent vocal Corsica Studio)",
   "calendar_id": "89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com",
   "capacity_per_slot": 1,
   "slot_duration_min": 20,
-
-  "greeting_instruction": "Salue en français, d'un ton calme, posé et rassurant, comme une secrétaire médicale bienveillante. Présente-toi avec le nom du centre. Ex : 'Espace Santé L'Annonciade, bonjour, Léa à votre écoute.' Une seule phrase, posée."
+  "greeting_instruction": "Salue en français, d'un ton calme, posé et rassurant, comme une secrétaire médicale bienveillante. Présente-toi avec le nom du centre. Ex : 'Espace Santé L'Annonciade, bonjour, Léa à votre écoute.' Une seule phrase, posée.",
+  "home_photo": "https://images.unsplash.com/photo-1630226040750-d934f017f0e4?w=900&q=80&auto=format&fit=crop",
+  "showcase_photo": "https://images.unsplash.com/photo-1630226040750-d934f017f0e4?w=900&q=80&auto=format&fit=crop"
 }

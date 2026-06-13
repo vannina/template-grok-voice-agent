@@ -225,6 +225,10 @@ _PROFILE_DEFAULTS = {
     "showcase_title": "La Carte",
     "showcase_sub": "Chef Nathan Helo · Produits des Alpilles",
     "showcase_kind": "menu",      # "menu" = rendu carte resto ; "fiche" = rendu générique
+    # photos des mockups téléphone (gauche = établissement, droite = vitrine/carte).
+    # Neutres par secteur pour chaque métier ; défaut = resto. Voir index.html {{HOME_PHOTO}}/{{SHOWCASE_PHOTO}}.
+    "home_photo": "/img/resto-salle.jpg",
+    "showcase_photo": "/img/resto-plat.jpg",
     # argumentaire — carte 1 (les cartes 2 et 3 sont identiques sur tous les métiers)
     "card1_title": "Zéro appel manqué",
     "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en plein coup de feu, 24h/24 et 7j/7</li><li>Prend les réservations directement <b>dans votre agenda</b></li><li>Renseigne vos clients : horaires, carte, services, accès</li><li>Votre équipe reste concentrée sur les clients présents</li><li>Un client qui a sa réponse ne rappelle pas le concurrent</li>",

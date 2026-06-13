@@ -7,13 +7,11 @@
   "objet": "réservation",
   "objet_pluriel": "réservations",
   "action_verbe": "réserver",
-
   "meta_title": "Démo Agent Vocal IA · Crillon le Brave · Corsica Studio",
   "meta_description": "Parlez à Chloé, la réceptionniste vocale IA de l'Hôtel Crillon le Brave : chambres et suites, La Table du Ventoux, Spa des Écuries, services et réservation en direct. Une démo Corsica Studio.",
   "og_title": "Démo Agent Vocal IA · Crillon le Brave · Corsica Studio",
   "og_description": "Chloé répond au téléphone du Crillon le Brave : chambres et suites, restaurant, spa, services et réservations. Faites le test en direct.",
   "og_image": "",
-
   "hero_title": "Appelez l'hôtel.",
   "hero_accent": "Chloé décroche.",
   "hero_sub": "Une vraie réservation, même à minuit ou en pleine saison.",
@@ -28,14 +26,11 @@
   "showcase_title": "La maison",
   "showcase_sub": "Crillon le Brave · l'art de vivre provençal",
   "showcase_kind": "fiche",
-
   "card1_title": "Zéro réservation manquée",
   "card1_bullets": "<li>Gère les <b>réservations 24h/24</b>, même à minuit ou en pleine saison</li><li>Renseigne sur les <b>chambres, le restaurant, le spa et les services</b></li><li>Enregistre les demandes directement <b>dans votre planning</b></li><li>Met votre planning à jour en temps réel</li><li>Un voyageur qui a sa réponse réserve chez vous, pas ailleurs</li>",
-
   "conversion_title": "Et si Chloé répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> hôtel ?",
   "conversion_text": "Cette page est une démonstration : Chloé décroche à chaque appel, renseigne vos hôtes et enregistre les réservations, jour et nuit. <b>Installation offerte, premier mois offert.</b>",
   "mailto_subject": "Agent%20vocal%20pour%20mon%20h%C3%B4tel",
-
   "bubbles": {
     "info_start": "{agent} consulte les informations de la maison…",
     "check_start": "{agent} vérifie les disponibilités pour le {date}…",
@@ -51,12 +46,12 @@
   "recap_title": "Réservation confirmée",
   "recap_unit": "chambre pour",
   "recap_note": "Elle est déjà enregistrée dans le planning de l'hôtel.",
-
   "event_summary_label": "Réservation",
   "calendar_note": "Prise par Chloé (agent vocal Corsica Studio)",
   "calendar_id": "89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com",
   "capacity_per_slot": 8,
   "slot_duration_min": 60,
-
-  "greeting_instruction": "Salue en français, avec la chaleur discrète et raffinée d'un concierge de palace. Présente-toi avec le nom de la maison. Ex : 'Hôtel Crillon le Brave, bonjour, Chloé à votre écoute.' Une seule phrase, posée, élégante et accueillante."
+  "greeting_instruction": "Salue en français, avec la chaleur discrète et raffinée d'un concierge de palace. Présente-toi avec le nom de la maison. Ex : 'Hôtel Crillon le Brave, bonjour, Chloé à votre écoute.' Une seule phrase, posée, élégante et accueillante.",
+  "home_photo": "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop",
+  "showcase_photo": "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop"
 }

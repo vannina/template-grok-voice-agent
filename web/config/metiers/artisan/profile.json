@@ -7,13 +7,11 @@
   "objet": "rendez-vous",
   "objet_pluriel": "rendez-vous",
   "action_verbe": "prendre rendez-vous",
-
   "meta_title": "Démo Agent Vocal IA · Neos Bâtiment · Corsica Studio",
   "meta_description": "Parlez à Paul, le standardiste vocal IA de Neos Bâtiment, entreprise de rénovation tous corps d'état à Marseille : zone d'intervention, prestations, devis gratuit et prise de rendez-vous en direct. Une démo Corsica Studio.",
   "og_title": "Démo Agent Vocal IA · Neos Bâtiment · Corsica Studio",
   "og_description": "Paul répond au téléphone de Neos Bâtiment : prestations, zone d'intervention, devis gratuit, rendez-vous de visite dans le planning. Faites le test en direct.",
   "og_image": "",
-
   "hero_title": "Appelez l'artisan.",
   "hero_accent": "Paul décroche.",
   "hero_sub": "Une vraie demande de devis, une vraie intervention planifiée dans l'agenda.",
@@ -28,14 +26,11 @@
   "showcase_title": "Nos prestations",
   "showcase_sub": "Neos Bâtiment · Rénovation tous corps d'état à Marseille",
   "showcase_kind": "fiche",
-
   "card1_title": "Zéro chantier manqué",
   "card1_bullets": "<li>Capte <b>chaque appel</b> pendant que vous êtes sur un chantier, 24h/24 et 7j/7</li><li>Qualifie chaque demande de devis et planifie les <b>visites</b> dans votre agenda</li><li>Renseigne vos clients : zone d'intervention, prestations, devis gratuit</li><li>Transmet les urgences et qualifie le projet avant votre déplacement</li><li>Vous ne perdez plus les clients qui rappellent un concurrent</li>",
-
   "conversion_title": "Et si Paul répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> entreprise ?",
   "conversion_text": "Cette page est une démonstration : Paul capte chaque appel, qualifie la demande et remplit votre planning, même quand vous êtes sur un chantier. <b>Installation offerte, premier mois offert.</b>",
   "mailto_subject": "Agent%20vocal%20pour%20mon%20entreprise%20de%20renovation",
-
   "bubbles": {
     "info_start": "{agent} consulte la fiche et les informations de l'entreprise…",
     "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
@@ -51,12 +46,12 @@
   "recap_title": "Rendez-vous confirmé",
   "recap_unit": "",
   "recap_note": "Il est déjà dans le planning de l'entreprise.",
-
   "event_summary_label": "Rendez-vous",
   "calendar_note": "Pris par Paul (agent vocal Corsica Studio)",
   "calendar_id": "89884ac999c1466943700e44935680309c680bae2c264970df2ba0000c9cf93f@group.calendar.google.com",
   "capacity_per_slot": 2,
   "slot_duration_min": 60,
-
-  "greeting_instruction": "Salue en français, d'une voix simple, posée et rassurante de standardiste du bâtiment. Annonce le nom de l'entreprise. Ex : 'Neos Bâtiment, bonjour, Paul à votre écoute.' Une seule phrase, sans en faire trop."
+  "greeting_instruction": "Salue en français, d'une voix simple, posée et rassurante de standardiste du bâtiment. Annonce le nom de l'entreprise. Ex : 'Neos Bâtiment, bonjour, Paul à votre écoute.' Une seule phrase, sans en faire trop.",
+  "home_photo": "https://images.unsplash.com/photo-1517581177682-a085bb7ffb15?w=900&q=80&auto=format&fit=crop",
+  "showcase_photo": "https://images.unsplash.com/photo-1517581177682-a085bb7ffb15?w=900&q=80&auto=format&fit=crop"
 }
