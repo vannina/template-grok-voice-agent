@@ -38,6 +38,25 @@ const $hangup      = document.getElementById("hangup");
 const $callTimer   = document.getElementById("call-timer");
 const $phoneHangup = document.getElementById("phone-hangup");
 
+// Barre de progression d'appel : Accueil -> Votre demande -> Disponibilité -> Confirmé.
+// Montre au visiteur que la réservation aboutit vite. Avance seulement (jamais en arrière).
+const $callSteps = document.getElementById("callsteps");
+const $stepFill  = document.getElementById("callsteps-fill");
+let callStep = 0;
+function setStep(n) {
+  if (n <= callStep) return;
+  callStep = n;
+  if ($stepFill) $stepFill.style.width = (n / 4 * 100) + "%";
+  if ($callSteps) $callSteps.querySelectorAll(".step").forEach(el => {
+    el.classList.toggle("done", Number(el.dataset.step) <= n);
+  });
+}
+function resetSteps() {
+  callStep = 0;
+  if ($stepFill) $stepFill.style.width = "0%";
+  if ($callSteps) $callSteps.querySelectorAll(".step").forEach(el => el.classList.remove("done"));
+}
+
 // chrono de l'écran d'appel (mockup téléphone)
 let callTimerInterval = null;
 let callStartedAt = 0;
@@ -240,6 +259,7 @@ async function start() {
   $afterCall.classList.remove("visible");
   // Nouvelle conversation : carte visible et vidée, barre d'appel fixe affichée.
   $chat.innerHTML = "";
+  resetSteps(); setStep(1);   // étape 1 : accueil / en ligne
   lastBooking = null;
   const $recap = document.getElementById("recap");
   if ($recap) $recap.hidden = true;
@@ -370,7 +390,7 @@ function handleEvent(event) {
 
     case "conversation.item.input_audio_transcription.completed": {
       const text = event.transcript || "";
-      if (text.trim()) addBubble("user", text, "Vous");
+      if (text.trim()) { addBubble("user", text, "Vous"); setStep(2); }  // étape 2 : demande exprimée
       break;
     }
 
@@ -423,7 +443,9 @@ async function handleFunctionCall(event) {
   }
 
   console.log(`[tool] ← ${name}`, result);
+  if (name === "check_availability") setStep(3);   // étape 3 : disponibilité vérifiée
   if (name === "book_reservation" && result && result.status === "confirmed") {
+    setStep(4);                  // étape 4 : confirmé
     lastBooking = { ...args };   // pour le récap affiché après le raccrochage
     track("reservation_booked", { party_size: args.party_size || 0 });
   }
@@ -478,6 +500,7 @@ async function stop() {
   $callCard.hidden = true;
   $callCard.classList.add("ended");
   $chat.innerHTML = "";
+  resetSteps();
   document.body.classList.remove("on-call");
   stopCallTimer();
   showRecap();

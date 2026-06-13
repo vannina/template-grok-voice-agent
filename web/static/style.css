@@ -749,3 +749,24 @@ body.on-call { padding-bottom: 116px; }
   .call-bar { left: 16px; right: 16px; transform: none; justify-content: space-between; }
   .after-call { padding: 22px 20px; }
 }
+
+/* ---- Barre de progression d'appel (montre que la réservation va vite) ---- */
+.callsteps { margin: 14px 0 4px; }
+.callsteps-track {
+  height: 5px; border-radius: 999px;
+  background: rgba(127,157,166,0.22); overflow: hidden;
+}
+.callsteps-fill {
+  display: block; height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #FF6E44, #ff8e6b);
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.callsteps-labels { display: flex; justify-content: space-between; gap: 6px; margin-top: 8px; }
+.callsteps-labels .step {
+  flex: 1; text-align: center; font-size: 12px; font-weight: 600;
+  color: var(--fg-faint); letter-spacing: .01em; transition: color .3s ease;
+}
+.callsteps-labels .step:first-child { text-align: left; }
+.callsteps-labels .step:last-child { text-align: right; }
+.callsteps-labels .step.done { color: var(--accent); }
+@media (max-width: 560px) { .callsteps-labels .step { font-size: 10px; } }
