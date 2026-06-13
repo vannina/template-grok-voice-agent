@@ -1,0 +1,62 @@
+{
+  "metier": "coach",
+  "agent": "Hugo",
+  "agent_initial": "H",
+  "agent_role": "l'accueil vocal",
+  "secteur": "coach sportif",
+  "objet": "séance",
+  "objet_pluriel": "séances",
+  "action_verbe": "réserver",
+
+  "meta_title": "Démo Agent Vocal IA · Corsica Studio",
+  "meta_description": "Parlez à Hugo, l'accueil vocal IA d'un coach sportif : cours, disciplines, horaires, formules et tarifs, et réservation de séance en direct. Une démo Corsica Studio.",
+  "og_title": "Démo Agent Vocal IA · Corsica Studio",
+  "og_description": "Hugo répond au téléphone du studio : planning des cours, formules, séances d'essai réservées dans l'agenda. Faites le test en direct.",
+  "og_image": "",
+
+  "hero_title": "Appelez votre coach.",
+  "hero_accent": "Hugo décroche.",
+  "hero_sub": "Une vraie conversation au téléphone d'un studio, une vraie séance dans l'agenda. Parlez-lui naturellement.",
+  "home_name": "",
+  "home_tag": "",
+  "home_btn_secondary": "Réserver une séance",
+  "call_header": "",
+  "cta_label": "Appeler le coach",
+  "chip_1": "Essayez : <b>« Je voudrais une séance d'essai »</b>",
+  "chip_2": "<b>« C'est quoi le planning des cours ? »</b>",
+  "chip_3": "<b>« Vous avez quels tarifs ? »</b>",
+  "showcase_title": "Cours & formules",
+  "showcase_sub": "Disciplines, horaires et accompagnement",
+  "showcase_kind": "fiche",
+
+  "card1_title": "Zéro séance manquée",
+  "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en plein cours, 24h/24 et 7j/7</li><li>Capte chaque prospect <b>pendant que vous coachez</b></li><li>Réserve les séances directement <b>dans votre agenda</b></li><li>Remplit le planning et relance les séances d'essai</li><li>Renseigne : disciplines, horaires, formules, tarifs, accès</li>",
+
+  "conversion_title": "Et si Hugo répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> studio ?",
+  "conversion_text": "Cette page est une démonstration : Hugo décroche à chaque appel, renseigne vos prospects et remplit votre planning, même pendant un cours. <b>Installation offerte, premier mois offert.</b>",
+  "mailto_subject": "Agent%20vocal%20pour%20mon%20studio%20de%20coaching",
+
+  "bubbles": {
+    "info_start": "{agent} consulte les cours et les informations du studio…",
+    "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
+    "book_start": "Enregistrement de la séance au nom de {name} ({party} pers.)…",
+    "book_confirmed": "Séance enregistrée dans l'agenda du studio.",
+    "book_full": "Créneau complet : {agent} propose une alternative.",
+    "check_yes": "Des créneaux sont disponibles ({free} libre(s) sur ce créneau).",
+    "check_no": "Créneau complet : {agent} cherche une alternative.",
+    "error": "Petit souci technique côté agenda : {agent} s'adapte.",
+    "end": "Fin d'appel demandée."
+  },
+  "info_label": "Planning",
+  "recap_title": "Séance confirmée",
+  "recap_unit": "séance pour",
+  "recap_note": "Elle est déjà dans le planning.",
+
+  "event_summary_label": "Séance",
+  "calendar_note": "Prise par Hugo (agent vocal Corsica Studio)",
+  "calendar_id": "",
+  "capacity_per_slot": 6,
+  "slot_duration_min": 60,
+
+  "greeting_instruction": "Salue en français, avec l'énergie chaleureuse et motivante d'un accueil de studio sportif. Ex : 'Bonjour, Hugo à votre écoute.' Une seule phrase, posée et dynamique."
+}

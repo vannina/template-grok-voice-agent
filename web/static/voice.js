@@ -456,7 +456,8 @@ function showRecap() {
   const recapTitle = P.recap_title || "Réservation confirmée";
   const recapUnit  = P.recap_unit  || "table pour";
   const recapNote  = P.recap_note  || "Elle est déjà dans l'agenda du restaurant.";
-  const unitPart = lastBooking.party_size ? `${recapUnit} ${lastBooking.party_size}, ` : "";
+  // n'affiche le nombre que s'il est pertinent (>1) : évite « séance pour 1 » / « table pour 1 »
+  const unitPart = (lastBooking.party_size > 1 && recapUnit) ? `${recapUnit} ${lastBooking.party_size}, ` : "";
   $recap.classList.remove("error");
   $recap.innerHTML = `
     <span class="recap-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></span>

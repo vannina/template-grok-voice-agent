@@ -1,0 +1,51 @@
+[
+  {
+    "type": "function",
+    "name": "get_business_info",
+    "description": "Renvoie la fiche complète de l'entreprise artisanale : spécialité, zone d'intervention, prestations, modalités de devis, frais de déplacement, horaires, adresse. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'un créneau dans le planning pour une date et une heure. À appeler AVANT book_reservation. Renvoie available (bool), creneaux_libres (int) et alternatives (créneaux proches disponibles) si complet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date souhaitée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure souhaitée, format HH:MM en 24h" }
+      },
+      "required": ["date", "time"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Enregistre le rendez-vous d'intervention ou de devis dans le planning de l'artisan. À appeler uniquement après une disponibilité confirmée par check_availability et avec toutes les informations complètes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom du client" },
+        "phone": { "type": "string", "description": "Numéro de téléphone du client" },
+        "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
+        "notes": { "type": "string", "description": "Nature des travaux, niveau d'urgence et adresse du chantier. Vide si rien." }
+      },
+      "required": ["name", "phone", "date", "time", "notes"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+]

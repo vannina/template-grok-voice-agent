@@ -1,0 +1,62 @@
+{
+  "metier": "hotel",
+  "agent": "Chloé",
+  "agent_initial": "C",
+  "agent_role": "la réceptionniste vocale",
+  "secteur": "hôtel",
+  "objet": "réservation",
+  "objet_pluriel": "réservations",
+  "action_verbe": "réserver",
+
+  "meta_title": "Démo Agent Vocal IA · Corsica Studio",
+  "meta_description": "Parlez à Chloé, la réceptionniste vocale IA d'un hôtel : chambres, services, équipements, petit-déjeuner, check-in et réservation en direct. Une démo Corsica Studio.",
+  "og_title": "Démo Agent Vocal IA · Corsica Studio",
+  "og_description": "Chloé répond au téléphone de l'hôtel : chambres, tarifs, services et réservations. Faites le test en direct.",
+  "og_image": "",
+
+  "hero_title": "Appelez votre hôtel.",
+  "hero_accent": "Chloé décroche.",
+  "hero_sub": "Une vraie conversation au téléphone d'un hôtel, une vraie réservation enregistrée. Posez vos questions, réservez votre chambre.",
+  "home_name": "",
+  "home_tag": "",
+  "home_btn_secondary": "Réserver",
+  "call_header": "",
+  "cta_label": "Appeler l'hôtel",
+  "chip_1": "Essayez : <b>« Une chambre pour deux nuits »</b>",
+  "chip_2": "<b>« À quelle heure est le petit-déjeuner ? »</b>",
+  "chip_3": "<b>« Avez-vous un parking ? »</b>",
+  "showcase_title": "Nos chambres & services",
+  "showcase_sub": "Confort, équipements et services de la maison",
+  "showcase_kind": "fiche",
+
+  "card1_title": "Zéro réservation manquée",
+  "card1_bullets": "<li>Décroche à <b>chaque appel</b>, jour et nuit, même quand la réception est occupée</li><li>Prend les demandes de réservation directement <b>dans votre planning</b></li><li>Renseigne vos clients : chambres, tarifs, services, équipements, accès</li><li>Votre équipe reste disponible pour les clients sur place</li><li>Un voyageur qui a sa réponse réserve chez vous, pas ailleurs</li>",
+
+  "conversion_title": "Et si Chloé répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> hôtel ?",
+  "conversion_text": "Cette page est une démonstration : Chloé décroche à chaque appel, renseigne vos clients et enregistre les réservations, jour et nuit. <b>Installation offerte, premier mois offert.</b>",
+  "mailto_subject": "Agent%20vocal%20pour%20mon%20h%C3%B4tel",
+
+  "bubbles": {
+    "info_start": "{agent} consulte les informations de l'hôtel…",
+    "check_start": "{agent} vérifie les disponibilités pour le {date}…",
+    "book_start": "Enregistrement de la réservation au nom de {name} ({party} pers.)…",
+    "book_confirmed": "Réservation enregistrée dans le planning de l'hôtel.",
+    "book_full": "Aucune chambre disponible : {agent} propose une alternative.",
+    "check_yes": "Des chambres sont disponibles ({free} libre(s) pour ces dates).",
+    "check_no": "Complet sur ces dates : {agent} cherche une alternative.",
+    "error": "Petit souci technique côté planning : {agent} s'adapte.",
+    "end": "Fin d'appel demandée."
+  },
+  "info_label": "Réception",
+  "recap_title": "Réservation confirmée",
+  "recap_unit": "chambre pour",
+  "recap_note": "Elle est déjà enregistrée dans le planning de l'hôtel.",
+
+  "event_summary_label": "Réservation",
+  "calendar_note": "Prise par Chloé (agent vocal Corsica Studio)",
+  "calendar_id": "",
+  "capacity_per_slot": 8,
+  "slot_duration_min": 60,
+
+  "greeting_instruction": "Salue en français, avec la chaleur élégante d'une réceptionniste de bel hôtel. Présente-toi sans nommer l'hôtel : 'Bonjour, Chloé à votre écoute.' Une seule phrase, posée et accueillante."
+}

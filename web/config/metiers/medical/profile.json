@@ -1,0 +1,62 @@
+{
+  "metier": "medical",
+  "agent": "Léa",
+  "agent_initial": "L",
+  "agent_role": "la secrétaire médicale vocale",
+  "secteur": "cabinet médical",
+  "objet": "rendez-vous",
+  "objet_pluriel": "rendez-vous",
+  "action_verbe": "prendre rendez-vous",
+
+  "meta_title": "Démo Agent Vocal IA · Corsica Studio",
+  "meta_description": "Parlez à Léa, la secrétaire médicale vocale d'un cabinet : horaires, adresse, praticiens, documents à apporter et prise de rendez-vous en direct. Une démo Corsica Studio.",
+  "og_title": "Démo Agent Vocal IA · Corsica Studio",
+  "og_description": "Léa répond au téléphone du cabinet : renseignements pratiques et prise de rendez-vous dans l'agenda. Faites le test en direct.",
+  "og_image": "",
+
+  "hero_title": "Appelez votre cabinet.",
+  "hero_accent": "Léa décroche.",
+  "hero_sub": "Une vraie conversation au téléphone d'un cabinet médical, un vrai rendez-vous dans l'agenda. Parlez-lui naturellement.",
+  "home_name": "",
+  "home_tag": "",
+  "home_btn_secondary": "Prendre RDV",
+  "call_header": "",
+  "cta_label": "Appeler le cabinet",
+  "chip_1": "Essayez : <b>« Je voudrais un rendez-vous »</b>",
+  "chip_2": "<b>« Quels sont vos horaires ? »</b>",
+  "chip_3": "<b>« Quels documents dois-je apporter ? »</b>",
+  "showcase_title": "Le cabinet",
+  "showcase_sub": "Praticiens · Horaires · Accès",
+  "showcase_kind": "fiche",
+
+  "card1_title": "Zéro rendez-vous manqué",
+  "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en pleine consultation, 24h/24 et 7j/7</li><li>Prend les rendez-vous directement <b>dans votre agenda</b></li><li>Renseigne vos patients : horaires, adresse, praticiens, documents à apporter</li><li>Le secrétariat reste concentré sur les patients présents</li><li>Vos créneaux se remplissent <b>sans payer d'abonnement à une plateforme type Doctolib</b></li>",
+
+  "conversion_title": "Et si Léa répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> cabinet ?",
+  "conversion_text": "Cette page est une démonstration : Léa décroche à chaque appel, renseigne vos patients et remplit votre agenda, sans abonnement Doctolib. <b>Installation offerte, premier mois offert.</b>",
+  "mailto_subject": "Agent%20vocal%20pour%20mon%20cabinet%20m%C3%A9dical",
+
+  "bubbles": {
+    "info_start": "{agent} consulte les informations du cabinet…",
+    "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
+    "book_start": "Enregistrement du rendez-vous au nom de {name}…",
+    "book_confirmed": "Rendez-vous enregistré dans l'agenda du cabinet.",
+    "book_full": "Créneau complet : {agent} propose une alternative.",
+    "check_yes": "Des créneaux sont disponibles ({free} libre(s) sur ce créneau).",
+    "check_no": "Créneau complet : {agent} cherche une alternative.",
+    "error": "Petit souci technique côté agenda : {agent} s'adapte.",
+    "end": "Fin d'appel demandée."
+  },
+  "info_label": "Agenda",
+  "recap_title": "Rendez-vous confirmé",
+  "recap_unit": "",
+  "recap_note": "Il est déjà dans l'agenda du cabinet.",
+
+  "event_summary_label": "RDV",
+  "calendar_note": "Pris par Léa (agent vocal Corsica Studio)",
+  "calendar_id": "",
+  "capacity_per_slot": 1,
+  "slot_duration_min": 20,
+
+  "greeting_instruction": "Salue en français, d'un ton calme, professionnel et rassurant, comme une secrétaire médicale posée. Ex : 'Bonjour, Léa à votre écoute.' Une seule phrase, sans nom de cabinet."
+}

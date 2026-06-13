@@ -1,0 +1,51 @@
+[
+  {
+    "type": "function",
+    "name": "get_business_info",
+    "description": "Renvoie la fiche complète de l'institut : prestations détaillées avec durées et tarifs, horaires, équipe, adresse et accès. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'un créneau pour une prestation à une date et une heure données. À appeler AVANT book_reservation. Renvoie available (bool), creneaux_libres (int) et alternatives (heures proches disponibles) si complet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date souhaitée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure souhaitée, format HH:MM en 24h" }
+      },
+      "required": ["date", "time"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Enregistre le rendez-vous dans l'agenda de l'institut. À appeler uniquement après une disponibilité confirmée par check_availability et avec les informations complètes (prestation, date, heure, nom, téléphone).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom de la cliente ou du client" },
+        "phone": { "type": "string", "description": "Numéro de téléphone" },
+        "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
+        "notes": { "type": "string", "description": "Prestation souhaitée, praticienne demandée, précisions éventuelles. Vide si rien." }
+      },
+      "required": ["name", "phone", "date", "time"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+]
