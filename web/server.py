@@ -41,6 +41,14 @@ XAI_REALTIME_WS = "wss://api.x.ai/v1/realtime"
 MODEL = "grok-voice-think-fast-1.0"
 VOICE = "69smp8rm"  # voix française « Camille » (bibliothèque Grok Voice)
 
+# --- Métier servi par cette instance --------------------------------------
+# Un SEUL conteneur sert les 7 métiers : le métier est résolu par le
+# sous-domaine (Host header) — demo-<metier>.corsica-studio.com → <metier> ;
+# demo.corsica-studio.com / localhost / IP → DEFAULT_METIER (rétro-compat).
+# En local, forcer un métier précis avec la variable d'env METIER.
+DEFAULT_METIER = (os.environ.get("METIER", "restaurant").strip().lower() or "restaurant")
+PUBLIC_BASE_DOMAIN = os.environ.get("PUBLIC_BASE_DOMAIN", "corsica-studio.com")
+
 COMPOSIO_API_KEY = os.environ.get("COMPOSIO_API_KEY")
 COMPOSIO_EXEC_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_CREATE_EVENT"
 COMPOSIO_LIST_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_EVENTS_LIST"
@@ -178,12 +186,130 @@ app = FastAPI(title="Grok Voice Agent")
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-def _load_config() -> dict:
-    """Read system prompt + tools fresh from disk on every call.
+# --- Socle « un agent par métier » -----------------------------------------
+# Tout ce qui varie d'un métier à l'autre vit dans web/config/metiers/<metier>/
+# (system_prompt.txt + tools.json + business.json + profile.json). Le restaurant
+# reste servi par les fichiers historiques web/config/*.json (fallback), donc la
+# prod actuelle n'est pas touchée. profile.json ne porte AUCUN secret : seulement
+# des libellés UI, du SEO et des paramètres d'agenda.
+
+# Valeurs par défaut = restaurant. Garantit que index.html (templatisé) et voice.js
+# s'affichent correctement même sans aucun profile.json (rétro-compat totale).
+_PROFILE_DEFAULTS = {
+    "metier": "restaurant",
+    "agent": "Margot",
+    "agent_initial": "M",
+    "agent_role": "l'hôtesse vocale",
+    "secteur": "restaurant",
+    "objet": "réservation",
+    "objet_pluriel": "réservations",
+    "action_verbe": "réserver",
+    # SEO / meta
+    "meta_title": "Démo Agent Vocal IA · Corsica Studio",
+    "meta_description": "Parlez à Margot, l'hôtesse vocale IA d'un restaurant : renseignements, carte, horaires et réservation de table en direct. Une démo Corsica Studio.",
+    "og_title": "Démo Agent Vocal IA · Corsica Studio",
+    "og_description": "Margot répond au téléphone du restaurant : carte, horaires, réservations dans l'agenda. Faites le test en direct.",
+    "og_image": "",
+    # scène démo (téléphones + CTA)
+    "hero_title": "Appelez le restaurant.",
+    "hero_accent": "Margot décroche.",
+    "hero_sub": "Une vraie conversation au téléphone d'un restaurant, une vraie réservation dans l'agenda. Parlez-lui naturellement.",
+    "home_name": "Lou Patio",
+    "home_tag": "Saint-Rémy-de-Provence",
+    "home_btn_secondary": "Réserver",
+    "call_header": "LOU PATIO",
+    "cta_label": "Appeler le restaurant",
+    "chip_1": "Essayez : <b>« Une table pour 4 samedi soir »</b>",
+    "chip_2": "<b>« Quel est le plat signature ? »</b>",
+    "chip_3": "<b>« Vous avez un parking ? »</b>",
+    "showcase_title": "La Carte",
+    "showcase_sub": "Chef Nathan Helo · Produits des Alpilles",
+    "showcase_kind": "menu",      # "menu" = rendu carte resto ; "fiche" = rendu générique
+    # argumentaire — carte 1 (les cartes 2 et 3 sont identiques sur tous les métiers)
+    "card1_title": "Zéro appel manqué",
+    "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en plein coup de feu, 24h/24 et 7j/7</li><li>Prend les réservations directement <b>dans votre agenda</b></li><li>Renseigne vos clients : horaires, carte, services, accès</li><li>Votre équipe reste concentrée sur les clients présents</li><li>Un client qui a sa réponse ne rappelle pas le concurrent</li>",
+    # conversion (bas de page)
+    "conversion_title": "Et si Margot répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> restaurant ?",
+    "conversion_text": "Cette page est une démonstration : Margot décroche à chaque appel, renseigne vos clients et remplit votre agenda, même en plein service. <b>Installation offerte, premier mois offert.</b>",
+    "mailto_subject": "Agent%20vocal%20pour%20mon%20restaurant",
+    # bulles d'outil (le {placeholder} est substitué dans voice.js)
+    "bubbles": {
+        "info_start": "{agent} consulte la carte et les informations du restaurant…",
+        "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
+        "book_start": "Enregistrement de la réservation au nom de {name} ({party} pers.)…",
+        "book_confirmed": "Réservation enregistrée dans l'agenda du restaurant.",
+        "book_full": "Créneau complet : {agent} propose une alternative.",
+        "check_yes": "Des tables sont disponibles ({free} libre(s) sur ce créneau).",
+        "check_no": "Créneau complet : {agent} cherche une alternative.",
+        "error": "Petit souci technique côté agenda : {agent} s'adapte.",
+        "end": "Fin d'appel demandée.",
+    },
+    "info_label": "Agenda",
+    "recap_title": "Réservation confirmée",
+    "recap_unit": "table pour",
+    "recap_note": "Elle est déjà dans l'agenda du restaurant.",
+    # agenda / réservation
+    "event_summary_label": "Réservation",
+    "calendar_note": "Prise par Margot (agent vocal Corsica Studio)",
+    "calendar_id": "",            # vide → fallback RESTAURANT_CALENDAR_ID (env)
+    "capacity_per_slot": CAPACITY_PER_SLOT,
+    "slot_duration_min": TABLE_DURATION_MIN,
+    # accroche d'ouverture (chemin Twilio)
+    "greeting_instruction": "Salue en français, avec l'élégance chaleureuse d'une hôtesse de belle maison provençale. Ex : 'LOU PATIO, bonjour, Margot à votre écoute.' Une seule phrase, posée.",
+}
+
+
+def _metier_dir(metier: str) -> Path:
+    """Dossier de config d'un métier, ou web/config/ si le dossier métier
+    n'existe pas (fallback rétro-compat pour le restaurant historique)."""
+    d = CONFIG_DIR / "metiers" / metier
+    return d if d.exists() else CONFIG_DIR
+
+
+def _metier_exists(slug: str | None) -> str | None:
+    slug = (slug or "").strip().lower()
+    return slug if slug and (CONFIG_DIR / "metiers" / slug).exists() else None
+
+
+def _resolve_metier(host: str | None, override: str | None = None) -> str:
+    """Métier de la requête. Priorité : ?metier= (test local) >
+    sous-domaine demo-<metier>.<base> > DEFAULT_METIER (demo.<base>, localhost, IP)."""
+    cand = _metier_exists(override)
+    if cand:
+        return cand
+    h = (host or "").split(":")[0].strip().lower()
+    if h.startswith("demo-"):
+        cand = _metier_exists(h[len("demo-"):].split(".")[0])
+        if cand:
+            return cand
+    return DEFAULT_METIER
+
+
+def _load_profile(metier: str) -> dict:
+    """Profil UI/SEO/agenda du métier : valeurs par défaut (restaurant) écrasées
+    par web/config/metiers/<metier>/profile.json. Hot-reloaded à chaque appel."""
+    prof = json.loads(json.dumps(_PROFILE_DEFAULTS))  # copie profonde
+    path = _metier_dir(metier) / "profile.json"
+    if path.exists():
+        try:
+            override = json.loads(path.read_text(encoding="utf-8"))
+            bubbles = dict(prof.get("bubbles", {}))
+            bubbles.update(override.get("bubbles", {}))
+            prof.update(override)
+            prof["bubbles"] = bubbles
+        except Exception as e:  # noqa: BLE001
+            print(f"[profile] {metier} parse error: {e}")
+    prof["metier"] = metier
+    return prof
+
+
+def _load_config(metier: str) -> dict:
+    """Read system prompt + tools fresh from disk on every call, for one métier.
     Expands ${ENV_VAR} placeholders in tools.json via Template.safe_substitute
     (NB: os.path.expandvars on Windows breaks on apostrophes — don't use it)."""
-    prompt_path = CONFIG_DIR / "system_prompt.txt"
-    tools_path = CONFIG_DIR / "tools.json"
+    d = _metier_dir(metier)
+    prompt_path = d / "system_prompt.txt"
+    tools_path = d / "tools.json"
     instructions = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
     instructions = instructions.replace("{{TODAY}}", _today_fr())
     tools_raw = tools_path.read_text(encoding="utf-8") if tools_path.exists() else "[]"
@@ -191,12 +317,30 @@ def _load_config() -> dict:
     return {"instructions": instructions, "tools": tools}
 
 
-def _load_restaurant() -> dict:
-    """Fiche restaurant (web/config/restaurant.json), hot-reloaded comme le prompt."""
-    path = CONFIG_DIR / "restaurant.json"
-    if not path.exists():
-        return {"error": "restaurant.json introuvable"}
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load_business(metier: str) -> dict:
+    """Fiche établissement (business.json, ou restaurant.json en fallback),
+    hot-reloaded comme le prompt."""
+    d = _metier_dir(metier)
+    for fname in ("business.json", "restaurant.json"):
+        p = d / fname
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    return {"error": "fiche établissement introuvable"}
+
+
+def _metier_ctx(metier: str) -> dict:
+    """Contexte agenda d'un métier (calendrier, capacité, durée, libellés),
+    résolu depuis le profil avec fallback sur les variables d'env globales."""
+    prof = _load_profile(metier)
+    return {
+        "metier": metier,
+        "profile": prof,
+        "calendar_id": prof.get("calendar_id") or RESTAURANT_CALENDAR_ID,
+        "capacity": int(prof.get("capacity_per_slot") or CAPACITY_PER_SLOT),
+        "duration": int(prof.get("slot_duration_min") or TABLE_DURATION_MIN),
+        "summary_label": prof.get("event_summary_label") or "Réservation",
+        "event_note": prof.get("calendar_note") or "",
+    }
 
 
 async def _composio_execute(url: str, arguments: dict) -> dict:
@@ -234,15 +378,15 @@ def _parse_event_window(ev: dict) -> tuple[datetime, datetime] | None:
         return None
 
 
-async def _list_events_window(day_start: datetime, day_end: datetime) -> list[tuple[datetime, datetime]] | None:
-    """Liste les réservations du calendrier resto sur une fenêtre. None = erreur API."""
+async def _list_events_window(day_start: datetime, day_end: datetime, calendar_id: str) -> list[tuple[datetime, datetime]] | None:
+    """Liste les réservations d'un calendrier sur une fenêtre. None = erreur API."""
     # Le slug Composio EVENTS_LIST accepte les paramètres style Google (camelCase) ;
     # fallback snake_case si la validation refuse.
     for args in (
-        {"calendarId": RESTAURANT_CALENDAR_ID,
+        {"calendarId": calendar_id,
          "timeMin": day_start.isoformat(), "timeMax": day_end.isoformat(),
          "singleEvents": True, "maxResults": 250},
-        {"calendar_id": RESTAURANT_CALENDAR_ID,
+        {"calendar_id": calendar_id,
          "time_min": day_start.isoformat(), "time_max": day_end.isoformat(),
          "single_events": True, "max_results": 250},
     ):
@@ -266,26 +410,26 @@ def _count_overlaps(windows: list[tuple[datetime, datetime]], start: datetime, e
     return sum(1 for (s, e) in windows if s < end and e > start)
 
 
-async def _check_availability(args: dict) -> dict:
-    """Disponibilité multi-tables : un créneau est libre tant que moins de
-    CAPACITY_PER_SLOT réservations (durée TABLE_DURATION_MIN) le chevauchent.
+async def _check_availability(args: dict, *, calendar_id: str, capacity: int, duration_min: int) -> dict:
+    """Disponibilité multi-places : un créneau est libre tant que moins de
+    `capacity` réservations (durée `duration_min`) le chevauchent.
     Si complet : propose jusqu'à 2 alternatives dans le même service."""
     try:
         start = datetime.strptime(f"{args.get('date','')} {args.get('time','')}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
     except ValueError:
         return {"status": "error", "message": "Date ou heure invalide (attendu YYYY-MM-DD et HH:MM)."}
-    duration = timedelta(minutes=TABLE_DURATION_MIN)
+    duration = timedelta(minutes=duration_min)
     end = start + duration
 
     day_start = start.replace(hour=0, minute=0)
     day_end = day_start + timedelta(days=1)
-    windows = await _list_events_window(day_start, day_end)
+    windows = await _list_events_window(day_start, day_end, calendar_id)
     if windows is None:
         return {"status": "error",
                 "message": "Le livre de réservations est momentanément inaccessible. Propose qu'un membre de l'équipe rappelle."}
 
     booked = _count_overlaps(windows, start, end)
-    free = max(0, CAPACITY_PER_SLOT - booked)
+    free = max(0, capacity - booked)
     if free > 0:
         return {"status": "ok", "available": True, "tables_libres": free}
 
@@ -295,7 +439,7 @@ async def _check_availability(args: dict) -> dict:
         t = datetime.strptime(f"{args.get('date','')} {win_start}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
         last = datetime.strptime(f"{args.get('date','')} {win_last}", "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
         while t <= last and len(alternatives) < 2:
-            if t != start and _count_overlaps(windows, t, t + duration) < CAPACITY_PER_SLOT:
+            if t != start and _count_overlaps(windows, t, t + duration) < capacity:
                 # privilégier les créneaux proches de la demande
                 if abs((t - start).total_seconds()) <= 2 * 3600:
                     alternatives.append(t.strftime("%H:%M"))
@@ -303,13 +447,14 @@ async def _check_availability(args: dict) -> dict:
     return {"status": "ok", "available": False, "tables_libres": 0, "alternatives": alternatives}
 
 
-async def _create_calendar_event(args: dict) -> dict:
+async def _create_calendar_event(args: dict, *, calendar_id: str, capacity: int,
+                                 duration_min: int, summary_label: str, event_note: str) -> dict:
     """Build the Google Calendar payload server-side (the model kept hallucinating
     fields like workingLocationProperties when given the raw schema) and POST to
     Composio. Returns a dict the voice agent can read back to the caller."""
     if not COMPOSIO_API_KEY:
         return {"status": "error", "message": "COMPOSIO_API_KEY not set"}
-    # Reject obvious placeholder phones — otherwise Margot blindly saves
+    # Reject obvious placeholder phones — otherwise the agent blindly saves
     # "anonymous" because Twilio sent it as the masked caller's From=.
     phone = str(args.get("phone") or "").strip()
     if phone.lower() in {"", "anonymous", "restricted", "unavailable", "unknown", "private", "none", "n/a"}:
@@ -318,7 +463,7 @@ async def _create_calendar_event(args: dict) -> dict:
             "message": "INVALID_PHONE: aucun numéro valide fourni — demande au client un vrai numéro de téléphone et rappelle book_reservation avec.",
         }
     # Garde anti-surbooking : re-vérifie la capacité juste avant de créer.
-    avail = await _check_availability(args)
+    avail = await _check_availability(args, calendar_id=calendar_id, capacity=capacity, duration_min=duration_min)
     if avail.get("status") == "ok" and not avail.get("available"):
         return {
             "status": "full",
@@ -326,13 +471,15 @@ async def _create_calendar_event(args: dict) -> dict:
             "alternatives": avail.get("alternatives", []),
         }
 
+    pers = args.get("party_size")
+    suffix = f" ({pers} pers.)" if pers else ""
     body = await _composio_execute(COMPOSIO_EXEC_URL, {
-        "calendar_id": RESTAURANT_CALENDAR_ID,
-        "summary": f"Réservation : {args.get('name','?')} ({args.get('party_size','?')} pers.)",
-        "description": f"Téléphone : {args.get('phone','?')}\nNotes : {args.get('notes') or '—'}\nPrise par Margot (agent vocal Corsica Studio)",
+        "calendar_id": calendar_id,
+        "summary": f"{summary_label} : {args.get('name','?')}{suffix}",
+        "description": f"Téléphone : {args.get('phone','?')}\nNotes : {args.get('notes') or '—'}\n{event_note}".rstrip(),
         "start_datetime": f"{args.get('date','')}T{args.get('time','')}:00",
-        "event_duration_hour": TABLE_DURATION_MIN // 60,
-        "event_duration_minutes": TABLE_DURATION_MIN % 60,
+        "event_duration_hour": duration_min // 60,
+        "event_duration_minutes": duration_min % 60,
         "timezone": RESTAURANT_TIMEZONE,
     })
     if not body.get("successful"):
@@ -347,17 +494,23 @@ async def _create_calendar_event(args: dict) -> dict:
     }
 
 
-async def _server_tool_call(name: str, args: dict) -> dict:
+async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
     """Function-tool dispatcher for the Twilio path (no browser to handle them).
-    Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools."""
+    Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools.
+    `ctx` carries the métier's calendar/capacity/labels (cf. _metier_ctx)."""
     if name == "book_reservation":
-        return await _create_calendar_event(args)
+        return await _create_calendar_event(
+            args, calendar_id=ctx["calendar_id"], capacity=ctx["capacity"],
+            duration_min=ctx["duration"], summary_label=ctx["summary_label"],
+            event_note=ctx["event_note"])
     if name == "check_availability":
-        return await _check_availability(args)
-    if name == "get_restaurant_info":
-        return _load_restaurant()
+        return await _check_availability(
+            args, calendar_id=ctx["calendar_id"], capacity=ctx["capacity"],
+            duration_min=ctx["duration"])
+    if name in ("get_business_info", "get_restaurant_info"):
+        return _load_business(ctx["metier"])
     if name == "get_restaurant_hours":  # compat legacy
-        return _load_restaurant().get("horaires", RESTAURANT_HOURS)
+        return _load_business(ctx["metier"]).get("horaires", RESTAURANT_HOURS)
     if name == "end_call":
         # Actual hang-up is deferred to the relay loop so we don't cut off the
         # goodbye mid-word; this just acknowledges so the model continues.
@@ -477,8 +630,9 @@ async def usage_report(key: str = "") -> JSONResponse:
 
 
 @app.get("/config")
-async def get_config() -> JSONResponse:
-    return JSONResponse(_load_config())
+async def get_config(request: Request) -> JSONResponse:
+    metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
+    return JSONResponse(_load_config(metier))
 
 
 class Reservation(BaseModel):
@@ -491,8 +645,12 @@ class Reservation(BaseModel):
 
 
 @app.post("/api/calendar/book")
-async def book(res: Reservation) -> JSONResponse:
-    return JSONResponse(await _create_calendar_event(res.model_dump()), status_code=200)
+async def book(res: Reservation, request: Request) -> JSONResponse:
+    ctx = _metier_ctx(_resolve_metier(request.headers.get("host"), request.query_params.get("metier")))
+    return JSONResponse(await _create_calendar_event(
+        res.model_dump(), calendar_id=ctx["calendar_id"], capacity=ctx["capacity"],
+        duration_min=ctx["duration"], summary_label=ctx["summary_label"],
+        event_note=ctx["event_note"]), status_code=200)
 
 
 class AvailabilityQuery(BaseModel):
@@ -502,13 +660,24 @@ class AvailabilityQuery(BaseModel):
 
 
 @app.post("/api/calendar/availability")
-async def availability(q: AvailabilityQuery) -> JSONResponse:
-    return JSONResponse(await _check_availability(q.model_dump()), status_code=200)
+async def availability(q: AvailabilityQuery, request: Request) -> JSONResponse:
+    ctx = _metier_ctx(_resolve_metier(request.headers.get("host"), request.query_params.get("metier")))
+    return JSONResponse(await _check_availability(
+        q.model_dump(), calendar_id=ctx["calendar_id"], capacity=ctx["capacity"],
+        duration_min=ctx["duration"]), status_code=200)
 
 
-@app.get("/api/restaurant")
-async def restaurant_info() -> JSONResponse:
-    return JSONResponse(_load_restaurant())
+@app.get("/api/restaurant")   # alias historique appelé par voice.js
+@app.get("/api/business")
+async def business_info(request: Request) -> JSONResponse:
+    metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
+    return JSONResponse(_load_business(metier))
+
+
+@app.get("/api/profile")
+async def profile_info(request: Request) -> JSONResponse:
+    metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
+    return JSONResponse(_load_profile(metier))
 
 
 # ---------------------------------------------------------------------------
@@ -552,7 +721,10 @@ async def twilio_stream(ws: WebSocket) -> None:
         await ws.close(code=1011, reason="XAI_API_KEY not configured")
         return
 
-    config = _load_config()
+    metier = _resolve_metier(ws.headers.get("host"))
+    ctx = _metier_ctx(metier)
+    config = _load_config(metier)
+    print(f"[twilio] métier résolu = {metier!r}")
     stream_sid: str | None = None
     call_sid: str | None = None
     pending_end_call = False
@@ -631,11 +803,9 @@ async def twilio_stream(ws: WebSocket) -> None:
                             await xai.send(json.dumps({
                                 "type": "response.create",
                                 "response": {
-                                    "instructions": (
-                                        "Salue en français, avec l'élégance chaleureuse d'une hôtesse "
-                                        "de belle maison provençale. Ex : 'LOU PATIO, bonjour, Margot "
-                                        "à votre écoute.' Une seule phrase, posée."
-                                    ),
+                                    "instructions": ctx["profile"].get(
+                                        "greeting_instruction",
+                                        _PROFILE_DEFAULTS["greeting_instruction"]),
                                 },
                             }))
                         elif kind == "media":
@@ -708,7 +878,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                         except json.JSONDecodeError:
                             args = {}
                         print(f"[tool] → {name}({args})")
-                        result = await _server_tool_call(name, args)
+                        result = await _server_tool_call(name, args, ctx)
                         print(f"[tool] ← {name} → {result}")
                         if name == "end_call":
                             pending_end_call = True
@@ -756,9 +926,21 @@ async def twilio_stream(ws: WebSocket) -> None:
 # ---------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-async def root() -> HTMLResponse:
-    """Serve index.html with ?v=<mtime> cache-busters on voice.js and style.css."""
+async def root(request: Request) -> HTMLResponse:
+    """Serve index.html for the resolved métier: inject the profile (text
+    placeholders {{KEY}} + window.__PROFILE__ for voice.js) and ?v=<mtime>
+    cache-busters on voice.js / style.css."""
+    metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
+    profile = _load_profile(metier)
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    # 1) placeholders texte {{KEY}} (les valeurs non-chaînes, ex. bubbles, sont ignorées)
+    for key, val in profile.items():
+        if isinstance(val, str):
+            html = html.replace("{{" + key.upper() + "}}", val)
+    # 2) profil complet exposé à voice.js (agent, objet, bulles d'outil…)
+    inject = "<script>window.__PROFILE__=" + json.dumps(profile, ensure_ascii=False) + ";</script>"
+    html = html.replace("</head>", inject + "</head>", 1)
+    # 3) cache-busters
     ver_js = int((STATIC_DIR / "voice.js").stat().st_mtime)
     ver_css = int((STATIC_DIR / "style.css").stat().st_mtime)
     html = html.replace('src="/voice.js"', f'src="/voice.js?v={ver_js}"')

@@ -1,4 +1,6 @@
-// Client navigateur — Démo Agent Vocal Corsica Studio (Margot, LOU PATIO).
+// Client navigateur — Démo Agent Vocal Corsica Studio (template par métier).
+// Tout ce qui est spécifique au métier (nom de l'agent, bulles, libellés…) vient
+// de window.__PROFILE__, injecté par le serveur selon le sous-domaine. Repli resto.
 // - Charge /config (prompt + tools), mint /token (secret éphémère xAI).
 // - Micro 24 kHz, frames PCM16 base64 en input_audio_buffer.append.
 // - Affiche la conversation, gère les function tools côté client.
@@ -11,6 +13,17 @@ const PREFERRED_RATE = 24000;
 let sampleRate = PREFERRED_RATE;
 const MODEL = "grok-voice-think-fast-1.0";
 const VOICE = "69smp8rm";   // voix française « Camille » (bibliothèque Grok Voice)
+
+// Profil métier injecté par le serveur (window.__PROFILE__), repli restaurant.
+const P = (typeof window !== "undefined" && window.__PROFILE__) || {};
+const AGENT = P.agent || "Margot";
+const BUBBLES = P.bubbles || {};
+const INFO_LABEL = P.info_label || "Agenda";
+const CTA_LABEL = P.cta_label || "Appeler le restaurant";
+// Remplace les jetons {agent} {date} {time} {name} {party} {free} d'un gabarit.
+function fillTpl(tpl, vars) {
+  return String(tpl || "").replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ""));
+}
 
 const $toggle      = document.getElementById("toggle");
 const $toggleLabel = $toggle.querySelector(".cta-label");
@@ -166,7 +179,11 @@ const FUNCTIONS = {
     return await r.json();
   },
   get_restaurant_info: async () => {
-    const r = await fetch("/api/restaurant");
+    const r = await fetch("/api/business");
+    return await r.json();
+  },
+  get_business_info: async () => {
+    const r = await fetch("/api/business");
     return await r.json();
   },
   end_call: async () => {
@@ -176,34 +193,38 @@ const FUNCTIONS = {
 };
 
 // Bulles lisibles pour le grand public (le JSON brut reste en console).
+// Les textes viennent du profil (BUBBLES) avec repli restaurant.
 function toolBubbleStart(name, args) {
+  const v = { agent: AGENT, date: args.date || "", time: args.time || "",
+              name: args.name || "…", party: args.party_size || "?" };
   if (name === "check_availability") {
-    return `Margot vérifie les disponibilités du ${args.date || ""} à ${args.time || ""}…`;
+    return fillTpl(BUBBLES.check_start || `${AGENT} vérifie les disponibilités du {date} à {time}…`, v);
   }
   if (name === "book_reservation") {
-    return `Enregistrement de la réservation au nom de ${args.name || "…"} (${args.party_size || "?"} pers.)…`;
+    return fillTpl(BUBBLES.book_start || `Enregistrement au nom de {name}…`, v);
   }
-  if (name === "get_restaurant_info") {
-    return "Margot consulte la carte et les informations du restaurant…";
+  if (name === "get_business_info" || name === "get_restaurant_info") {
+    return fillTpl(BUBBLES.info_start || `${AGENT} consulte les informations…`, v);
   }
-  if (name === "end_call") return "Fin d'appel demandée.";
+  if (name === "end_call") return BUBBLES.end || "Fin d'appel demandée.";
   return `→ ${name}`;
 }
 
 function toolBubbleEnd(name, result) {
+  const v = { agent: AGENT, free: (result && result.tables_libres != null) ? result.tables_libres : "?" };
   if (name === "book_reservation" && result && result.status === "confirmed") {
-    return "Réservation enregistrée dans l'agenda du restaurant.";
+    return fillTpl(BUBBLES.book_confirmed || "Enregistré dans l'agenda.", v);
   }
   if (name === "book_reservation" && result && result.status === "full") {
-    return "Créneau complet : Margot propose une alternative.";
+    return fillTpl(BUBBLES.book_full || `Créneau complet : ${AGENT} propose une alternative.`, v);
   }
   if (name === "check_availability" && result && typeof result.available !== "undefined") {
     return result.available
-      ? `Des tables sont disponibles (${result.tables_libres ?? "?"} libre(s) sur ce créneau).`
-      : "Créneau complet : Margot cherche une alternative.";
+      ? fillTpl(BUBBLES.check_yes || `Des créneaux sont disponibles ({free} libre(s)).`, v)
+      : fillTpl(BUBBLES.check_no || `Créneau complet : ${AGENT} cherche une alternative.`, v);
   }
   if (result && result.status === "error") {
-    return "Petit souci technique côté agenda : Margot s'adapte.";
+    return fillTpl(BUBBLES.error || `Petit souci technique côté agenda : ${AGENT} s'adapte.`, v);
   }
   return null; // pas de bulle de fin
 }
@@ -323,7 +344,7 @@ function handleEvent(event) {
     case "response.output_audio_transcript.delta":
     case "response.text.delta":
     case "response.output_text.delta": {
-      if (!assistantBubble) assistantBubble = addBubble("assistant", "", "Margot");
+      if (!assistantBubble) assistantBubble = addBubble("assistant", "", AGENT);
       assistantBubble.textContent += event.delta || "";
       scrollChat();
       break;
@@ -357,7 +378,7 @@ function handleEvent(event) {
       setStatus("vous parlez…");
       break;
     case "input_audio_buffer.speech_stopped":
-      setStatus("Margot réfléchit…");
+      setStatus(`${AGENT} réfléchit…`);
       break;
 
     case "response.function_call_arguments.done":
@@ -390,7 +411,7 @@ async function handleFunctionCall(event) {
   try { args = JSON.parse(event.arguments || "{}"); } catch {}
 
   console.log(`[tool] → ${name}`, args);
-  addBubble("tool", toolBubbleStart(name, args), "Agenda");
+  addBubble("tool", toolBubbleStart(name, args), INFO_LABEL);
 
   const handler = FUNCTIONS[name];
   let result;
@@ -407,7 +428,7 @@ async function handleFunctionCall(event) {
     track("reservation_booked", { party_size: args.party_size || 0 });
   }
   const endText = toolBubbleEnd(name, result);
-  if (endText) addBubble("tool", endText, "Agenda");
+  if (endText) addBubble("tool", endText, INFO_LABEL);
 
   ws.send(JSON.stringify({
     type: "conversation.item.create",
@@ -432,20 +453,23 @@ function showRecap() {
     when = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   } catch {}
   const heure = (lastBooking.time || "").replace(":", "h");
+  const recapTitle = P.recap_title || "Réservation confirmée";
+  const recapUnit  = P.recap_unit  || "table pour";
+  const recapNote  = P.recap_note  || "Elle est déjà dans l'agenda du restaurant.";
+  const unitPart = lastBooking.party_size ? `${recapUnit} ${lastBooking.party_size}, ` : "";
   $recap.classList.remove("error");
   $recap.innerHTML = `
     <span class="recap-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></span>
     <div>
-      <b>Réservation confirmée</b> : table pour ${lastBooking.party_size || "?"},
-      ${when} à ${heure}${lastBooking.name ? `, au nom de ${lastBooking.name}` : ""}.
-      <span class="recap-note">Elle est déjà dans l'agenda du restaurant.</span>
+      <b>${recapTitle}</b> : ${unitPart}${when} à ${heure}${lastBooking.name ? `, au nom de ${lastBooking.name}` : ""}.
+      <span class="recap-note">${recapNote}</span>
     </div>`;
   $recap.hidden = false;
 }
 
 async function stop() {
   running = false;
-  $toggleLabel.textContent = "Appeler le restaurant";
+  $toggleLabel.textContent = CTA_LABEL;
   $toggle.classList.remove("recording");
   // Raccrochage : la barre disparaît, la conversation est effacée,
   // seul le récap (si réservation) reste à l'écran.
@@ -520,6 +544,11 @@ async function loadRestaurantPage() {
       ${section("Plats", c.plats)}
       ${section("Pièces à partager", c.pieces_a_partager)}
       ${section("Desserts", c.desserts)}`;
+  } else if ($menu && Array.isArray(r.showcase)) {
+    // Métiers hors restauration : fiche générique (prestations, services, infos).
+    const sec = (titre, items) => (items && items.length)
+      ? `<div class="menu-section"><h4>${titre}</h4>${items.map(menuItem).join("")}</div>` : "";
+    $menu.innerHTML = r.showcase.map(s => sec(s.titre, s.items)).join("");
   }
 
   // (les 3 cartes sous les téléphones sont commerciales et statiques :

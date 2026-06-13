@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Démo Agent Vocal IA · Corsica Studio</title>
-  <meta name="description" content="Parlez à Margot, l'hôtesse vocale IA d'un restaurant : renseignements, carte, horaires et réservation de table en direct. Une démo Corsica Studio." />
-  <meta property="og:title" content="Démo Agent Vocal IA · Corsica Studio" />
-  <meta property="og:description" content="Margot répond au téléphone du restaurant : carte, horaires, réservations dans l'agenda. Faites le test en direct." />
+  <title>{{META_TITLE}}</title>
+  <meta name="description" content="{{META_DESCRIPTION}}" />
+  <meta property="og:title" content="{{OG_TITLE}}" />
+  <meta property="og:description" content="{{OG_DESCRIPTION}}" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=MuseoModerno:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -37,11 +37,8 @@
 
     <!-- ======== SCÈNE DÉMO : deux téléphones, le CTA au centre ======== -->
     <section class="demo-stage">
-      <h1 class="stage-title">Appelez le restaurant.<br/><span class="coral">Margot décroche.</span></h1>
-      <p class="stage-sub">
-        Une vraie conversation au téléphone d'un restaurant, une vraie réservation
-        dans l'agenda. Parlez-lui naturellement.
-      </p>
+      <h1 class="stage-title">{{HERO_TITLE}}<br/><span class="coral">{{HERO_ACCENT}}</span></h1>
+      <p class="stage-sub">{{HERO_SUB}}</p>
 
       <div class="stage-row">
 
@@ -53,19 +50,19 @@
               <img class="home-photo" src="/img/resto-salle.jpg" alt="Salle du restaurant" />
               <div class="home-body">
                 <span class="home-stars">★★★★★</span>
-                <h3 class="home-name">Lou Patio</h3>
-                <p class="home-tag">Saint-Rémy-de-Provence</p>
+                <h3 class="home-name">{{HOME_NAME}}</h3>
+                <p class="home-tag">{{HOME_TAG}}</p>
                 <div class="home-actions">
                   <span class="home-btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Appeler</span>
-                  <span class="home-btn ghost">Réserver</span>
+                  <span class="home-btn ghost">{{HOME_BTN_SECONDARY}}</span>
                 </div>
               </div>
             </div>
             <div class="phone-screen screen-call" aria-hidden="true">
-              <p class="call-resto">LOU PATIO</p>
+              <p class="call-resto">{{CALL_HEADER}}</p>
               <div class="call-center">
-                <div class="call-avatar">M</div>
-                <p class="call-name">Margot</p>
+                <div class="call-avatar">{{AGENT_INITIAL}}</div>
+                <p class="call-name">{{AGENT}}</p>
                 <p class="call-state" id="call-timer">00:00</p>
                 <span class="voice-eq big accent" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
               </div>
@@ -78,15 +75,15 @@
         <div class="stage-center">
           <button id="toggle" class="cta-pill primary big">
             <span class="voice-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="cta-label">Appeler le restaurant</span>
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="cta-label">{{CTA_LABEL}}</span>
           </button>
           <span id="status" class="status">prêt</span>
           <span id="config-info" class="muted small"></span>
-          <p class="stage-margot"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <b>Margot</b>, l'hôtesse vocale, vous répond en direct.</p>
+          <p class="stage-margot"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <b>{{AGENT}}</b>, {{AGENT_ROLE}}, vous répond en direct.</p>
           <div class="chips stage-chips">
-            <span class="chip">Essayez : <b>« Une table pour 4 samedi soir »</b></span>
-            <span class="chip"><b>« Quel est le plat signature ? »</b></span>
-            <span class="chip"><b>« Vous avez un parking ? »</b></span>
+            <span class="chip">{{CHIP_1}}</span>
+            <span class="chip">{{CHIP_2}}</span>
+            <span class="chip">{{CHIP_3}}</span>
           </div>
         </div>
 
@@ -99,8 +96,8 @@
                 <img class="menu-photo" src="/img/resto-plat.jpg" alt="Plat du chef" />
                 <header class="menu-head">
                   <span class="menu-orn">❦</span>
-                  <h2>La Carte</h2>
-                  <p class="menu-sub">Chef Nathan Helo · Produits des Alpilles</p>
+                  <h2>{{SHOWCASE_TITLE}}</h2>
+                  <p class="menu-sub">{{SHOWCASE_SUB}}</p>
                 </header>
                 <div id="menu-content" class="menu-content"><!-- rempli depuis /api/restaurant --></div>
               </div>
@@ -114,7 +111,7 @@
     <section id="call-card" class="call-card" hidden>
       <div class="call-card-head">
         <span class="voice-eq accent" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-        <span class="call-title">Conversation avec <b>Margot</b></span>
+        <span class="call-title">Conversation avec <b>{{AGENT}}</b></span>
         <span class="call-hint">la conversation s'écrit ici en direct</span>
       </div>
       <div id="chat" class="transcript" aria-live="polite"></div>
@@ -129,14 +126,8 @@
 
         <div class="info-card">
           <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><path d="M14.05 2a9 9 0 0 1 8 7.94"/><path d="M14.05 6A5 5 0 0 1 18 10"/></svg></span>
-          <h3>Zéro appel manqué</h3>
-          <ul>
-            <li>Décroche à <b>chaque appel</b>, même en plein coup de feu, 24h/24 et 7j/7</li>
-            <li>Prend les réservations directement <b>dans votre agenda</b></li>
-            <li>Renseigne vos clients : horaires, carte, services, accès</li>
-            <li>Votre équipe reste concentrée sur les clients présents</li>
-            <li>Un client qui a sa réponse ne rappelle pas le concurrent</li>
-          </ul>
+          <h3>{{CARD1_TITLE}}</h3>
+          <ul>{{CARD1_BULLETS}}</ul>
         </div>
 
         <div class="info-card">
@@ -171,15 +162,11 @@
 
     <!-- ======== CONVERSION CORSICA STUDIO ======== -->
     <section id="after-call" class="after-call">
-      <h2>Et si Margot répondait au téléphone de <span style="color:var(--accent)">votre</span> restaurant ?</h2>
-      <p>
-        Cette page est une démonstration : Margot décroche à chaque appel, renseigne vos
-        clients et remplit votre agenda, même en plein service.
-        <b>Installation offerte, premier mois offert.</b>
-      </p>
+      <h2>{{CONVERSION_TITLE}}</h2>
+      <p>{{CONVERSION_TEXT}}</p>
       <div class="contact-row">
         <a class="contact-pill" href="tel:+33651003049"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 06 51 00 30 49</a>
-        <a class="contact-pill ghost" href="mailto:contact@corsica-studio.com?subject=Agent%20vocal%20pour%20mon%20restaurant"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> contact@corsica-studio.com</a>
+        <a class="contact-pill ghost" href="mailto:contact@corsica-studio.com?subject={{MAILTO_SUBJECT}}"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> contact@corsica-studio.com</a>
         <a class="contact-pill ghost" href="https://corsica-studio.com" target="_blank" rel="noopener">corsica-studio.com</a>
       </div>
     </section>
