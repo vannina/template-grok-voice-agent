@@ -7,13 +7,11 @@
   "objet": "réservation",
   "objet_pluriel": "réservations",
   "action_verbe": "réserver",
-
   "meta_title": "Démo Agent Vocal IA · Corsica Studio",
   "meta_description": "Parlez à Margot, l'hôtesse vocale IA d'un restaurant : renseignements, carte, horaires et réservation de table en direct. Une démo Corsica Studio.",
   "og_title": "Démo Agent Vocal IA · Corsica Studio",
   "og_description": "Margot répond au téléphone du restaurant : carte, horaires, réservations dans l'agenda. Faites le test en direct.",
   "og_image": "",
-
   "hero_title": "Appelez le restaurant.",
   "hero_accent": "Margot décroche.",
   "hero_sub": "Une vraie conversation au téléphone d'un restaurant, une vraie réservation dans l'agenda. Parlez-lui naturellement.",
@@ -28,14 +26,11 @@
   "showcase_title": "La Carte",
   "showcase_sub": "Chef Nathan Helo · Produits des Alpilles",
   "showcase_kind": "menu",
-
   "card1_title": "Zéro appel manqué",
   "card1_bullets": "<li>Décroche à <b>chaque appel</b>, même en plein coup de feu, 24h/24 et 7j/7</li><li>Prend les réservations directement <b>dans votre agenda</b></li><li>Renseigne vos clients : horaires, carte, services, accès</li><li>Votre équipe reste concentrée sur les clients présents</li><li>Un client qui a sa réponse ne rappelle pas le concurrent</li>",
-
   "conversion_title": "Et si Margot répondait au téléphone de <span style=\"color:var(--accent)\">votre</span> restaurant ?",
   "conversion_text": "Cette page est une démonstration : Margot décroche à chaque appel, renseigne vos clients et remplit votre agenda, même en plein service. <b>Installation offerte, premier mois offert.</b>",
   "mailto_subject": "Agent%20vocal%20pour%20mon%20restaurant",
-
   "bubbles": {
     "info_start": "{agent} consulte la carte et les informations du restaurant…",
     "check_start": "{agent} vérifie les disponibilités du {date} à {time}…",
@@ -51,12 +46,11 @@
   "recap_title": "Réservation confirmée",
   "recap_unit": "table pour",
   "recap_note": "Elle est déjà dans l'agenda du restaurant.",
-
   "event_summary_label": "Réservation",
   "calendar_note": "Prise par Margot (agent vocal Corsica Studio)",
   "calendar_id": "",
   "capacity_per_slot": 10,
   "slot_duration_min": 90,
-
-  "greeting_instruction": "Salue en français, avec l'élégance chaleureuse d'une hôtesse de belle maison provençale. Ex : 'LOU PATIO, bonjour, Margot à votre écoute.' Une seule phrase, posée."
+  "greeting_instruction": "Salue en français, avec l'élégance chaleureuse d'une hôtesse de belle maison provençale. Ex : 'LOU PATIO, bonjour, Margot à votre écoute.' Une seule phrase, posée.",
+  "multilingual": true
 }

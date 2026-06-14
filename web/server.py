@@ -149,6 +149,30 @@ def _today_fr() -> str:
     now = datetime.now(TZ)
     return f"{FR_DAYS[now.weekday()]} {now.day} {FR_MONTHS[now.month - 1]} {now.year} ({now.strftime('%Y-%m-%d')})"
 
+
+def _now_fr() -> str:
+    now = datetime.now(TZ)
+    return f"{FR_DAYS[now.weekday()]} {now.day} {FR_MONTHS[now.month - 1]} {now.year}, {now.strftime('%H:%M')}"
+
+
+def _runtime_rules() -> str:
+    """Règles transverses injectées à chaque conversation (tous métiers, browser + Twilio).
+    Recalculées à chaque appel pour donner l'heure réelle à l'agent."""
+    return (
+        "\n\n[Règles en temps réel — à respecter absolument]\n"
+        f"- Date et heure actuelles : {_now_fr()} (heure de Paris). Ne propose JAMAIS un créneau "
+        "déjà passé : tout créneau que tu proposes doit être POSTÉRIEUR à cette date et heure. "
+        "En fin de journée, propose plus tard aujourd'hui si c'est jouable, sinon les jours suivants.\n"
+        "- Ne présume jamais le genre de la personne : n'utilise pas « Monsieur » ni « Madame » "
+        "tant que tu ne le sais pas. Reste neutre et chaleureux, ou demande poliment son nom.\n"
+        "- Si tu n'as pas l'information demandée (un tarif, un détail absent de tes informations), "
+        "ne l'invente jamais : propose de prendre un message et qu'un membre de l'équipe rappelle "
+        "la personne, ou de transmettre sa demande à un humain. Recueille alors son nom et son numéro.\n"
+        "- Si on te demande si tu es une intelligence artificielle, un robot ou un répondeur, "
+        "réponds clairement que OUI, tu es l'assistant vocal IA de l'établissement. Indique aussi, "
+        "le cas échéant, que l'appel peut être enregistré."
+    )
+
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 # Auth REST par clé API (SK + secret) — recommandé par Twilio, plus sûr que
@@ -319,6 +343,14 @@ def _load_config(metier: str) -> dict:
     tools_path = d / "tools.json"
     instructions = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
     instructions = instructions.replace("{{TODAY}}", _today_fr())
+    instructions += _runtime_rules()   # heure réelle + genre neutre + escalade humain + disclosure IA (tous métiers)
+    # Multilingue : seulement les métiers du tourisme (profile.multilingual=true : hôtel, restaurant).
+    if _load_profile(metier).get("multilingual"):
+        instructions += (
+            "\n- Tu es multilingue. Si l'appelant s'exprime dans une autre langue "
+            "(anglais, espagnol, italien, allemand...), réponds naturellement et couramment "
+            "DANS SA langue (essentiel dans le tourisme). Sinon, réponds en français."
+        )
     tools_raw = tools_path.read_text(encoding="utf-8") if tools_path.exists() else "[]"
     tools = json.loads(Template(tools_raw).safe_substitute(os.environ))
     return {"instructions": instructions, "tools": tools}
@@ -647,7 +679,7 @@ class Reservation(BaseModel):
     phone: str
     date: str         # YYYY-MM-DD
     time: str         # HH:MM (24h)
-    party_size: int
+    party_size: int = 1   # défaut 1 : métiers sans notion de groupe (artisan, médical, immo, beauté) n'envoient pas ce champ
     notes: str = ""
 
 
