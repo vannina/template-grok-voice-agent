@@ -53,5 +53,6 @@
   "slot_duration_min": 60,
   "greeting_instruction": "Salue en français, avec la chaleur discrète et raffinée d'un concierge de palace. Présente-toi avec le nom de la maison. Ex : 'Hôtel Crillon le Brave, bonjour, Chloé à votre écoute.' Une seule phrase, posée, élégante et accueillante.",
   "home_photo": "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop",
-  "showcase_photo": "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop"
+  "showcase_photo": "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80&auto=format&fit=crop",
+  "voice": "ara"
 }

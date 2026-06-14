@@ -200,6 +200,9 @@ _PROFILE_DEFAULTS = {
     "agent": "Margot",
     "agent_initial": "M",
     "agent_role": "l'hôtesse vocale",
+    # Voix Grok Voice par métier. Défaut = Camille (FR féminine). Surchargée
+    # dans profile.json : ara/eve (féminines), rex/leo (masculines, pour Hugo/Paul).
+    "voice": "69smp8rm",
     "secteur": "restaurant",
     "objet": "réservation",
     "objet_pluriel": "réservations",
@@ -788,7 +791,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                             await xai.send(json.dumps({
                                 "type": "session.update",
                                 "session": {
-                                    "voice": VOICE,
+                                    "voice": ctx["profile"].get("voice") or VOICE,
                                     "instructions": instructions,
                                     "tools": config["tools"],
                                     "turn_detection": {"type": "server_vad"},

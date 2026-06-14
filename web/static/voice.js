@@ -12,7 +12,9 @@
 const PREFERRED_RATE = 24000;
 let sampleRate = PREFERRED_RATE;
 const MODEL = "grok-voice-think-fast-1.0";
-const VOICE = "69smp8rm";   // voix française « Camille » (bibliothèque Grok Voice)
+// Voix par métier : injectée par le serveur via window.__PROFILE__.voice (profile.json).
+// Défaut Camille FR. ara/eve = féminines, rex/leo = masculines (Hugo/Paul).
+const VOICE = (typeof window !== "undefined" && window.__PROFILE__ && window.__PROFILE__.voice) || "69smp8rm";
 
 // Profil métier injecté par le serveur (window.__PROFILE__), repli restaurant.
 const P = (typeof window !== "undefined" && window.__PROFILE__) || {};
@@ -273,6 +275,19 @@ async function start() {
   (callTarget || $callCard).scrollIntoView({ behavior: "smooth", block: "center" });
   setStatus("préparation…");
 
+  // iOS Safari : l'AudioContext DOIT être créé + débloqué DANS le geste de clic,
+  // AVANT tout await. Sinon il reste "suspended" sur Safari mobile et il n'y a
+  // aucun son (ni capture ni lecture). On le crée donc ici, pas après les fetch.
+  try { audioCtx = new AudioContext({ sampleRate: PREFERRED_RATE }); }
+  catch { audioCtx = new AudioContext(); }
+  sampleRate = audioCtx.sampleRate;
+  audioCtx.resume().catch(() => {});
+  try {                       // unlock sortie audio iOS : buffer muet joué dans le geste
+    const _b = audioCtx.createBuffer(1, 1, sampleRate);
+    const _s = audioCtx.createBufferSource();
+    _s.buffer = _b; _s.connect(audioCtx.destination); _s.start(0);
+  } catch {}
+
   const micPromise    = navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
   });
@@ -294,11 +309,9 @@ async function start() {
 
   console.log(`[config] tools: ${config.tools.length} • prompt: ${config.instructions.length} chars`);
 
-  // iOS Safari : un sampleRate forcé peut jeter une exception → fallback natif.
-  try { audioCtx = new AudioContext({ sampleRate: PREFERRED_RATE }); }
-  catch { audioCtx = new AudioContext(); }
-  sampleRate = audioCtx.sampleRate;
-  if (audioCtx.state === "suspended") { try { await audioCtx.resume(); } catch {} }
+  // AudioContext déjà créé + débloqué dans le geste (plus haut). On s'assure
+  // juste qu'il est actif après les await (iOS peut le re-suspendre).
+  if (audioCtx && audioCtx.state === "suspended") { try { await audioCtx.resume(); } catch {} }
   console.log(`[audio] sampleRate=${sampleRate}`);
   const source = audioCtx.createMediaStreamSource(stream);
   micNode = audioCtx.createScriptProcessor(4096, 1, 1);

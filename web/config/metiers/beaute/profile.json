@@ -53,5 +53,6 @@
   "slot_duration_min": 45,
   "greeting_instruction": "Salue en français, avec la chaleur soignée d'une réceptionniste de salon de coiffure, accueillante et complice. Présente-toi AVEC le nom du salon. Ex : 'L'Artisan Coiffeur by M, bonjour, Inès à votre écoute.' Une seule phrase, posée.",
   "home_photo": "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=900&q=80&auto=format&fit=crop",
-  "showcase_photo": "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=900&q=80&auto=format&fit=crop"
+  "showcase_photo": "https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=900&q=80&auto=format&fit=crop",
+  "voice": "ara"
 }
