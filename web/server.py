@@ -59,6 +59,42 @@ TZ = ZoneInfo(RESTAURANT_TIMEZONE)
 # Réservation multi-tables : capacité par créneau, durée d'une table.
 RESTAURANT_CALENDAR_ID = os.environ.get("RESTAURANT_CALENDAR_ID", "primary")
 CAPACITY_PER_SLOT = int(os.environ.get("CAPACITY_PER_SLOT", "10"))
+
+# --- Demande de rappel (escalade) — PRÉPARÉ MAIS DÉSACTIVÉ PAR DÉFAUT ---------
+# Quand l'agent ne peut pas répondre ou pas finaliser un rendez-vous, il capte
+# nom + téléphone + motif via l'outil `prendre_message` et le transmet au pro par
+# Telegram + copie email (Resend). DORMANT tant que ENABLE_CALLBACK_TOOL != 1 :
+# l'outil n'est PAS exposé à l'agent et le comportement actuel ne change pas.
+# Activation et test : voir docs/MECANISME-RAPPEL.md.
+NOTIFY_ENABLED = os.environ.get("ENABLE_CALLBACK_TOOL", "0").strip().lower() in ("1", "true", "yes", "on")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL")
+NOTIFY_FROM = os.environ.get("NOTIFY_FROM", "Corsica Studio <noreply@corsica-studio.com>")
+
+# Outil exposé à l'agent UNIQUEMENT si NOTIFY_ENABLED (injecté dans _load_config).
+CALLBACK_TOOL = {
+    "type": "function",
+    "name": "prendre_message",
+    "description": (
+        "Capte une demande de rappel quand tu ne peux pas répondre à la question "
+        "ou pas finaliser le rendez-vous. Recueille le nom, le numéro et le motif, "
+        "rédige un résumé structuré de l'échange, puis appelle cet outil : la demande "
+        "est transmise aussitôt à l'équipe pour qu'un humain rappelle la personne en "
+        "connaissant déjà le contexte. N'invente jamais : si tu ne sais pas, prends un message."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "nom": {"type": "string", "description": "Nom de la personne à rappeler"},
+            "telephone": {"type": "string", "description": "Numéro de rappel"},
+            "motif": {"type": "string", "description": "Demande en une phrase (l'essentiel)"},
+            "resume": {"type": "string", "description": "Résumé structuré de l'échange : ce que la personne veut précisément, le contexte, les informations déjà fournies et tout détail utile pour la rappeler efficacement. Quelques lignes claires."},
+        },
+        "required": ["nom", "telephone", "motif"],
+    },
+}
 TABLE_DURATION_MIN = int(os.environ.get("TABLE_DURATION_MIN", "90"))
 
 # Fenêtres de service (heures locales) pour proposer des alternatives crédibles.
@@ -351,8 +387,19 @@ def _load_config(metier: str) -> dict:
             "(anglais, espagnol, italien, allemand...), réponds naturellement et couramment "
             "DANS SA langue (essentiel dans le tourisme). Sinon, réponds en français."
         )
+    if NOTIFY_ENABLED:
+        instructions += (
+            "\n- Pour transmettre une demande de rappel (tu n'as pas l'information "
+            "demandée, ou tu ne peux pas finaliser le rendez-vous), recueille le nom, "
+            "le numéro et le motif, rédige un résumé structuré de l'échange (ce que la "
+            "personne veut précisément, le contexte, les infos déjà données), puis appelle "
+            "l'outil prendre_message avec le champ resume rempli. La demande part aussitôt "
+            "à l'équipe ; confirme alors à la personne qu'elle sera rappelée."
+        )
     tools_raw = tools_path.read_text(encoding="utf-8") if tools_path.exists() else "[]"
     tools = json.loads(Template(tools_raw).safe_substitute(os.environ))
+    if NOTIFY_ENABLED:
+        tools = tools + [CALLBACK_TOOL]
     return {"instructions": instructions, "tools": tools}
 
 
@@ -379,6 +426,8 @@ def _metier_ctx(metier: str) -> dict:
         "duration": int(prof.get("slot_duration_min") or TABLE_DURATION_MIN),
         "summary_label": prof.get("event_summary_label") or "Réservation",
         "event_note": prof.get("calendar_note") or "",
+        "telegram_chat_id": prof.get("telegram_chat_id") or TELEGRAM_CHAT_ID,
+        "notify_email": prof.get("notify_email") or NOTIFY_EMAIL,
     }
 
 
@@ -533,6 +582,56 @@ async def _create_calendar_event(args: dict, *, calendar_id: str, capacity: int,
     }
 
 
+async def _notify_callback(ctx: dict, args: dict, *, dry_run: bool = False) -> dict:
+    """Transmet une demande de rappel (nom + tel + motif) au pro via Telegram + copie
+    email (Resend). Destinataires résolus par métier (profil) avec repli sur les vars
+    d'env CS. `dry_run` formate le message SANS rien envoyer (test). Cf. CALLBACK_TOOL.
+    Préparé mais inerte tant que l'agent n'appelle pas l'outil (NOTIFY_ENABLED off)."""
+    prof = ctx.get("profile", {})
+    etablissement = prof.get("home_name") or prof.get("secteur") or ctx.get("metier", "")
+    nom = (args.get("nom") or args.get("name") or "").strip() or "(non précisé)"
+    tel = (args.get("telephone") or args.get("phone") or "").strip() or "(non précisé)"
+    motif = (args.get("motif") or args.get("message") or "").strip() or "(non précisé)"
+    resume = (args.get("resume") or args.get("transcription") or "").strip()
+    chat_id = ctx.get("telegram_chat_id") or TELEGRAM_CHAT_ID
+    to_email = ctx.get("notify_email") or NOTIFY_EMAIL
+    text = (f"[RAPPEL] {etablissement}\n"
+            f"Nom : {nom}\n"
+            f"Telephone : {tel}\n"
+            f"Motif : {motif}\n"
+            + (f"\nDemande detaillee :\n{resume}\n" if resume else "")
+            + f"\nRecu : {_now_fr()}\n"
+            "Demande captee par l'agent vocal : la personne attend un rappel.")
+    out = {"telegram": None, "email": None,
+           "payload": {"chat_id": chat_id, "to": to_email, "text": text}}
+    if dry_run:
+        return {"status": "dry_run", **out}
+    if TELEGRAM_BOT_TOKEN and chat_id:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.post(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                    json={"chat_id": chat_id, "text": text})
+            out["telegram"] = r.status_code
+        except Exception as e:
+            out["telegram"] = f"error: {e}"
+    if RESEND_API_KEY and to_email:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {RESEND_API_KEY}",
+                             "Content-Type": "application/json"},
+                    json={"from": NOTIFY_FROM, "to": [to_email],
+                          "subject": f"[Rappel] {etablissement} — {nom}",
+                          "text": text, "html": text.replace(chr(10), "<br>")})
+            out["email"] = r.status_code
+        except Exception as e:
+            out["email"] = f"error: {e}"
+    ok = out["telegram"] == 200 or out["email"] == 200
+    return {"status": "transmis" if ok else "error", **out}
+
+
 async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
     """Function-tool dispatcher for the Twilio path (no browser to handle them).
     Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools.
@@ -550,6 +649,8 @@ async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
         return _load_business(ctx["metier"])
     if name == "get_restaurant_hours":  # compat legacy
         return _load_business(ctx["metier"]).get("horaires", RESTAURANT_HOURS)
+    if name == "prendre_message":
+        return await _notify_callback(ctx, args)
     if name == "end_call":
         # Actual hang-up is deferred to the relay loop so we don't cut off the
         # goodbye mid-word; this just acknowledges so the model continues.
@@ -690,6 +791,21 @@ async def book(res: Reservation, request: Request) -> JSONResponse:
         res.model_dump(), calendar_id=ctx["calendar_id"], capacity=ctx["capacity"],
         duration_min=ctx["duration"], summary_label=ctx["summary_label"],
         event_note=ctx["event_note"]), status_code=200)
+
+
+class CallbackMessage(BaseModel):
+    nom: str = ""
+    telephone: str = ""
+    motif: str = ""
+
+
+@app.post("/api/message")
+async def take_message(msg: CallbackMessage, request: Request) -> JSONResponse:
+    """Demande de rappel (escalade). Transmet au pro via Telegram + email.
+    Préparé mais inerte tant que l'agent ne dispose pas de l'outil prendre_message
+    (NOTIFY_ENABLED off) ; l'endpoint répond quand même si appelé directement."""
+    ctx = _metier_ctx(_resolve_metier(request.headers.get("host"), request.query_params.get("metier")))
+    return JSONResponse(await _notify_callback(ctx, msg.model_dump()), status_code=200)
 
 
 class AvailabilityQuery(BaseModel):

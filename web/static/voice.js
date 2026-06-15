@@ -207,6 +207,14 @@ const FUNCTIONS = {
     const r = await fetch("/api/business");
     return await r.json();
   },
+  prendre_message: async (args) => {
+    const r = await fetch("/api/message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    return await r.json();
+  },
   end_call: async () => {
     pendingEndCall = true;
     return { status: "ok", message: "Hang-up scheduled after current utterance." };
@@ -227,6 +235,9 @@ function toolBubbleStart(name, args) {
   if (name === "get_business_info" || name === "get_restaurant_info") {
     return fillTpl(BUBBLES.info_start || `${AGENT} consulte les informations…`, v);
   }
+  if (name === "prendre_message") {
+    return fillTpl(BUBBLES.message_start || `${AGENT} prend votre message…`, v);
+  }
   if (name === "end_call") return BUBBLES.end || "Fin d'appel demandée.";
   return `→ ${name}`;
 }
@@ -243,6 +254,9 @@ function toolBubbleEnd(name, result) {
     return result.available
       ? fillTpl(BUBBLES.check_yes || `Des créneaux sont disponibles ({free} libre(s)).`, v)
       : fillTpl(BUBBLES.check_no || `Créneau complet : ${AGENT} cherche une alternative.`, v);
+  }
+  if (name === "prendre_message" && result && (result.status === "transmis" || result.status === "dry_run")) {
+    return fillTpl(BUBBLES.message_done || "Message transmis à l'équipe, vous serez rappelé(e).", v);
   }
   if (result && result.status === "error") {
     return fillTpl(BUBBLES.error || `Petit souci technique côté agenda : ${AGENT} s'adapte.`, v);
