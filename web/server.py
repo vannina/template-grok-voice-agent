@@ -736,7 +736,7 @@ async def mint_token(request: Request) -> JSONResponse:
     if r.status_code >= 300:
         raise HTTPException(r.status_code, f"xAI token mint failed: {r.text}")
     metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
-    _usage_append({"event": "start", "path": "browser", **({"lead": lead} if lead else {})})
+    _usage_append({"event": "start", "path": "browser", "metier": metier, **({"lead": lead} if lead else {})})
     if lead:
         await _demo_webhook(lead, metier)
     return JSONResponse({"client_secret": r.json(), "model": MODEL})
@@ -762,6 +762,7 @@ def _aggregate_usage() -> dict:
     today_sessions = 0
     by_day: dict[str, int] = {}
     by_lead: dict[str, int] = {}
+    by_metier: dict[str, int] = {}
     if USAGE_LOG.exists():
         for line in USAGE_LOG.read_text(encoding="utf-8").splitlines():
             try:
@@ -775,6 +776,9 @@ def _aggregate_usage() -> dict:
                 lead = e.get("lead")
                 if lead:
                     by_lead[lead] = by_lead.get(lead, 0) + 1
+                m = e.get("metier")
+                if m:
+                    by_metier[m] = by_metier.get(m, 0) + 1
                 if day == today:
                     today_sessions += 1
             elif e.get("event") == "end" and e.get("seconds"):
@@ -795,6 +799,7 @@ def _aggregate_usage() -> dict:
         "tarif_min_usd": XAI_RATE_PER_MIN,
         "par_jour": dict(sorted(by_day.items())),
         "par_lead": dict(sorted(by_lead.items(), key=lambda kv: -kv[1])),
+        "par_metier": dict(sorted(by_metier.items(), key=lambda kv: -kv[1])),
         "sessions_identifiees": sum(by_lead.values()),
         "note": "Estimation côté serveur (le solde exact reste sur console.x.ai du compte équipe).",
     }
