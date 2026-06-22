@@ -108,6 +108,12 @@ XAI_RATE_PER_MIN = float(os.environ.get("XAI_RATE_PER_MIN", "0.05"))  # ~0,05 $/
 XAI_CREDIT_TOTAL = float(os.environ.get("XAI_CREDIT_TOTAL", "40"))    # 40 $ équipe Alpha
 AVG_SESSION_MIN = 1.5  # estimation pour les sessions sans durée remontée
 
+# --- Attribution démo cold email -------------------------------------------
+# Quand un prospect identifié (lien email ...?lead=recXXX) lance une démo, on
+# logue son record_id Airtable dans usage.jsonl ET on notifie n8n (WF-13) qui
+# rapproche la démo de l'étape de relance et alerte Vannina en temps réel.
+DEMO_WEBHOOK_URL = os.environ.get("DEMO_WEBHOOK_URL", "").strip()
+
 # Alertes Telegram conso : palier tous les 10 $ + alerte "reste 10 $".
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -691,10 +697,33 @@ async def no_cache(request, call_next):
 # Browser-facing endpoints (unchanged behaviour)
 # ---------------------------------------------------------------------------
 
+async def _demo_webhook(lead: str, metier: str) -> None:
+    """Notifie n8n (WF-13) qu'un prospect identifié lance une démo. Best-effort :
+    ne jamais bloquer le mint de token à cause du webhook."""
+    if not (DEMO_WEBHOOK_URL and lead):
+        return
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            await client.post(DEMO_WEBHOOK_URL, json={
+                "lead": lead,
+                "metier": metier,
+                "ts": datetime.now(TZ).isoformat(),
+                "source": "browser",
+            })
+    except Exception as e:  # noqa: BLE001
+        print(f"[demo] webhook failed: {e}")
+
+
 @app.post("/token")
-async def mint_token() -> JSONResponse:
+async def mint_token(request: Request) -> JSONResponse:
     if not XAI_API_KEY:
         raise HTTPException(500, "XAI_API_KEY is not set. Add it to .env")
+    # Lead optionnel transmis par la SPA (lien email ...?lead=recXXX).
+    try:
+        payload = await request.json()
+    except Exception:  # noqa: BLE001
+        payload = {}
+    lead = str((payload or {}).get("lead") or "").strip()[:40]
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(
             XAI_TOKEN_URL,
@@ -706,7 +735,10 @@ async def mint_token() -> JSONResponse:
         )
     if r.status_code >= 300:
         raise HTTPException(r.status_code, f"xAI token mint failed: {r.text}")
-    _usage_append({"event": "start", "path": "browser"})
+    metier = _resolve_metier(request.headers.get("host"), request.query_params.get("metier"))
+    _usage_append({"event": "start", "path": "browser", **({"lead": lead} if lead else {})})
+    if lead:
+        await _demo_webhook(lead, metier)
     return JSONResponse({"client_secret": r.json(), "model": MODEL})
 
 
@@ -729,6 +761,7 @@ def _aggregate_usage() -> dict:
     today = datetime.now(TZ).date().isoformat()
     today_sessions = 0
     by_day: dict[str, int] = {}
+    by_lead: dict[str, int] = {}
     if USAGE_LOG.exists():
         for line in USAGE_LOG.read_text(encoding="utf-8").splitlines():
             try:
@@ -739,6 +772,9 @@ def _aggregate_usage() -> dict:
             if e.get("event") == "start":
                 sessions += 1
                 by_day[day] = by_day.get(day, 0) + 1
+                lead = e.get("lead")
+                if lead:
+                    by_lead[lead] = by_lead.get(lead, 0) + 1
                 if day == today:
                     today_sessions += 1
             elif e.get("event") == "end" and e.get("seconds"):
@@ -758,6 +794,8 @@ def _aggregate_usage() -> dict:
         "pourcent_consomme": round(100 * est_cost / XAI_CREDIT_TOTAL, 1) if XAI_CREDIT_TOTAL else None,
         "tarif_min_usd": XAI_RATE_PER_MIN,
         "par_jour": dict(sorted(by_day.items())),
+        "par_lead": dict(sorted(by_lead.items(), key=lambda kv: -kv[1])),
+        "sessions_identifiees": sum(by_lead.values()),
         "note": "Estimation côté serveur (le solde exact reste sur console.x.ai du compte équipe).",
     }
 

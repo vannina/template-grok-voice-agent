@@ -305,7 +305,12 @@ async function start() {
   const micPromise    = navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
   });
-  const tokenPromise  = fetch("/token",  { method: "POST" }).then(r => { if (!r.ok) throw new Error("token "+r.status); return r.json(); });
+  const _leadId = new URLSearchParams(location.search).get("lead") || "";
+  const tokenPromise  = fetch("/token",  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lead: _leadId }),
+  }).then(r => { if (!r.ok) throw new Error("token "+r.status); return r.json(); });
   const configPromise = fetch("/config").then(r => { if (!r.ok) throw new Error("config "+r.status); return r.json(); });
 
   const [stream, tokenResp, config] = await Promise.all([micPromise, tokenPromise, configPromise]);
