@@ -102,34 +102,38 @@ The active booking path is Composio, not direct Google OAuth. Defaults in `serve
 
 `Dockerfile` builds a python:3.12-slim image with the app. `docker-compose.yml` runs the container bound only to `127.0.0.1:8001` — a reverse proxy on the host fronts the public domain and terminates TLS. The `web/config` dir is bind-mounted read-only into the container so prompt/tools edits don't need a rebuild (Python source changes do).
 
-The repo carries two reverse-proxy templates:
+The repo carries `deploy/nginx.conf.example` (Nginx vhost with `proxy_set_header Host $host;`, the WebSocket `Upgrade` headers, and `proxy_request_buffering off`) as a generic template. **The current production VPS does not use it** — it fronts the container with **Traefik** instead (see below). Keep the Nginx/Caddy templates for reference, but the live setup is Traefik.
 
-- **`deploy/nginx.conf.example`** — Nginx vhost with `proxy_set_header Host $host;` (required — `/twilio/voice` reads the Host header to build the `wss://` URL), the WebSocket `Upgrade` headers, and `proxy_request_buffering off`. TLS via `certbot --nginx`.
-- **The current production VPS (`voiceagents.thomas-berton.com`)** actually runs **Caddy**, not Nginx. The block in `/etc/caddy/Caddyfile` is just:
+### Production deployment (real, as of 2026-06-22)
+
+The production deployment is a **VPS Hostinger at `168.231.83.45`**. It serves **all 7 sector sub-domains from a single container** (`demo`, `demo-hotel`, `demo-medical`, `demo-immobilier`, `demo-artisan`, `demo-coach`, `demo-beaute`, all under `corsica-studio.com`), routed by **Traefik on a Host-based rule**. The server resolves the métier from the incoming `Host` header, so one image covers every sector.
+
+- The app lives at **`/opt/demo-voice`** on the VPS. **It is NOT a git clone** — there is no `git pull`. Deployment is by **`rsync`/`scp`** of the changed files (`web/server.py`, `web/static/*`, `web/config/*`, etc.) into `/opt/demo-voice`.
+- The container/service is **`demo-voice`**, declared in **`/docker/docker-compose.yml`** (separate from the app dir), internal port **8000**, `env_file` **`/opt/demo-voice/.env`**.
+- Rebuild after a Python source or requirements change:
   ```
-  voiceagents.thomas-berton.com {
-      reverse_proxy 127.0.0.1:8001 {
-          header_up Host {host}
-      }
-  }
+  ssh root@168.231.83.45
+  # rsync the changed files into /opt/demo-voice first
+  cd /docker
+  docker compose up -d --build demo-voice
+  docker logs -f demo-voice        # follow live logs
   ```
-  Caddy auto-provisions Let's Encrypt and proxies WebSockets natively, no extra directives. `header_up Host {host}` is the Caddy equivalent of nginx's `proxy_set_header Host $host;` — needed so the TwiML URL builder sees the public hostname, not `127.0.0.1:8001`.
+- If the change is only in `web/config/*` (prompt, tools.json), the bind mount picks it up on the next conversation — no `docker compose` invocation needed.
 
-The repo is cloned at `/opt/margot-voice/`. Standard ops:
+### Tracking démo cold email (attribution `?lead=`)
 
-```
-ssh root@<vps>
-cd /opt/margot-voice
-git pull
-docker compose up -d --build       # rebuild only needed if Python source or requirements changed
-docker logs -f margot-voice        # follow live logs
-```
+The cold-email button (WF-06a) links to `https://demo.corsica-studio.com/?lead=${record_id}&utm_...`. The app turns that `?lead=` into real attribution:
 
-If the change is only in `web/config/*` (prompt, tools.json), the bind mount picks it up on the next conversation — no `docker compose` invocation needed.
+- **`web/static/voice.js`** reads `?lead=` from the URL (`URLSearchParams`) and sends it in the body of `POST /token`.
+- **`web/server.py`** captures the lead on `/token`, writes it to `usage.jsonl` (alongside the métier resolved from the `Host` header), then notifies n8n **WF-13** best-effort via `_demo_webhook(lead, metier)` (httpx POST, never blocks the token mint). The endpoint is set by **`DEMO_WEBHOOK_URL`** in `.env` (= `https://n8n-cs.corsica-studio.com/webhook/demo-lancee`).
+- WF-13 writes `demo_lancee` / `demo_date` / `demo_etape` / `demo_count` on the Airtable prospect and fires a nominative Telegram alert.
+- **`GET /usage`** (`_aggregate_usage()`) exposes `par_lead`, `par_metier`, and `sessions_identifiees` so you can see which prospects launched a demo.
+
+Full mechanism (email link → Telegram → Airtable): see `docs/TRACKING-DEMO.md`.
 
 ## Logging conventions
 
-Server prints tagged lines so `docker logs -f margot-voice` is the primary debug tool:
+Server prints tagged lines so `docker logs -f demo-voice` is the primary debug tool:
 
 - `[twilio] ...` — Twilio WS lifecycle (connected, start with `from='...'`, stop, closed)
 - `[caller] ...` — completed Whisper transcript of the caller
@@ -150,4 +154,4 @@ If you see no `[tool] → book_reservation` despite the caller having given all 
 
 ## Secrets / files not in git
 
-`.env` holds `XAI_API_KEY`, `COMPOSIO_API_KEY`, `COMPOSIO_MCP_URL`, and (for the phone path) `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN`. `web/config/google_oauth_client.json` and `web/config/google_token.json` are gitignored (only relevant if you reactivate the legacy `google_calendar.py` path). `.deploy_tmp/` is also gitignored — it holds throwaway SSH/SFTP helper scripts that embed the VPS password for the duration of a deployment session.
+`.env` holds `XAI_API_KEY`, `COMPOSIO_API_KEY`, `COMPOSIO_MCP_URL`, `DEMO_WEBHOOK_URL` (cold-email demo attribution, notifies n8n WF-13), and (for the phone path) `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN`. `web/config/google_oauth_client.json` and `web/config/google_token.json` are gitignored (only relevant if you reactivate the legacy `google_calendar.py` path). `.deploy_tmp/` is also gitignored — it holds throwaway SSH/SFTP helper scripts that embed the VPS password for the duration of a deployment session.

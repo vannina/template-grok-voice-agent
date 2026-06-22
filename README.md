@@ -118,43 +118,55 @@ le modèle ne touche jamais directement aux champs Google.
 
 ## 🐳 Déploiement Docker sur un VPS
 
-Pour faire tourner Margot 24/7 (et la brancher à un numéro Twilio), un VPS
-Debian/Ubuntu + Docker + Nginx suffit. Le projet expose le container sur
-**`127.0.0.1:8001` uniquement** pour qu'aucune autre app du VPS ne soit
-gênée, et c'est Nginx qui s'occupe du HTTPS + des en-têtes WebSocket.
+### Déploiement de production réel (au 2026-06-22)
 
-### 1. Cloner et configurer le projet
+La prod tourne sur un **VPS Hostinger `168.231.83.45`**. **Un seul conteneur**
+sert les **7 sous-domaines métier** (`demo`, `demo-hotel`, `demo-medical`,
+`demo-immobilier`, `demo-artisan`, `demo-coach`, `demo-beaute`, tous sous
+`corsica-studio.com`), routés par **Traefik** sur une règle Host. Le serveur
+résout le métier à partir de l'en-tête `Host`, donc la même image couvre tous
+les secteurs.
 
-```bash
-git clone https://github.com/Thomas-Berton/template-grok-voice-agent.git
-cd template-grok-voice-agent
-cp .env.example .env
-nano .env          # colle XAI_API_KEY, COMPOSIO_*, TWILIO_*
-```
+Points importants :
 
-### 2. Builder + démarrer
+- L'app vit dans **`/opt/demo-voice`** sur le VPS. **Ce n'est PAS un clone git** :
+  pas de `git pull`. On déploie par **`rsync`/`scp`** des fichiers modifiés
+  (`web/server.py`, `web/static/*`, `web/config/*`…) vers `/opt/demo-voice`.
+- Le conteneur/service est **`demo-voice`**, déclaré dans
+  **`/docker/docker-compose.yml`** (séparé du dossier app), port interne **8000**,
+  `env_file` **`/opt/demo-voice/.env`**.
+- Le `.env` contient `XAI_API_KEY`, `COMPOSIO_*`, **`DEMO_WEBHOOK_URL`** (tracking
+  démo cold email, notifie n8n WF-13) et, pour le téléphone, `TWILIO_*`.
 
-```bash
-docker compose up -d --build
-docker compose logs -f          # vérifie que uvicorn démarre
-curl http://127.0.0.1:8001/config   # doit renvoyer du JSON
-```
-
-### 3. Configurer Nginx pour ton domaine
-
-Pointe d'abord ton sous-domaine (ex. `margot.tondomaine.com`) sur l'IP du
-VPS (enregistrement DNS `A`). Puis :
+Rebuild après une modif du code Python ou des dépendances :
 
 ```bash
-sudo cp deploy/nginx.conf.example /etc/nginx/sites-available/margot.conf
-sudo nano /etc/nginx/sites-available/margot.conf   # remplace server_name
-sudo ln -s /etc/nginx/sites-available/margot.conf /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d margot.tondomaine.com      # HTTPS auto via Let's Encrypt
+ssh root@168.231.83.45
+# rsync au préalable les fichiers modifiés vers /opt/demo-voice
+cd /docker
+docker compose up -d --build demo-voice
+docker logs -f demo-voice          # suit les logs en direct
 ```
 
-Une fois fini, **<https://margot.tondomaine.com>** sert l'app web. Tout est
-prêt pour Twilio.
+Si la modif ne touche que `web/config/*` (prompt, tools.json), le bind mount la
+prend en compte à la conversation suivante — pas besoin de `docker compose`.
+
+### Tracking démo cold email (attribution `?lead=`)
+
+Le bouton démo du cold email (WF-06a) pointe vers
+`https://demo.corsica-studio.com/?lead=${record_id}&utm_...`. `voice.js` lit ce
+`?lead=` et le transmet au `POST /token` ; le serveur le logue dans `usage.jsonl`
+(avec le métier résolu par le `Host`) puis notifie n8n **WF-13** (alerte Telegram
+nominative + champs `demo_*` écrits sur le prospect Airtable). `GET /usage` expose
+`par_lead`, `par_metier` et `sessions_identifiees`. Détail complet :
+`docs/TRACKING-DEMO.md`.
+
+### Template générique (Nginx)
+
+Le repo embarque `deploy/nginx.conf.example` comme modèle générique si tu veux
+fronter le conteneur avec Nginx au lieu de Traefik (HTTPS via
+`certbot --nginx`, en-têtes WebSocket `Upgrade`, `proxy_set_header Host $host;`).
+La prod n'utilise pas ce template : elle est sur Traefik.
 
 ---
 
@@ -197,7 +209,7 @@ Appelle ton numéro Twilio depuis ton portable. Margot devrait répondre en
 français en quelques secondes. Suis les logs :
 
 ```bash
-docker compose logs -f margot
+docker logs -f demo-voice
 ```
 
 Tu devrais voir :
