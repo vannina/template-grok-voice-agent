@@ -98,6 +98,29 @@ Docs liés : `BENCHMARK-MARCHE-AGENTS-IA-2026` · `CATALOGUE-AGENTS-VOCAUX-CS` �
 3. Niche n°1 : valider le **sous-segment** d'attaque (plombier ? serrurier ? multi ?).
 4. Bornes de prix finales + test offre garantie/perf.
 
+## 6bis. Programme d'exécution validé (Vannina, 2026-07-01) — « gère tout ça »
+Quatre livrables à mener, je pilote :
+- **L1 — Agent de prospection SDR IA** (outbound B2B) : appelle les entreprises, propose
+  les services CS, valide les leads, prend RDV avec Vannina, fait de la pédagogie.
+- **L2 — Standard entrant CS + CD** : sur non-réponse du 06, l'agent route selon le besoin
+  (Studio/Design), renseigne, prend RDV/message, transfert sur demande.
+- **L3 — « Secrétaire générale » agent vocal sur le site CS** (widget vocal embarqué, façon
+  démos, qui représente Corsica Studio : renseigne, oriente, prend RDV/message).
+- **L4 — Pages « agents vocaux spécialisés » sur le site Framer** : décliner les métiers
+  (BTP/dépannage en tête) en pages offres + démos vendables.
+
+Ordre recommandé (réutilisation max + déblocage) :
+1. **L2 standard entrant** (réutilise le moteur ; débloqué par 6 confirmations §11 archi).
+2. **L3 secrétaire générale site** (même cerveau que L2, exposé sur le site).
+3. **L4 pages spécialisées Framer** (vitrine de vente ; nécessite l'auth API Framer).
+4. **L1 prospection SDR** (brique Twilio outbound nouvelle ; gros build, moteur de croissance).
+Mené **de front** côté prépa (configs + specs), build séquencé pour la mise en prod.
+
+Inputs minimaux pour démarrer (le reste = défauts intelligents, ajustables) :
+- Opérateur mobile + délai de renvoi du 06 → 04 12 13 60 10.
+- Transfert : numéro dédié sans renvoi **ou** toggle « dispo » (anti-boucle).
+- Infos /CD (services, horaires, style) pour le persona Design.
+
 ## 7. Backlog ordonné (todo)
 Voir la todo de session (tâches #7, #8, #11, #12, #13, #14✓, #15, #16). Ordre conseillé :
 API Framer → niche BTP (agent + démo + offre) → réveil de devis → standard perso →
