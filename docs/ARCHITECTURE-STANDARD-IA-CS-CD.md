@@ -154,6 +154,30 @@ Chaque tool = handler dans `_server_tool_call` (chemin téléphone). Liste :
 
 ---
 
+## 5bis. Identification de l'appelant & accueil personnalisé (standard tous agents)
+
+Fonctionnalité transverse — vaut pour le standard CS/CD **et** tous les agents vendus
+(resto rapide, plombier, etc.).
+
+- **Capture du numéro** : déjà fait. Twilio envoie `From=` au webhook → transmis en
+  Stream `Parameter from` → injecté dans le contexte. Numéro masqué (`anonymous`,
+  `restricted`…) : déjà géré → l'agent demande le numéro de rappel.
+- **Lookup au décroché** (`identify_caller`) : avant la 1re phrase, rechercher le `from`
+  dans Airtable (table `Contacts` : numéro → nom, entreprise, entité, historique,
+  dernier échange, RDV en cours). 1 appel rapide, non bloquant.
+- **Accueil personnalisé** :
+  - Connu → « Bonjour {prénom}, ravi de vous réentendre. {accroche contextuelle :
+    suite de votre projet… / votre RDV de jeudi…} ».
+  - Inconnu → accueil standard, puis **enregistrement du contact** (numéro + nom donné)
+    pour la fois suivante.
+- **Boucle de connaissance** : chaque appel enrichit la fiche contact (intention,
+  besoin, RDV, message) → l'accueil s'améliore appel après appel.
+- **RGPD** : annonce enregistrement (déjà obligatoire), finalité « relation client /
+  RDV », données minimales, droit d'accès/suppression. Pas de données sensibles.
+- **Implémentation** : ajouter le tool `identify_caller` dans `_server_tool_call` +
+  table `Contacts` Airtable + (option) pré-fetch côté serveur au `start` Twilio pour
+  injecter directement le nom dans les instructions avant la salutation.
+
 ## 6. Données & intégrations
 
 ### 6.1 Google Calendar (Composio)
