@@ -148,8 +148,19 @@ Chaque tool = handler dans `_server_tool_call` (chemin téléphone). Liste :
    indicatif, urgence, canal de rappel préféré) → Airtable.
 6. **`request_callback`** — programme un rappel (date souhaitée) → Airtable + Telegram.
 7. **`get_formation_info`** (cs) — infos offres formation IA, oriente vers `/formation`.
-8. **`end_call`** — raccrochage propre (auto-hangup filet de sécurité déjà présent).
+8. **`transfer_to_human`** — **transfert d'appel vers Vannina sur demande** (CS ou CD).
+   Si l'appelant demande à lui parler et qu'elle est joignable : l'agent annonce, met en
+   relation via Twilio `<Dial>` vers une ligne de Vannina.
+   ⚠️ **Anti-boucle** : l'appel arrive à l'IA parce que le mobile n'a pas répondu →
+   rappeler ce même mobile (renvoi actif) reboucle sur l'IA. Options (à choisir, §11) :
+   (a) transférer vers un **numéro dédié sans renvoi** ; (b) un **toggle « je suis dispo »**
+   (Airtable/variable) que l'agent lit avant de proposer le transfert ; (c) `<Dial timeout>`
+   court → si pas de réponse, retour à l'agent qui prend un message. Par défaut : proposer
+   le transfert seulement si le toggle « dispo » est actif, sinon message/rappel.
+9. **`end_call`** — raccrochage propre (auto-hangup filet de sécurité déjà présent).
 
+> Tools transverses standard sur TOUS les agents : `identify_caller` (accueil
+> personnalisé, §5bis) et `transfer_to_human` (transfert sur demande).
 > Tous les tools écrivent un évènement structuré qui alimente le post-traitement (§7).
 
 ---
