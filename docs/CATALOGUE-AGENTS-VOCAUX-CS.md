@@ -103,13 +103,48 @@ Airtable · Resend · Telegram. Pas de Zapier/Make. Déploiement VPS Hostinger +
 
 ---
 
+## 2bis. Secteurs / métiers cibles (liste étendue, priorisée)
+
+> Priorité = volume d'appels manqués × valeur d'un appel × récurrence. (Chiffres marché
+> à compléter via le benchmark — agent de recherche en cours.)
+
+**Priorité FORTE — urgences & RDV à forte valeur (un appel manqué = CA perdu)**
+- **Artisans BTP / dépannage** : plombier, électricien, chauffagiste, **serrurier**,
+  vitrier, dépannage (urgences 24/7 → ROI maximal).
+- **Santé** : cabinet médical, **dentaire**, kiné, ostéo, vétérinaire, opticien,
+  infirmier, sage-femme (RDV récurrents, gros volume d'appels).
+- **Auto** : garage, carrossier, **auto-école**, contrôle technique, dépannage auto.
+- **Beauté / bien-être** : coiffeur, barbier, institut, onglerie, spa (RDV cadencés).
+
+**Priorité MOYENNE — réservation / commande / volume saisonnier**
+- **Restauration** : restaurant, **fast-food / pizzeria** (prise de commande), traiteur,
+  food truck, boulangerie/click&collect.
+- **Hôtellerie / tourisme** : hôtel, gîte, **location saisonnière**, camping, agence de
+  voyage, activités (très porteur en Corse, saisonnier).
+- **Immobilier** : agence, syndic, gestion locative, diagnostiqueur, promoteur.
+- **Sport / loisirs** : salle de sport, club, école de danse, coach, escalade.
+
+**Priorité À QUALIFIER — services pro & commerce**
+- **Professions libérales / services** : avocat, notaire, expert-comptable, assurance,
+  courtier, RH/recrutement (déontologie à respecter, ton vouvoyé).
+- **Commerce de proximité** : fleuriste, pressing, cordonnier, animalerie, pharmacie.
+- **Événementiel** : salle de réception, photographe, DJ, wedding planner.
+- **Éducation / formation** : école, centre de formation, soutien scolaire.
+
+**Spécial Corse** : tourisme & hôtellerie, locations saisonnières, **vignobles** (vente
+directe, visites), artisans, plagistes/activités nautiques — forte saisonnalité estivale
+→ l'agent absorbe les pics d'appels sans embauche.
+
+> Chaque secteur = un dossier de config `<agent>/` (persona + base de connaissances +
+> tools + agenda) sur le même moteur. Les 7 démos existantes couvrent déjà resto, hôtel,
+> médical, immo, artisan, coach, beauté → vitrine de vente immédiate.
+
 ## 3. Packaging / offre (à affiner dans le benchmark #9)
 - **Modèle recommandé** : service productisé. **Frais de mise en place** (config +
   base de connaissances + déploiement + numéro) + **abonnement mensuel** (hébergement
   VPS + maintenance + suivi + minutes). Prix **toujours en fourchette, HT**.
 - **Suivi client léger** : interface Airtable (appels, RDV, messages, contacts) — pas un
   SaaS à coder. SaaS seulement après ~10-15 clients (récolte de la config commune).
-- **Aides corses** à intégrer aux devis : Chèque Numérique Corsica, CII, Impresa Sì/ADEC.
 - **Combo** : agent vocal + chatbot site = package « présence 24/7 ».
 
 ---

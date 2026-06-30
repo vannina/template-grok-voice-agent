@@ -136,8 +136,8 @@ toute confirmation) et R2 (déclencher `book_appointment` dès les champs collec
 Chaque tool = handler dans `_server_tool_call` (chemin téléphone). Liste :
 
 1. **`get_infos`** — renseignements depuis `business.json` de l'entité (services,
-   horaires, zone, délais, fourchettes de prix, aides corses pour CS). Base de
-   connaissances locale, pas d'hallucination.
+   horaires, zone, délais, fourchettes de prix). Base de connaissances locale, pas
+   d'hallucination.
 2. **`book_appointment`** — crée un évènement Google Calendar via Composio.
    - Champs : nom, téléphone (rappel), date/heure, objet, entité.
    - Agenda : `RDV Corsica Studio` (cs) / `RDV Corsica Design` (cd) — voir §6.
