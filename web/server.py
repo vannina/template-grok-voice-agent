@@ -49,6 +49,18 @@ VOICE = "69smp8rm"  # voix française « Camille » (bibliothèque Grok Voice)
 DEFAULT_METIER = (os.environ.get("METIER", "restaurant").strip().lower() or "restaurant")
 PUBLIC_BASE_DOMAIN = os.environ.get("PUBLIC_BASE_DOMAIN", "corsica-studio.com")
 
+# --- Standard téléphonique bi-marque (CS + CD) ------------------------------
+# Le numéro « standard » (04 12 13 60 10) arrive sur un Host dédié :
+# standard.corsica-studio.com → annonce légale + IVR DTMF (1 = Corsica Studio,
+# 2 = Corsica Design) puis Media Stream avec Parameter entite=cs|cd.
+# Tous les autres Hosts gardent le comportement démo INCHANGÉ.
+# Hosts du standard configurables (liste séparée par des virgules) via env.
+STANDARD_HOSTS = {
+    h.strip().lower()
+    for h in os.environ.get("STANDARD_HOSTS", "standard.corsica-studio.com").split(",")
+    if h.strip()
+}
+
 COMPOSIO_API_KEY = os.environ.get("COMPOSIO_API_KEY")
 COMPOSIO_EXEC_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_CREATE_EVENT"
 COMPOSIO_LIST_URL = "https://backend.composio.dev/api/v3/tools/execute/GOOGLECALENDAR_EVENTS_LIST"
@@ -333,10 +345,28 @@ _PROFILE_DEFAULTS = {
 
 
 def _metier_dir(metier: str) -> Path:
-    """Dossier de config d'un métier, ou web/config/ si le dossier métier
-    n'existe pas (fallback rétro-compat pour le restaurant historique)."""
-    d = CONFIG_DIR / "metiers" / metier
+    """Dossier de config d'un métier (web/config/metiers/<metier>/) ou d'une
+    entité du standard bi-marque (slug interne « entite/<e> » →
+    web/config/entites/<e>/), avec fallback web/config/ si le dossier
+    n'existe pas (rétro-compat pour le restaurant historique)."""
+    if metier.startswith("entite/"):
+        d = CONFIG_DIR / "entites" / metier.split("/", 1)[1]
+    else:
+        d = CONFIG_DIR / "metiers" / metier
     return d if d.exists() else CONFIG_DIR
+
+
+def _entite_slug(entite: str | None) -> str | None:
+    """Slug interne « entite/<e> » si la config de l'entité (cs|cd) existe
+    dans web/config/entites/<e>/, sinon None (→ fallback config par défaut)."""
+    e = (entite or "").strip().lower()
+    return f"entite/{e}" if e and (CONFIG_DIR / "entites" / e).exists() else None
+
+
+def _is_standard_host(host: str | None) -> bool:
+    """True si le Host entrant est celui du standard bi-marque (STANDARD_HOSTS).
+    Tout autre Host (démo web + démo Twilio) garde le comportement existant."""
+    return (host or "").split(":")[0].strip().lower() in STANDARD_HOSTS
 
 
 def _metier_exists(slug: str | None) -> str | None:
@@ -891,14 +921,70 @@ async def twilio_voice(request: Request) -> Response:
     (otherwise the model has no way to know what number the caller is calling
     from, and can't honour "use the number I'm calling from")."""
     host = request.headers.get("host") or request.url.hostname or "example.com"
-    ws_url = f"wss://{host}/twilio/stream"
     form = await request.form()
     caller_from = (form.get("From") or "").strip()
+
+    if _is_standard_host(host):
+        # Mode standard bi-marque : annonce légale (enregistrement + IA) puis
+        # IVR DTMF à 2 branches. Le choix est POSTé par Twilio sur /twilio/route
+        # qui ouvre le Media Stream avec l'entité. Sans choix (timeout), le
+        # <Redirect> repose la question.
+        print(f"[standard] appel entrant host={host!r} from={caller_from!r}")
+        twiml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<Response>'
+            '<Say language="fr-FR" voice="alice">'
+            "Bonjour, vous êtes en relation avec l'assistant vocal de Vannina Michelosi. "
+            "Cet appel est enregistré et vous parlez à une intelligence artificielle."
+            '</Say>'
+            '<Gather input="dtmf" numDigits="1" timeout="6" action="/twilio/route" method="POST">'
+            '<Say language="fr-FR" voice="alice">'
+            "Pour Corsica Studio, le digital et l'intelligence artificielle, tapez 1. "
+            "Pour Corsica Design, l'architecture d'intérieur, tapez 2."
+            '</Say>'
+            '</Gather>'
+            '<Redirect>/twilio/voice</Redirect>'
+            '</Response>'
+        )
+        return Response(content=twiml, media_type="application/xml")
+
+    ws_url = f"wss://{host}/twilio/stream"
     param_xml = f'<Parameter name="from" value="{caller_from}" />' if caller_from else ""
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Response>'
         f'<Connect><Stream url="{ws_url}">{param_xml}</Stream></Connect>'
+        '</Response>'
+    )
+    return Response(content=twiml, media_type="application/xml")
+
+
+@app.post("/twilio/route")
+async def twilio_route(request: Request) -> Response:
+    """IVR du standard bi-marque : Twilio POSTe ici le choix DTMF du <Gather>.
+    Digits 1 → entité `cs` (Corsica Studio), 2 → entité `cd` (Corsica Design) ;
+    tout autre choix repose la question (redirect /twilio/voice). Ouvre alors
+    le Media Stream avec l'entité et le numéro appelant en <Parameter> — lus
+    au `start` du WS /twilio/stream (même mécanisme que `from` aujourd'hui)."""
+    host = request.headers.get("host") or request.url.hostname or "example.com"
+    form = await request.form()
+    digits = (form.get("Digits") or "").strip()
+    caller_from = (form.get("From") or "").strip()
+    entite = {"1": "cs", "2": "cd"}.get(digits)
+    if not entite:
+        print(f"[standard] choix DTMF invalide digits={digits!r} → on repose la question")
+        twiml = ('<?xml version="1.0" encoding="UTF-8"?>'
+                 '<Response><Redirect>/twilio/voice</Redirect></Response>')
+        return Response(content=twiml, media_type="application/xml")
+    print(f"[standard] route digits={digits!r} → entite={entite!r} from={caller_from!r}")
+    ws_url = f"wss://{host}/twilio/stream"
+    param_from = f'<Parameter name="from" value="{caller_from}" />' if caller_from else ""
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response>'
+        f'<Connect><Stream url="{ws_url}">'
+        f'<Parameter name="entite" value="{entite}" />{param_from}'
+        '</Stream></Connect>'
         '</Response>'
     )
     return Response(content=twiml, media_type="application/xml")
@@ -941,7 +1027,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                 caller's phone number (passed in as a custom <Parameter>).
                 We inject it into the system prompt so Margot can honour
                 'use the number I'm calling from'."""
-                nonlocal stream_sid, call_sid
+                nonlocal stream_sid, call_sid, metier, ctx, config
                 try:
                     while True:
                         raw = await ws.receive_text()
@@ -953,6 +1039,22 @@ async def twilio_stream(ws: WebSocket) -> None:
                             custom = evt["start"].get("customParameters") or {}
                             caller_from = (custom.get("from") or "").strip()
                             print(f"[twilio] start streamSid={stream_sid} callSid={call_sid} from={caller_from!r}")
+
+                            # Standard bi-marque : si l'IVR a transmis une entité
+                            # (Parameter entite=cs|cd via /twilio/route), la config
+                            # vient de web/config/entites/<entite>/ au lieu du
+                            # métier résolu par Host. Fallback : dossier absent →
+                            # config par défaut inchangée + warning.
+                            entite_param = (custom.get("entite") or "").strip().lower()
+                            if entite_param:
+                                slug = _entite_slug(entite_param)
+                                if slug:
+                                    metier = slug
+                                    ctx = _metier_ctx(slug)
+                                    config = _load_config(slug)
+                                    print(f"[standard] entité résolue = {entite_param!r} (config {slug!r})")
+                                else:
+                                    print(f"[standard] WARNING config entités absente pour {entite_param!r} → config par défaut ({metier!r})")
 
                             instructions = config["instructions"]
                             # Twilio sends literal strings like "anonymous" / "restricted"
