@@ -103,3 +103,9 @@ rsync complet -> /opt/demo-voice (server.py+voice.js : whisper_language par prof
 goodbyes EN/IT/DE additifs) + Traefik Host demo-hotel-international + rebuild demo-voice
 (~30 s). Tests : nouveau metier 200 (Chloe, whisper=auto), regression demo/demo-hotel/
 demo-depannage/standard = 200. 9 hosts servis par demo-voice, standard-voice intact.
+
+## 2026-07-02 21:20 CEST — Correctifs recette DEPLOYES (standard-voice rebuild)
+Commit 50b6381 : voix IVR Polly.Lea-Neural (x3 Say), latence 1re parole reduite
+(pre-fetch caller 300ms non bloquant + handshake xAI parallele au start Twilio),
+personas CS/CD chaleureux et proactifs (suggestion services par profession/projet).
+Test : TwiML Polly OK. Feu vert donne a Vannina pour le renvoi Free -> 0412136016.
