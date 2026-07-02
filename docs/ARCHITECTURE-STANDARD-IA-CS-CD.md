@@ -209,11 +209,46 @@ agenda partagé « Standard IA » avec préfixe `[CS]` / `[CD]`. Reco : **2 agen
 - Possibilité de relier l'agenda perso de Vannina pour éviter les doubles réservations
   (free/busy en lecture via `check_availability`).
 
+> **MAJ 2026-07-02 (A.4) — action Vannina + mécanisme exact.**
+> - **Côté Google (action Vannina, pas d'API)** : créer 2 agendas Google
+>   « RDV Corsica Studio » et « RDV Corsica Design » dans le compte Google relié à
+>   Composio, puis récupérer chaque `calendar_id` (Google Calendar → Paramètres de
+>   l'agenda → « ID de l'agenda », forme `xxxx@group.calendar.google.com`). En
+>   attendant, le calendrier partagé « Démo Agent Vocal » existant peut servir.
+> - **Mécanisme vérifié dans `server.py`** : `_metier_ctx()` lit
+>   `profile.json.calendar_id` de l'entité ; si vide → fallback sur l'env
+>   **`RESTAURANT_CALENDAR_ID`** (pas de `CS_CALENDAR_ID`/`CD_CALENDAR_ID` lu par le
+>   code aujourd'hui). ⚠️ `_load_profile()` ne fait **aucune** expansion `${ENV}`
+>   (contrairement à `tools.json`) : un placeholder `${CS_CALENDAR_ID}` dans
+>   `profile.json` serait passé tel quel à Composio.
+> - **Donc, deux options pour A.5** : (a) coller le `calendar_id` **en littéral** dans
+>   `web/config/entites/cs/profile.json` et `web/config/entites/cd/profile.json`
+>   (champ `calendar_id`, actuellement `""`) — aucun code à changer ; ou (b) ajouter
+>   dans `_load_profile()` l'expansion env du champ `calendar_id` pour lire
+>   `CS_CALENDAR_ID`/`CD_CALENDAR_ID` depuis le `.env` (préférable : pas d'ID dans le
+>   repo). À trancher au déploiement A.5.
+
 ### 6.2 Airtable — base « Standard IA » (CRM des appels)
 Table `Appels` : `date`, `entite (CS/CD)`, `numero_appelant`, `nom`, `intention`
 (infos / rdv / message / rappel / qualif), `besoin`, `budget`, `urgence`, `message`,
 `rdv_pris` (date), `statut`, `enregistrement_url`, `transcript`.
 Sert de tableau de bord + base de relance.
+
+> **CRÉÉ 2026-07-02 (A.4).** Le connecteur Airtable MCP n'a pas la permission
+> `create_base` → tables créées dans la base **« Campagne Agent Vocal »**
+> (`appZaFI40YcGBCn8D`), préfixées « Standard — » :
+> - **Standard — Appels** `tblF0Q3jchpNb8C97` : date (dateTime Europe/Paris,
+>   champ primaire), entite (cs/cd), numero_appelant, nom, intention
+>   (infos/rdv/message/rappel/qualif), besoin, type_projet, delai, canal_rappel,
+>   budget, message, statut (nouveau / à rappeler / traité), transcript, duree_s.
+> - **Standard — Contacts** `tblHUXSuCWt8Tt1fn` : telephone (clé), nom,
+>   entite_habituelle (cs/cd), dernier_contact (date), notes.
+> - **Standard — Config** `tbljnAJI1n4jVZ5lK` : cle, transfert_dispo (checkbox) —
+>   record `standard` créé (`recK2KoMxahZqE4la`), transfert désactivé par défaut.
+> Env A.5 : `STANDARD_AIRTABLE_BASE_ID=appZaFI40YcGBCn8D`,
+> `STANDARD_CALLS_TABLE=Standard — Appels`, `STANDARD_CONTACTS_TABLE=Standard — Contacts`,
+> `STANDARD_CONFIG_TABLE=Standard — Config`. Migration possible plus tard vers une
+> base dédiée « Standard IA » (dupliquer les tables, changer le base_id).
 
 ### 6.3 n8n (orchestration & notifications)
 - **WF-Standard-Reception** : webhook appelé par l'app en fin d'appel → écrit la ligne
@@ -222,6 +257,23 @@ Sert de tableau de bord + base de relance.
 - **WF-Standard-Confirmation** : si RDV → email **Resend** de confirmation à l'appelant
   (+ copie Vannina) + éventuel SMS Twilio.
 - **WF-Standard-Digest** : récap quotidien (21h) des appels reçus, par entité.
+
+> **CRÉÉS 2026-07-02 (A.4), INACTIFS** (activation au déploiement A.5) :
+> - **WF-Standard-Reception** `Dif4bdlL818IcUY7` —
+>   https://n8n-cs.corsica-studio.com/workflow/Dif4bdlL818IcUY7
+>   Webhook POST `/webhook/standard-fin-appel` → Code normalisation (intention déduite
+>   des `tools_appeles`, best-effort) → create « Standard — Appels » → Telegram
+>   (« 📞 [CS|CD] Appel de {from} ({duree}s) — {intention} », chat 8518781262, même
+>   canal que WF-13) → si numéro non masqué, upsert « Standard — Contacts »
+>   (clé `telephone`, `dernier_contact`). Credentials existants auto-assignés
+>   (Airtable Personal Access Token-1, Telegram account).
+> - **WF-Standard-Digest** `afWCvDC016CrlNZU` —
+>   https://n8n-cs.corsica-studio.com/workflow/afWCvDC016CrlNZU
+>   Cron 21h00 Europe/Paris → appels du jour (formule SET_TIMEZONE) → si ≥1 appel,
+>   digest Telegram (nb CS/CD, RDV pris, liste à rappeler) ; 0 appel = silence.
+> - `STANDARD_WEBHOOK_URL=https://n8n-cs.corsica-studio.com/webhook/standard-fin-appel`
+>   (à mettre dans le `.env` du VPS en A.5).
+> - **WF-Standard-Confirmation** (Resend) : reste à faire (S2/A.5, après agendas).
 
 ### 6.4 Stack (figée Corsica) : Twilio · xAI grok-voice · Composio (calendar) · n8n ·
 Claude · Airtable · Resend · Telegram. **Pas de Zapier/Make.**
