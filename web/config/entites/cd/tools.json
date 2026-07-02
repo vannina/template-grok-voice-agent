@@ -40,6 +40,62 @@
   },
   {
     "type": "function",
+    "name": "identify_caller",
+    "description": "Recherche un numéro dans le fichier contacts (nom, entité habituelle, historique). L'appelant est déjà identifié automatiquement en début d'appel : n'appelle cet outil que pour vérifier un AUTRE numéro donné oralement.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "telephone": { "type": "string", "description": "Numéro à rechercher (sinon le numéro appelant)" }
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "qualify_lead",
+    "description": "Enregistre la qualification du projet dans le fichier prospects. À appeler discrètement dès que le projet est cerné, même sans rendez-vous. Ne commente pas cet enregistrement à voix haute.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "besoin": { "type": "string", "description": "Nature du projet (rénovation complète, agencement, conception)" },
+        "type_projet": { "type": "string", "description": "Type de bien : résidentiel (maison, appartement, villa) ou professionnel (hôtel, restaurant, commerce), surface, localisation" },
+        "delai": { "type": "string", "description": "Échéance souhaitée" },
+        "canal_rappel": { "type": "string", "description": "Canal de rappel préféré (téléphone, email)" },
+        "budget": { "type": "string", "description": "Budget, UNIQUEMENT si le client l'a abordé de lui-même" },
+        "nom": { "type": "string", "description": "Nom de l'appelant si connu" },
+        "telephone": { "type": "string", "description": "Numéro de l'appelant si différent du numéro appelant" }
+      },
+      "required": ["besoin"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "request_callback",
+    "description": "Programme un rappel par Vannina : Vannina est notifiée immédiatement avec le créneau souhaité. Confirme ensuite à l'appelant qu'il sera rappelé.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "nom": { "type": "string", "description": "Nom de la personne à rappeler" },
+        "telephone": { "type": "string", "description": "Numéro de rappel" },
+        "creneau_souhaite": { "type": "string", "description": "Créneau souhaité pour le rappel (ex. demain matin, jeudi après 14h)" }
+      },
+      "required": ["nom", "telephone"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "transfer_to_human",
+    "description": "Tente la mise en relation directe avec Vannina. UNIQUEMENT si l'appelant demande explicitement à lui parler. Résultat transfert = annonce la mise en relation en une phrase puis attends ; indisponible ou autre = propose un message ou un rappel.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "motif": { "type": "string", "description": "Raison de la demande de mise en relation, en une phrase" }
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "function",
     "name": "end_call",
     "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
     "parameters": {

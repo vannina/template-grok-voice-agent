@@ -23,6 +23,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from string import Template
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -126,6 +127,32 @@ AVG_SESSION_MIN = 1.5  # estimation pour les sessions sans durée remontée
 # rapproche la démo de l'étape de relance et alerte Vannina en temps réel.
 DEMO_WEBHOOK_URL = os.environ.get("DEMO_WEBHOOK_URL", "").strip()
 
+# --- Standard bi-marque : CRM Airtable + transfert + webhook fin d'appel (A.3) --
+# Tools server-side du standard téléphonique (entités cs/cd UNIQUEMENT — les
+# métiers démo n'exposent pas ces tools dans leurs tools.json, rien ne change
+# pour eux). TOUT est best-effort : une panne Airtable / n8n / Twilio REST ne
+# doit JAMAIS casser l'appel en cours. Env manquantes → les tools répondent
+# {"status": "non_configuré"} proprement (+ warning en log) au lieu de crasher.
+AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "").strip()
+STANDARD_AIRTABLE_BASE_ID = os.environ.get("STANDARD_AIRTABLE_BASE_ID", "").strip()
+STANDARD_CONTACTS_TABLE = os.environ.get("STANDARD_CONTACTS_TABLE", "Contacts").strip()
+STANDARD_CALLS_TABLE = os.environ.get("STANDARD_CALLS_TABLE", "Appels").strip()
+STANDARD_CONFIG_TABLE = os.environ.get("STANDARD_CONFIG_TABLE", "Config").strip()
+# Récap de fin d'appel standard → n8n (même pattern que DEMO_WEBHOOK_URL).
+STANDARD_WEBHOOK_URL = os.environ.get("STANDARD_WEBHOOK_URL", "").strip()
+# Transfert vers Vannina (transfer_to_human) :
+#  - TRANSFER_ENABLED=1|0 prime (toggle rapide) ; si NON définie, repli
+#    optionnel sur Airtable table Config, champ `transfert_dispo` (checkbox).
+#  - TRANSFER_NUMBER : ligne appelée par le <Dial>. ⚠️ Anti-boucle (archi §5) :
+#    ce numéro NE DOIT PAS avoir de renvoi vers le standard, sinon l'appel
+#    reboucle sur l'IA. Utiliser une ligne dédiée sans renvoi.
+TRANSFER_ENABLED = os.environ.get("TRANSFER_ENABLED", "").strip()
+TRANSFER_NUMBER = os.environ.get("TRANSFER_NUMBER", "").strip()
+TRANSFER_DIAL_TIMEOUT = int(os.environ.get("TRANSFER_DIAL_TIMEOUT", "20"))
+
+# Sentinelles Twilio « numéro masqué » (From= littéral quand le CallerID est caché).
+HIDDEN_CALLERS = {"", "anonymous", "restricted", "unavailable", "unknown", "private"}
+
 # Alertes Telegram conso : palier tous les 10 $ + alerte "reste 10 $".
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -209,9 +236,11 @@ def _now_fr() -> str:
     return f"{FR_DAYS[now.weekday()]} {now.day} {FR_MONTHS[now.month - 1]} {now.year}, {now.strftime('%H:%M')}"
 
 
-def _runtime_rules() -> str:
+def _runtime_rules(recorded: bool = True) -> str:
     """Règles transverses injectées à chaque conversation (tous métiers, browser + Twilio).
-    Recalculées à chaque appel pour donner l'heure réelle à l'agent."""
+    Recalculées à chaque appel pour donner l'heure réelle à l'agent.
+    `recorded=False` (standard cs/cd) : les appels du standard ne sont PAS
+    enregistrés — on ne dit pas le contraire à l'appelant (consigne Vannina)."""
     return (
         "\n\n[Règles en temps réel — à respecter absolument]\n"
         f"- Date et heure actuelles : {_now_fr()} (heure de Paris). Ne propose JAMAIS un créneau "
@@ -223,8 +252,8 @@ def _runtime_rules() -> str:
         "ne l'invente jamais : propose de prendre un message et qu'un membre de l'équipe rappelle "
         "la personne, ou de transmettre sa demande à un humain. Recueille alors son nom et son numéro.\n"
         "- Si on te demande si tu es une intelligence artificielle, un robot ou un répondeur, "
-        "réponds clairement que OUI, tu es l'assistant vocal IA de l'établissement. Indique aussi, "
-        "le cas échéant, que l'appel peut être enregistré."
+        "réponds clairement que OUI, tu es l'assistant vocal IA de l'établissement."
+        + (" Indique aussi, le cas échéant, que l'appel peut être enregistré." if recorded else "")
     )
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -415,7 +444,9 @@ def _load_config(metier: str) -> dict:
     tools_path = d / "tools.json"
     instructions = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
     instructions = instructions.replace("{{TODAY}}", _today_fr())
-    instructions += _runtime_rules()   # heure réelle + genre neutre + escalade humain + disclosure IA (tous métiers)
+    # heure réelle + genre neutre + escalade humain + disclosure IA (tous métiers).
+    # Standard cs/cd : pas de mention d'enregistrement (appels non enregistrés).
+    instructions += _runtime_rules(recorded=not metier.startswith("entite/"))
     # Multilingue : seulement les métiers du tourisme (profile.multilingual=true : hôtel, restaurant).
     if _load_profile(metier).get("multilingual"):
         instructions += (
@@ -668,6 +699,287 @@ async def _notify_callback(ctx: dict, args: dict, *, dry_run: bool = False) -> d
     return {"status": "transmis" if ok else "error", **out}
 
 
+# ---------------------------------------------------------------------------
+# Standard bi-marque — tools A.3 (identify_caller, qualify_lead,
+# request_callback, transfer_to_human) + webhook de fin d'appel.
+# Airtable = base « Standard IA » : tables Contacts / Appels / Config.
+# ---------------------------------------------------------------------------
+
+def _standard_airtable_ready() -> bool:
+    return bool(AIRTABLE_API_KEY and STANDARD_AIRTABLE_BASE_ID)
+
+
+def _at_escape(v: str) -> str:
+    """Échappe une valeur injectée dans une filterByFormula Airtable."""
+    return str(v).replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _ctx_entite(ctx: dict) -> str:
+    """« CS » / « CD » depuis le slug interne entite/<e>, sinon le métier brut."""
+    m = str(ctx.get("metier") or "")
+    return m.split("/", 1)[1].upper() if m.startswith("entite/") else m
+
+
+def _is_standard_ctx(ctx: dict) -> bool:
+    return str(ctx.get("metier") or "").startswith("entite/")
+
+
+async def _airtable_request(method: str, table: str, *, record_id: str = "",
+                            params: dict | None = None, payload: dict | None = None,
+                            timeout: float = 6.0) -> dict | None:
+    """Appel REST Airtable best-effort. None = échec (déjà loggé) — ne lève JAMAIS."""
+    if not _standard_airtable_ready():
+        return None
+    url = f"https://api.airtable.com/v0/{STANDARD_AIRTABLE_BASE_ID}/{quote(table, safe='')}"
+    if record_id:
+        url += f"/{record_id}"
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.request(
+                method, url,
+                headers={"Authorization": f"Bearer {AIRTABLE_API_KEY}",
+                         "Content-Type": "application/json"},
+                params=params, json=payload)
+        if r.status_code >= 300:
+            print(f"[standard] airtable {method} {table} → HTTP {r.status_code}: {r.text[:200]}")
+            return None
+        return r.json()
+    except Exception as e:  # noqa: BLE001
+        print(f"[standard] airtable {method} {table} failed: {e}")
+        return None
+
+
+async def _airtable_find_contact(phone: str) -> dict | None:
+    """Première fiche Contacts dont {telephone} == phone. None si absente/échec."""
+    body = await _airtable_request("GET", STANDARD_CONTACTS_TABLE, params={
+        "filterByFormula": f"{{telephone}}='{_at_escape(phone)}'",
+        "maxRecords": 1,
+    })
+    recs = (body or {}).get("records") or []
+    return recs[0] if recs else None
+
+
+async def _identify_caller(phone: str) -> dict:
+    """Recherche le numéro appelant dans Airtable (table Contacts).
+    Trouvé → {connu:true, nom, entite_habituelle, dernier_contact, notes}.
+    Absent, masqué ou Airtable non configuré → {connu:false} (jamais d'exception)."""
+    phone = (phone or "").strip()
+    if not phone or phone.lower() in HIDDEN_CALLERS:
+        return {"connu": False}
+    if not _standard_airtable_ready():
+        print("[standard] identify_caller : Airtable non configuré "
+              "(AIRTABLE_API_KEY / STANDARD_AIRTABLE_BASE_ID) → accueil standard")
+        return {"connu": False, "status": "non_configuré"}
+    rec = await _airtable_find_contact(phone)
+    if not rec:
+        return {"connu": False}
+    f = rec.get("fields", {})
+    return {
+        "connu": True,
+        "nom": f.get("nom") or "",
+        "entite_habituelle": f.get("entite_habituelle") or "",
+        "dernier_contact": str(f.get("dernier_contact") or "")[:10],
+        "notes": str(f.get("notes") or "")[:500],
+    }
+
+
+async def _upsert_contact(phone: str, fields: dict) -> None:
+    """Crée / actualise la fiche Contacts (clé = telephone), notes en append.
+    Best-effort : rien ne remonte à l'appel si Airtable est en panne."""
+    phone = (phone or "").strip()
+    if not phone or phone.lower() in HIDDEN_CALLERS or not _standard_airtable_ready():
+        return
+    fields = {k: v for k, v in fields.items() if v}
+    fields["dernier_contact"] = datetime.now(TZ).strftime("%Y-%m-%d")
+    rec = await _airtable_find_contact(phone)
+    if rec:
+        old_notes = str(rec.get("fields", {}).get("notes") or "")
+        if fields.get("notes") and old_notes:
+            fields["notes"] = (old_notes + "\n" + fields["notes"])[:2000]
+        await _airtable_request("PATCH", STANDARD_CONTACTS_TABLE, record_id=rec["id"],
+                                payload={"fields": fields, "typecast": True})
+    else:
+        fields["telephone"] = phone
+        await _airtable_request("POST", STANDARD_CONTACTS_TABLE,
+                                payload={"fields": fields, "typecast": True})
+
+
+async def _log_call_row(fields: dict) -> None:
+    """Ajoute une ligne à la table Appels (CRM des appels). Best-effort."""
+    fields = {k: v for k, v in fields.items() if v not in ("", None)}
+    fields.setdefault("date", datetime.now(TZ).isoformat())
+    await _airtable_request("POST", STANDARD_CALLS_TABLE,
+                            payload={"fields": fields, "typecast": True})
+
+
+async def _qualify_lead(ctx: dict, args: dict) -> dict:
+    """Tool qualify_lead : upsert Contacts + ligne Appels (intention=qualif).
+    Écritures best-effort : un échec Airtable est loggé mais ne bloque pas l'appel."""
+    if not _standard_airtable_ready():
+        print("[standard] WARNING qualify_lead : Airtable non configuré")
+        return {"status": "non_configuré",
+                "message": "CRM indisponible : note la qualification dans les notes du rendez-vous ou du message."}
+    entite = _ctx_entite(ctx)
+    phone = (args.get("telephone") or ctx.get("caller_from") or "").strip()
+    stamp = datetime.now(TZ).strftime("%Y-%m-%d %H:%M")
+    note_bits = [f"[{stamp}] Qualification ({entite})"]
+    for k in ("besoin", "type_projet", "delai", "canal_rappel", "budget"):
+        if args.get(k):
+            note_bits.append(f"{k} : {args[k]}")
+    await _upsert_contact(phone, {
+        "nom": (args.get("nom") or "").strip(),
+        "entite_habituelle": entite,
+        "notes": " · ".join(note_bits),
+    })
+    await _log_call_row({
+        "entite": entite,
+        "numero_appelant": phone,
+        "nom": (args.get("nom") or "").strip(),
+        "intention": "qualif",
+        "besoin": args.get("besoin") or "",
+        "type_projet": args.get("type_projet") or "",
+        "delai": args.get("delai") or "",
+        "canal_rappel": args.get("canal_rappel") or "",
+        "budget": args.get("budget") or "",
+    })
+    return {"status": "ok"}
+
+
+async def _request_callback(ctx: dict, args: dict) -> dict:
+    """Tool request_callback : ligne Appels (intention=rappel) + notif Telegram/email
+    via le mécanisme _notify_callback existant. Best-effort sur chaque canal."""
+    entite = _ctx_entite(ctx)
+    nom = (args.get("nom") or "").strip()
+    tel = (args.get("telephone") or ctx.get("caller_from") or "").strip()
+    creneau = (args.get("creneau_souhaite") or "").strip() or "dès que possible"
+    can_notify = bool((TELEGRAM_BOT_TOKEN and (ctx.get("telegram_chat_id") or TELEGRAM_CHAT_ID))
+                      or (RESEND_API_KEY and (ctx.get("notify_email") or NOTIFY_EMAIL)))
+    if not (_standard_airtable_ready() or can_notify):
+        print("[standard] WARNING request_callback : aucune sortie configurée (Airtable/Telegram/Resend)")
+        return {"status": "non_configuré",
+                "message": "Rappel non programmable automatiquement : confirme quand même à l'appelant "
+                           "qu'il sera rappelé, sa demande est transcrite."}
+    await _log_call_row({
+        "entite": entite,
+        "numero_appelant": tel,
+        "nom": nom,
+        "intention": "rappel",
+        "message": f"Rappel souhaité : {creneau}",
+        "statut": "à rappeler",
+    })
+    await _upsert_contact(tel, {
+        "nom": nom,
+        "entite_habituelle": entite,
+        "notes": f"[{datetime.now(TZ).strftime('%Y-%m-%d %H:%M')}] Demande de rappel ({creneau})",
+    })
+    notif = {"status": "skipped"}
+    if can_notify:
+        notif = await _notify_callback(ctx, {
+            "nom": nom, "telephone": tel,
+            "motif": f"[{entite}] Demande de rappel — créneau souhaité : {creneau}",
+        })
+    return {"status": "ok", "notification": notif.get("status")}
+
+
+async def _transfer_available() -> bool:
+    """Toggle « Vannina dispo » : env TRANSFER_ENABLED (1|0) prioritaire ; si la
+    variable n'est PAS définie, repli optionnel sur Airtable table Config, champ
+    `transfert_dispo` (checkbox, 1er enregistrement). Échec / rien → indisponible."""
+    if TRANSFER_ENABLED:
+        return TRANSFER_ENABLED.lower() in ("1", "true", "yes", "on")
+    if _standard_airtable_ready():
+        try:
+            body = await asyncio.wait_for(
+                _airtable_request("GET", STANDARD_CONFIG_TABLE,
+                                  params={"maxRecords": 1}, timeout=2.0),
+                timeout=2.5)
+            recs = (body or {}).get("records") or []
+            if recs:
+                return bool(recs[0].get("fields", {}).get("transfert_dispo"))
+        except Exception as e:  # noqa: BLE001
+            print(f"[standard] lecture Config.transfert_dispo échouée: {e}")
+    return False
+
+
+async def _transfer_to_human(ctx: dict, args: dict) -> dict:
+    """Tool transfer_to_human — vérifie SEULEMENT la faisabilité ici.
+    Le <Dial> Twilio effectif est déclenché par la boucle de relais à
+    response.done (flag pending_transfer), pour laisser l'agent annoncer la
+    mise en relation AVANT que la redirection ne coupe le Media Stream."""
+    if not _is_standard_ctx(ctx):
+        return {"status": "indisponible",
+                "message": "Transfert réservé au standard : propose un message ou un rappel."}
+    if not (TRANSFER_NUMBER and _twilio_rest_auth() and TWILIO_ACCOUNT_SID and ctx.get("call_sid")):
+        print("[standard] WARNING transfer_to_human : non configuré "
+              "(TRANSFER_NUMBER / auth Twilio REST / call_sid)")
+        return {"status": "non_configuré",
+                "message": "Transfert impossible techniquement : propose un message ou un rappel."}
+    if not await _transfer_available():
+        return {"status": "indisponible",
+                "message": "Vannina n'est pas joignable en ce moment : propose un message ou un rappel."}
+    return {"status": "transfert",
+            "message": "Annonce en UNE phrase courte que tu mets l'appelant en relation avec Vannina, puis attends."}
+
+
+async def _twilio_transfer(call_sid: str, host: str, entite: str) -> None:
+    """Transfert effectif : update REST du call avec un TwiML <Dial>.
+    Comportement retenu (documenté) : <Say> mise en relation → <Dial timeout=20>
+    vers TRANSFER_NUMBER → si non-réponse, <Say> « je reprends votre appel »
+    puis <Redirect> ABSOLU vers /twilio/route?Digits=1|2 : l'appelant retombe
+    directement sur l'agent de la MÊME entité (nouvelle session, sans repasser
+    par l'IVR). NB : l'update REST termine le Media Stream courant — c'est
+    attendu, le webhook de fin d'appel part quand même."""
+    auth = _twilio_rest_auth()
+    if not (TWILIO_ACCOUNT_SID and auth and call_sid and TRANSFER_NUMBER):
+        print("[standard] transfert annulé : configuration Twilio incomplète")
+        return
+    digit = {"cs": "1", "cd": "2"}.get((entite or "").lower(), "1")
+    back_url = f"https://{host}/twilio/route?Digits={digit}" if host else ""
+    redirect = f'<Redirect method="POST">{back_url}</Redirect>' if back_url else "<Hangup/>"
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<Response>"
+        '<Say language="fr-FR" voice="alice">Je vous mets en relation avec Vannina. Un instant, ne quittez pas.</Say>'
+        f'<Dial timeout="{TRANSFER_DIAL_TIMEOUT}"><Number>{TRANSFER_NUMBER}</Number></Dial>'
+        '<Say language="fr-FR" voice="alice">Vannina n\'est pas joignable pour le moment. '
+        "Je reprends votre appel pour noter un message.</Say>"
+        f"{redirect}"
+        "</Response>"
+    )
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls/{call_sid}.json"
+    try:
+        async with httpx.AsyncClient(timeout=10, auth=auth) as client:
+            r = await client.post(url, data={"Twiml": twiml})
+        print(f"[standard] transfert Twilio déclenché vers {TRANSFER_NUMBER} (HTTP {r.status_code})")
+    except Exception as e:  # noqa: BLE001
+        print(f"[standard] transfert Twilio échoué: {e}")
+
+
+async def _standard_call_webhook(ctx: dict) -> None:
+    """Fin d'appel standard : POST best-effort du récap vers n8n
+    (STANDARD_WEBHOOK_URL) — même pattern que _demo_webhook. Ne bloque jamais."""
+    if not (STANDARD_WEBHOOK_URL and _is_standard_ctx(ctx)):
+        return
+    started = ctx.get("call_started_ts")
+    duree = round((datetime.now(TZ) - started).total_seconds(), 1) if started else None
+    payload = {
+        "entite": _ctx_entite(ctx),
+        "from": ctx.get("caller_from") or "",
+        "duree_s": duree,
+        "tools_appeles": ctx.get("tools_called") or [],
+        "transcript": "\n".join(ctx.get("transcript") or [])[:4000],
+        "call_sid": ctx.get("call_sid") or "",
+        "ts": datetime.now(TZ).isoformat(),
+        "source": "standard",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            await client.post(STANDARD_WEBHOOK_URL, json=payload)
+        print(f"[standard] webhook fin d'appel envoyé ({payload['entite']}, {duree}s)")
+    except Exception as e:  # noqa: BLE001
+        print(f"[standard] webhook fin d'appel échoué: {e}")
+
+
 async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
     """Function-tool dispatcher for the Twilio path (no browser to handle them).
     Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools.
@@ -687,6 +999,21 @@ async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
         return _load_business(ctx["metier"]).get("horaires", RESTAURANT_HOURS)
     if name == "prendre_message":
         return await _notify_callback(ctx, args)
+    # --- Tools du standard bi-marque (A.3) — exposés uniquement dans les
+    # tools.json des entités cs/cd ; tous best-effort / non bloquants. --------
+    if name == "identify_caller":
+        # Normalement inutile : le pré-fetch au `start` Twilio injecte déjà
+        # l'identité dans les instructions. Utile si l'agent veut vérifier un
+        # AUTRE numéro donné oralement.
+        return await _identify_caller(args.get("telephone") or ctx.get("caller_from") or "")
+    if name == "qualify_lead":
+        return await _qualify_lead(ctx, args)
+    if name == "request_callback":
+        return await _request_callback(ctx, args)
+    if name == "transfer_to_human":
+        # Vérifie la faisabilité ; le <Dial> effectif est déclenché à
+        # response.done par la boucle de relais (flag pending_transfer).
+        return await _transfer_to_human(ctx, args)
     if name == "end_call":
         # Actual hang-up is deferred to the relay loop so we don't cut off the
         # goodbye mid-word; this just acknowledges so the model continues.
@@ -925,22 +1252,23 @@ async def twilio_voice(request: Request) -> Response:
     caller_from = (form.get("From") or "").strip()
 
     if _is_standard_host(host):
-        # Mode standard bi-marque : annonce légale (enregistrement + IA) puis
-        # IVR DTMF à 2 branches. Le choix est POSTé par Twilio sur /twilio/route
-        # qui ouvre le Media Stream avec l'entité. Sans choix (timeout), le
-        # <Redirect> repose la question.
+        # Mode standard bi-marque : accueil court puis IVR DTMF à 2 branches.
+        # Le choix est POSTé par Twilio sur /twilio/route qui ouvre le Media
+        # Stream avec l'entité. Sans choix (timeout), le <Redirect> repose la
+        # question. La déclaration IA est faite par CHAQUE agent d'entité dès
+        # son greeting (après le choix 1/2), pas ici. Consignes Vannina :
+        # jamais le nom de famille prononcé (la TTS le massacre) — prénom seul ;
+        # l'appel n'est PAS enregistré — si l'enregistrement est activé un jour,
+        # REMETTRE ICI l'annonce légale (« cet appel est enregistré ») avant le <Gather>.
         print(f"[standard] appel entrant host={host!r} from={caller_from!r}")
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<Response>'
-            '<Say language="fr-FR" voice="alice">'
-            "Bonjour, vous êtes en relation avec l'assistant vocal de Vannina Michelosi. "
-            "Cet appel est enregistré et vous parlez à une intelligence artificielle."
-            '</Say>'
             '<Gather input="dtmf" numDigits="1" timeout="6" action="/twilio/route" method="POST">'
             '<Say language="fr-FR" voice="alice">'
-            "Pour Corsica Studio, le digital et l'intelligence artificielle, tapez 1. "
-            "Pour Corsica Design, l'architecture d'intérieur, tapez 2."
+            "Bonjour, vous êtes bien chez Vannina. "
+            "Pour Corsica Studio, tapez 1. "
+            "Pour Corsica Design, tapez 2."
             '</Say>'
             '</Gather>'
             '<Redirect>/twilio/voice</Redirect>'
@@ -968,7 +1296,9 @@ async def twilio_route(request: Request) -> Response:
     au `start` du WS /twilio/stream (même mécanisme que `from` aujourd'hui)."""
     host = request.headers.get("host") or request.url.hostname or "example.com"
     form = await request.form()
-    digits = (form.get("Digits") or "").strip()
+    # Digits en query = ré-entrée directe sur une entité SANS repasser par
+    # l'IVR (utilisé par le <Redirect> post-<Dial> de transfer_to_human).
+    digits = (form.get("Digits") or request.query_params.get("Digits") or "").strip()
     caller_from = (form.get("From") or "").strip()
     entite = {"1": "cs", "2": "cd"}.get(digits)
     if not entite:
@@ -1012,6 +1342,9 @@ async def twilio_stream(ws: WebSocket) -> None:
     stream_sid: str | None = None
     call_sid: str | None = None
     pending_end_call = False
+    # Transfert vers Vannina (standard) : armé par transfer_to_human, exécuté
+    # à response.done pour laisser l'agent annoncer la mise en relation.
+    pending_transfer = False
 
     xai_url = f"{XAI_REALTIME_WS}?model={MODEL}"
     headers = {"Authorization": f"Bearer {XAI_API_KEY}"}
@@ -1056,12 +1389,20 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 else:
                                     print(f"[standard] WARNING config entités absente pour {entite_param!r} → config par défaut ({metier!r})")
 
+                            # Contexte partagé avec les tools server-side (A.3) et le
+                            # webhook de fin d'appel. Posé APRÈS la résolution d'entité
+                            # (ctx vient d'être rebindé pour le standard).
+                            ctx["call_sid"] = call_sid
+                            ctx["caller_from"] = caller_from
+                            ctx["call_started_ts"] = datetime.now(TZ)
+                            ctx["public_host"] = (ws.headers.get("host") or "").split(":")[0]
+
                             instructions = config["instructions"]
                             # Twilio sends literal strings like "anonymous" / "restricted"
                             # / "unavailable" when the caller's number is hidden. Treat
                             # them as "no CallerID" — otherwise the model passes the
                             # literal "anonymous" as the phone field.
-                            HIDDEN = {"", "anonymous", "restricted", "unavailable", "unknown", "private"}
+                            HIDDEN = HIDDEN_CALLERS
                             if caller_from.lower() in HIDDEN:
                                 instructions += (
                                     "\n\n[Contexte de l'appel]\n"
@@ -1080,6 +1421,36 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     f"donne pas explicitement de numéro, utilise CE numéro pour "
                                     f"book_reservation."
                                 )
+
+                            # Standard bi-marque : pré-fetch identify_caller au `start`
+                            # (archi §5bis). Lookup Airtable ≤ 1,5 s, échec SILENCIEUX
+                            # (accueil standard) — jamais bloquant pour l'appel.
+                            if _is_standard_ctx(ctx) and caller_from.lower() not in HIDDEN:
+                                caller_info: dict = {}
+                                try:
+                                    caller_info = await asyncio.wait_for(
+                                        _identify_caller(caller_from), timeout=1.5) or {}
+                                except Exception:  # noqa: BLE001 — timeout ou panne : accueil standard
+                                    caller_info = {}
+                                if caller_info.get("connu"):
+                                    nom = caller_info.get("nom") or ""
+                                    extras = []
+                                    if caller_info.get("entite_habituelle"):
+                                        extras.append(f"entité habituelle : {caller_info['entite_habituelle']}")
+                                    if caller_info.get("dernier_contact"):
+                                        extras.append(f"dernier contact : {caller_info['dernier_contact']}")
+                                    if caller_info.get("notes"):
+                                        extras.append(f"notes : {caller_info['notes']}")
+                                    instructions += (
+                                        "\n\n[Appelant identifié]\n"
+                                        f"Le numéro appelant correspond à un contact connu : {nom}"
+                                        + (f" ({' ; '.join(extras)})" if extras else "")
+                                        + ". Salue cette personne NOMINATIVEMENT dès l'ouverture "
+                                        f"(ex. « Bonjour {nom}, ravie de vous réentendre »), ne "
+                                        "redemande ni son nom ni son numéro, et utilise ce numéro "
+                                        "comme numéro de rappel par défaut."
+                                    )
+                                    print(f"[standard] appelant identifié : {nom!r}")
 
                             await xai.send(json.dumps({
                                 "type": "session.update",
@@ -1120,7 +1491,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                     print("[twilio] client disconnected")
 
             async def xai_to_twilio() -> None:
-                nonlocal pending_end_call
+                nonlocal pending_end_call, pending_transfer
                 async for raw in xai:
                     evt = json.loads(raw)
                     t = evt.get("type", "")
@@ -1155,10 +1526,14 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 if not pending_end_call and any(g in low for g in GOODBYES):
                                     print("[twilio] auto-hangup armed (goodbye in transcript)")
                                     pending_end_call = True
+                                if _is_standard_ctx(ctx):
+                                    ctx.setdefault("transcript", []).append(f"agent : {transcript}")
                         elif t == "conversation.item.input_audio_transcription.completed":
                             transcript = (evt.get("transcript") or "").replace("\n", " ").strip()
                             if transcript:
                                 print(f"[caller] {transcript}")
+                                if _is_standard_ctx(ctx):
+                                    ctx.setdefault("transcript", []).append(f"appelant : {transcript}")
                         elif t == "error" or "error" in t.lower():
                             print(f"[xai] ERROR ({t}): {json.dumps(evt)[:600]}")
                         elif "mcp" in t.lower() or "tool" in t.lower() or "fail" in t.lower():
@@ -1180,8 +1555,12 @@ async def twilio_stream(ws: WebSocket) -> None:
                         print(f"[tool] → {name}({args})")
                         result = await _server_tool_call(name, args, ctx)
                         print(f"[tool] ← {name} → {result}")
+                        if _is_standard_ctx(ctx):
+                            ctx.setdefault("tools_called", []).append(name)
                         if name == "end_call":
                             pending_end_call = True
+                        if name == "transfer_to_human" and result.get("status") == "transfert":
+                            pending_transfer = True
                         await xai.send(json.dumps({
                             "type": "conversation.item.create",
                             "item": {
@@ -1192,6 +1571,18 @@ async def twilio_stream(ws: WebSocket) -> None:
                         }))
                         await xai.send(json.dumps({"type": "response.create"}))
                     elif t == "response.done":
+                        if pending_transfer:
+                            # L'agent a annoncé la mise en relation : on redirige
+                            # maintenant le call vers le <Dial>. L'update REST coupe
+                            # le Media Stream courant (attendu) — le webhook de fin
+                            # d'appel part dans le finally.
+                            print("[standard] transfer_to_human → redirection Twilio (Dial)")
+                            await asyncio.sleep(1.0)
+                            await _twilio_transfer(
+                                call_sid or "",
+                                ctx.get("public_host") or "",
+                                _ctx_entite(ctx).lower())
+                            return
                         if pending_end_call:
                             print("[tool] end_call → hanging up")
                             # Small grace period so Twilio finishes playing the
@@ -1214,6 +1605,12 @@ async def twilio_stream(ws: WebSocket) -> None:
     except Exception as e:
         print(f"[twilio/stream] error: {e!r}")
     finally:
+        # Standard bi-marque : récap de fin d'appel → n8n (best-effort, no-op
+        # hors standard ou sans STANDARD_WEBHOOK_URL).
+        try:
+            await _standard_call_webhook(ctx)
+        except Exception as e:  # noqa: BLE001
+            print(f"[standard] webhook fin d'appel (finally) échoué: {e}")
         try:
             await ws.close()
         except Exception:

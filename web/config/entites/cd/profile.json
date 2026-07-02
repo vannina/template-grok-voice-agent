@@ -41,6 +41,6 @@
   "calendar_id": "",
   "capacity_per_slot": 1,
   "slot_duration_min": 30,
-  "greeting_instruction": "Salue en français, ton feutré, posé et élégant. En une ou deux phrases : annonce Corsica Design, que tu es l'assistante de Vannina, que tu es une intelligence artificielle et que l'appel est enregistré, puis propose ton aide. Ex : 'Corsica Design, bonjour. Je suis l'assistante de Vannina. Je suis une intelligence artificielle et cet appel est enregistré. En quoi puis-je vous aider ?'",
+  "greeting_instruction": "Salue en français, ton feutré, posé et élégant, mot pour mot : 'Corsica Design bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner sur l'agence, convenir d'un premier échange ou transmettre un message. Que puis-je faire pour vous ?' Si le contexte [Appelant identifié] est présent, personnalise avec son nom en gardant la mention agent vocal. Ne prononce JAMAIS de nom de famille.",
   "multilingual": false
 }

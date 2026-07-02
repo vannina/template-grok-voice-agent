@@ -8,8 +8,15 @@
 **Règle absolue : ne jamais fusionner /CS et /CD.** Deux personas, deux contextes, deux
 agendas, deux bases de connaissances. L'IVR sépare dès le début.
 
-**Règles légales (non négociables, à chaque appel) :** annoncer que l'appel est
-enregistré + l'agent déclare qu'il est une IA.
+**Règles légales (non négociables, à chaque appel) :** l'agent déclare qu'il n'est
+pas humain (« agent vocal ») dès son greeting.
+> **MAJ 2026-07-02 (consignes Vannina, A.3)** : les appels du standard ne sont PAS
+> enregistrés → AUCUNE annonce d'enregistrement (à réintroduire dans le TwiML
+> `/twilio/voice` si l'enregistrement est activé un jour). L'accueil IVR est court
+> (« Bonjour, vous êtes bien chez Vannina. Pour Corsica Studio, tapez 1. Pour
+> Corsica Design, tapez 2. ») ; la déclaration de non-humanité est portée par le
+> greeting de CHAQUE entité, APRÈS le choix 1/2. Jamais le nom de famille prononcé
+> (« Vannina » seul, la TTS massacre le patronyme).
 
 ---
 
@@ -83,12 +90,13 @@ par Host, booking Composio Google Calendar, auto-hangup. On **étend** ce socle.
 - **`POST /twilio/voice`** (réécrit pour ce numéro) renvoie un TwiML :
   ```xml
   <Response>
-    <Say language="fr-FR">Bonjour, vous êtes en relation avec l'assistant vocal de
-      Vannina Michelosi. Cet appel est enregistré et vous parlez à une intelligence
-      artificielle.</Say>
+    <!-- Accueil court validé Vannina (2026-07-02). Règles : jamais le nom de famille
+         (TTS le massacre) ; PAS de mention « enregistré » (l'appel n'est pas
+         enregistré — si l'enregistrement est activé un jour, ré-ajouter l'annonce) ;
+         la déclaration IA se fait APRÈS le choix, dans le greeting de l'entité. -->
+    <Say language="fr-FR">Bonjour, vous êtes bien chez Vannina.</Say>
     <Gather input="dtmf" numDigits="1" timeout="6" action="/twilio/route" method="POST">
-      <Say language="fr-FR">Pour Corsica Studio, le digital et l'intelligence
-        artificielle, tapez 1. Pour Corsica Design, l'architecture d'intérieur, tapez 2.</Say>
+      <Say language="fr-FR">Pour Corsica Studio, tapez 1. Pour Corsica Design, tapez 2.</Say>
     </Gather>
     <Redirect>/twilio/voice</Redirect>  <!-- repose la question si rien -->
   </Response>
@@ -123,7 +131,7 @@ Résolution : `entite` (DTMF) au lieu du Host. Fallback `cs` si absent.
 | Domaine | Digital, web, IA, automatisation (Framer, n8n, Claude) | Architecture d'intérieur |
 | Ton | Vouvoiement pro, dynamique, orienté solution | Vouvoiement feutré, esthétique, à l'écoute |
 | Représente | Vannina / Corsica Studio | Vannina / Corsica Design |
-| Ouverture | « Corsica Studio, l'assistant de Vannina. Comment puis-je vous aider ? » | « Corsica Design, l'assistant de Vannina. En quoi puis-je vous aider ? » |
+| Ouverture (validée Vannina 2026-07-02) | « Corsica Studio bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner, prendre un rendez-vous ou transmettre un message. Que puis-je faire pour vous ? » | « Corsica Design bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner sur l'agence, convenir d'un premier échange ou transmettre un message. Que puis-je faire pour vous ? » |
 | Sujets | sites, automatisations, agents IA, **formation**, audit, aides corses | projets déco/agencement, prise de besoin, visite, devis |
 
 Structure de prompt commune (modèle OpenAI Realtime 8 sections, comme Margot) :
@@ -232,8 +240,30 @@ Claude · Airtable · Resend · Telegram. **Pas de Zapier/Make.**
 - Réutilise le conteneur `demo-voice` **ou** un service dédié `standard-voice`
   (recommandé : service séparé pour isoler le standard pro de la démo commerciale).
 - Sous-domaine **`standard.corsica-studio.com`** routé par Traefik (Host-based).
-- `.env` (en plus de l'existant) : `STANDARD_WEBHOOK_URL`, `AIRTABLE_*`, `RESEND_*`,
-  `TELEGRAM_*`, `CS_CALENDAR_ID`, `CD_CALENDAR_ID`.
+- `.env` (en plus de l'existant) — variables A.3 implémentées (`web/server.py`) :
+  - `AIRTABLE_API_KEY` + `STANDARD_AIRTABLE_BASE_ID` — base « Standard IA » ;
+    tables : `STANDARD_CONTACTS_TABLE` (déf. `Contacts`), `STANDARD_CALLS_TABLE`
+    (déf. `Appels`), `STANDARD_CONFIG_TABLE` (déf. `Config`).
+    Champs Contacts : `telephone` (clé), `nom`, `entite_habituelle`,
+    `dernier_contact`, `notes`. Champs Appels : `date`, `entite`,
+    `numero_appelant`, `nom`, `intention`, `besoin`, `type_projet`, `delai`,
+    `canal_rappel`, `budget`, `message`, `statut`.
+  - `STANDARD_WEBHOOK_URL` — récap n8n de fin d'appel (entite, from, duree_s,
+    tools_appeles, transcript).
+  - `TRANSFER_ENABLED` (1|0, prime sur Airtable `Config.transfert_dispo`),
+    `TRANSFER_NUMBER` (⚠️ ligne SANS renvoi — anti-boucle §5),
+    `TRANSFER_DIAL_TIMEOUT` (déf. 20 s).
+  - Déjà existants réutilisés : `TELEGRAM_*`, `RESEND_*`, `TWILIO_*`.
+  - À venir (S2) : `CS_CALENDAR_ID`, `CD_CALENDAR_ID` (via `profile.json`).
+  Toutes les env A.3 sont optionnelles : absentes, les tools répondent
+  `{"status": "non_configuré"}` sans jamais casser l'appel.
+- **Comportement transfer_to_human retenu (A.3)** : le tool vérifie la dispo
+  (env puis Airtable) et renvoie `transfert` / `indisponible` / `non_configuré` ;
+  le `<Dial>` effectif part à `response.done` (l'agent annonce d'abord la mise en
+  relation), via update REST du call : `<Say>` mise en relation → `<Dial timeout=20>`
+  vers `TRANSFER_NUMBER` → si non-réponse, `<Say>` « je reprends votre appel » +
+  `<Redirect>/twilio/route?Digits=1|2` (retour direct sur l'agent de la même
+  entité, nouvelle session, sans repasser par l'IVR).
 - Déploiement par `rsync`/`scp` vers `/opt/standard-voice` puis `docker compose up -d
   --build`. Toute action VPS journalisée (`vps/JOURNAL.md`).
 
