@@ -53,3 +53,10 @@ Commit 5fc7169. Airtable (base appZaFI40YcGBCn8D) : Standard — Appels tblF0Q3j
 Contacts tblHUXSuCWt8Tt1fn, Config tbljnAJI1n4jVZ5lK. n8n INACTIFS :
 WF-Standard-Reception Dif4bdlL818IcUY7 (webhook standard-fin-appel), WF-Standard-Digest
 afWCvDC016CrlNZU (cron 21h). A.5 : activer WFs + STANDARD_WEBHOOK_URL + deploiement.
+
+## 2026-07-02 17:45 CEST — Agendas RDV crees (Composio API, compte contact.corsicastudio@gmail.com)
+RDV Corsica Studio = 45e70304b9d6927cfcceeae642c1e501caa76c79d7d7a1b409c932949533b13f@group.calendar.google.com
+RDV Corsica Design = 5b609809397f5c8c83daabf9ed8b40705c17fdb6d640f4fe65f3743883f9c0e5@group.calendar.google.com
+tz Europe/Paris, inseres dans la calendarList, branches en litteral dans entites/*/profile.json.
+Note : 2 doublons orphelins possibles (1re tentative, ids perdus, absents de la calendarList, sans effet).
+Le lien calendar.app.google fourni par Vannina = page de reservation (autre mecanisme, non utilise).

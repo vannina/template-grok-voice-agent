@@ -33,8 +33,8 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) Dossiers config `entites/cs|cd/` créés (squelettes ; personas = A.2 en cours) — **2026-07-02**
 - [x] (C) Personas CS + CD (vraies infos corsicadesign.com, 8 sections, R1/R2) — **fait 2026-07-02, commit 38cdfd6, 54 checks** ; TODO restant : horaires RDV (V)
 - [x] (C) Tools standard : identify_caller (pré-fetch nominatif), qualify_lead, request_callback, transfer_to_human (toggle + Dial 20s + reprise), webhook fin d'appel — **fait 2026-07-02, commit 2939e84, 51 checks** (book/check/get/message existaient)
-- [ ] (V) 2 agendas Google « RDV Corsica Studio » / « RDV Corsica Design » (création côté Google + fournir les calendar_id — mécanisme documenté ARCHITECTURE §6.1, MAJ A.4 2026-07-02 ; en attendant : calendrier « Démo Agent Vocal »)
-- [ ] (C) Brancher les calendar_id (littéral dans `entites/cs|cd/profile.json` ou expansion env `CS_CALENDAR_ID`/`CD_CALENDAR_ID` dans `_load_profile`) — A.5
+- [x] (C) 2 agendas Google créés via Composio le 2026-07-02 (RDV Corsica Studio 45e70304…, RDV Corsica Design 5b609809…, tz Europe/Paris, visibles dans le compte contact.corsicastudio@gmail.com)
+- [x] (C) calendar_id branchés en littéral dans `entites/cs|cd/profile.json` — 2026-07-02
 - [ ] (C) Accueil personnalisé (lookup Airtable Contacts)
 - [x] (C) Post-traitement → n8n (Airtable + Telegram) — **fait 2026-07-02 (A.4)** : WF-Standard-Reception `Dif4bdlL818IcUY7` (webhook `standard-fin-appel` → Appels + upsert Contacts + Telegram) et WF-Standard-Digest `afWCvDC016CrlNZU` (cron 21h, digest si ≥1 appel), **créés INACTIFS**, credentials existants auto-assignés ; activation + `STANDARD_WEBHOOK_URL` dans le `.env` = A.5. Resend confirmation RDV : reste à faire
 - [ ] (C) Déploiement VPS (`standard-voice` ou mutualisé) + `.env`

@@ -38,7 +38,7 @@
   "recap_note": "Il est déjà dans l'agenda de Corsica Studio.",
   "event_summary_label": "RDV Corsica Studio",
   "calendar_note": "RDV pris par l'assistante vocale du standard IA Corsica Studio",
-  "calendar_id": "",
+  "calendar_id": "45e70304b9d6927cfcceeae642c1e501caa76c79d7d7a1b409c932949533b13f@group.calendar.google.com",
   "capacity_per_slot": 1,
   "slot_duration_min": 30,
   "greeting_instruction": "Salue en français, ton professionnel, dynamique et chaleureux, mot pour mot : 'Corsica Studio bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner, prendre un rendez-vous ou transmettre un message. Que puis-je faire pour vous ?' Si le contexte [Appelant identifié] est présent, personnalise avec son nom en gardant la mention agent vocal. Ne prononce JAMAIS de nom de famille.",
