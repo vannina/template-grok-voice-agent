@@ -78,3 +78,16 @@ connaissances CS depuis corsica-studio.com (agent).
 RESTE : A.5 = DNS+Traefik standard.corsica-studio.com, service Docker, .env (TRANSFER_*,
 STANDARD_*, ENABLE_CALLBACK_TOOL=1, secrets->coffre), webhook Twilio 0412136010,
 activer les 2 WF n8n, recette avec Vannina, PUIS renvoi Free Mobile (dernier).
+
+## 2026-07-02 19:15 CEST — A.5 STANDARD EN SERVICE (VPS + Twilio + n8n)
+- rsync repo -> /opt/standard-voice ; .env = copie demo + STANDARD_HOSTS, ENABLE_CALLBACK_TOOL=1,
+  AIRTABLE (base appZaFI40YcGBCn8D, tables Standard — *), STANDARD_WEBHOOK_URL, TRANSFER_ENABLED=0.
+- /docker/docker-compose.yml : service standard-voice ajoute (backup .bak horodate),
+  Traefik Host standard.corsica-studio.com, build OK, conteneur Up.
+- Tests publics : POST /twilio/voice -> 200 TwiML IVR exact ; /twilio/route Digits=1 -> Stream entite=cs.
+- Le 04 12 13 60 10 N'EST PAS chez Twilio (autre operateur) -> decision Vannina : achat
+  d'un numero Twilio. ACHETE : +33412136016 (PN PNfd445e527554f0ad1494cba4e9f12248,
+  adresse ADae69576fc55fa72c50afb3841cbb97ea, bundle BUcb630734ade24f7951cb9f6f3a4e78e6),
+  VoiceUrl deja branche sur le standard.
+- WF n8n ACTIVES : Reception Dif4bdlL818IcUY7, Digest afWCvDC016CrlNZU.
+RESTE : recette (appel reel Vannina au 04 12 13 60 16) puis renvoi Free Mobile 06 -> 0412136016.
