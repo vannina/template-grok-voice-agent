@@ -32,8 +32,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) `/twilio/route` : route 1→cs / 2→cd → `<Connect><Stream entite=…>` — **fait 2026-07-02**
 - [x] (C) Dossiers config `entites/cs|cd/` créés (squelettes ; personas = A.2 en cours) — **2026-07-02**
 - [x] (C) Personas CS + CD (vraies infos corsicadesign.com, 8 sections, R1/R2) — **fait 2026-07-02, commit 38cdfd6, 54 checks** ; TODO restant : horaires RDV (V)
-- [ ] (C) Tools : `identify_caller`, `get_infos`, `book_appointment`, `check_availability`,
-      `take_message`, `qualify_lead`, `request_callback`, `transfer_to_human`, `end_call`
+- [x] (C) Tools standard : identify_caller (pré-fetch nominatif), qualify_lead, request_callback, transfer_to_human (toggle + Dial 20s + reprise), webhook fin d'appel — **fait 2026-07-02, commit 2939e84, 51 checks** (book/check/get/message existaient)
 - [ ] (C) 2 agendas Composio (RDV CS / RDV CD)
 - [ ] (C) Accueil personnalisé (lookup Airtable Contacts)
 - [ ] (C) Post-traitement → n8n (Airtable + Telegram + Resend)

@@ -132,7 +132,7 @@ Résolution : `entite` (DTMF) au lieu du Host. Fallback `cs` si absent.
 | Ton | Vouvoiement pro, dynamique, orienté solution | Vouvoiement feutré, esthétique, à l'écoute |
 | Représente | Vannina / Corsica Studio | Vannina / Corsica Design |
 | Ouverture (validée Vannina 2026-07-02) | « Corsica Studio bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner, prendre un rendez-vous ou transmettre un message. Que puis-je faire pour vous ? » | « Corsica Design bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner sur l'agence, convenir d'un premier échange ou transmettre un message. Que puis-je faire pour vous ? » |
-| Sujets | sites, automatisations, agents IA, **formation**, audit, aides corses | projets déco/agencement, prise de besoin, visite, devis |
+| Sujets | sites, automatisations, agents IA, **formation**, audit | projets déco/agencement, prise de besoin, visite, devis |
 
 Structure de prompt commune (modèle OpenAI Realtime 8 sections, comme Margot) :
 `Role · Personality & Tone · Unclear audio · Tools · Rules · Conversation Flow · Safety

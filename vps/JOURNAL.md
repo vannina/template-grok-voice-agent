@@ -40,3 +40,10 @@ webhook Twilio 04 12 13 60 10). Renvoi Free Mobile : à activer en DERNIER, apr�
 Commit 38cdfd6. Personas 8 sections + business.json (CS : offres/fourchettes HT ; CD :
 faits corsicadesign.com) + profile.json (RDV 30 min, capacite 1, greetings dedies).
 Note deploiement : ENABLE_CALLBACK_TOOL=1 requis dans le .env standard (prendre_message).
+
+## 2026-07-02 16:30 CEST — A.3 tools standard (local)
+Commit 2939e84. identify_caller (pre-fetch Airtable, accueil nominatif), qualify_lead,
+request_callback, transfer_to_human (TRANSFER_ENABLED + Dial 20s -> reprise agent),
+webhook fin d'appel (STANDARD_WEBHOOK_URL). Wording Vannina final (agent vocal, pas
+d'"enregistre", pas de nom de famille, IVR court, fluide). Nouvelles env documentees
+archi §8. Requis avant deploiement : base Airtable Standard IA + ENABLE_CALLBACK_TOOL=1.
