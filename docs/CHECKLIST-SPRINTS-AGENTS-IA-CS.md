@@ -20,7 +20,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 
 ## Sprint 1 — Déblocage & fondations *(à faire en premier)*
 - [x] (V+C) **Auth API Framer** : projet `OjzOQVoVRE6fGasAiFsZ` autorisé le 2026-07-01 ✅
-- [ ] (V) **Opérateur mobile** + délai de renvoi du 06 51 00 30 49 → 04 12 13 60 10
+- [x] (V) **Opérateur mobile identifié le 2026-07-02 : Free Mobile** (renvoi via espace abonné ou `**61*`) ; activation du renvoi = dernière étape A.5, après recette
 - [ ] (V) **Transfert** : numéro dédié sans renvoi **ou** toggle « dispo » (choix anti-boucle)
 - [ ] (V) **Infos /CD** (services, horaires, style) pour le persona Design
 - [ ] (V) Confirmer les 6 points §11 de ARCHITECTURE-STANDARD (agendas, horaires, voix, conteneur)
@@ -28,9 +28,9 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [ ] (C) Créer base Airtable « Standard IA » (tables Appels + Contacts)
 
 ## Sprint 2 — L2 : Standard entrant CS + CD *(réutilise le moteur)*
-- [ ] (C) IVR `/twilio/voice` : annonce légale (IA + enregistrement) + Gather 1/2
-- [ ] (C) `/twilio/route` : route 1→cs / 2→cd → `<Connect><Stream entite=…>`
-- [ ] (C) Dossiers config `entites/cs/` et `entites/cd/` (prompt + tools + business + profile)
+- [x] (C) IVR `/twilio/voice` : annonce légale + Gather 1/2 — **fait 2026-07-02, commit d07a6a5, 26/26 checks**
+- [x] (C) `/twilio/route` : route 1→cs / 2→cd → `<Connect><Stream entite=…>` — **fait 2026-07-02**
+- [x] (C) Dossiers config `entites/cs|cd/` créés (squelettes ; personas = A.2 en cours) — **2026-07-02**
 - [ ] (C) Persona CS (digital/IA) + persona CD (archi) — vouvoiement, jamais fusionner
 - [ ] (C) Tools : `identify_caller`, `get_infos`, `book_appointment`, `check_availability`,
       `take_message`, `qualify_lead`, `request_callback`, `transfer_to_human`, `end_call`

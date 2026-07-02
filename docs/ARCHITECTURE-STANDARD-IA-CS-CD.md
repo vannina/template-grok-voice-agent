@@ -57,10 +57,12 @@ Codes GSM standard (à activer une fois depuis le mobile ; dépend de l'opérate
 - Injoignable / éteint : `**62*0412136010#`
 - Tout conditionnel d'un coup : `**004*0412136010#`
 
-> **À confirmer (Vannina)** : opérateur mobile exact (Orange/SFR/Bouygues/Free) → les
-> codes/délais peuvent varier ; certains se règlent dans l'app opérateur plutôt qu'en
-> code. Décision : renvoi **toujours sur non-réponse** (24/7) ou **seulement hors
-> horaires** ? (un renvoi inconditionnel `**21*` enverrait TOUT directement à l'IA).
+> **CONFIRMÉ (2026-07-02)** : opérateur = **Free Mobile**. Réglage via l'espace abonné
+> mobile.free.fr → Gérer mon compte → Mes options → **Renvois d'appel** (non-réponse /
+> occupation / injoignable → 04 12 13 60 10), ou codes GSM (`**61*0412136010**20#` etc.).
+> Délai conseillé 20-25 s. Renvoi vers 04 FR = inclus forfait.
+> ⚠️ **N'activer le renvoi QU'APRÈS déploiement + recette du standard** (sinon appels
+> dans le vide). Reste à décider : 24/7 ou hors horaires seulement.
 
 ### 2.2 Configuration Twilio du 04 12 13 60 10
 - Phone Numbers → ce numéro → Voice → "A call comes in" → Webhook
