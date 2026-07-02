@@ -19,7 +19,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) Skills Framer agent installés (`npx @framer/agent setup`)
 
 ## Sprint 1 — Déblocage & fondations *(à faire en premier)*
-- [ ] (V) **Auth API Framer** : me donner l'URL projet → `project auth` + approuver popup
+- [x] (V+C) **Auth API Framer** : projet `OjzOQVoVRE6fGasAiFsZ` autorisé le 2026-07-01 ✅
 - [ ] (V) **Opérateur mobile** + délai de renvoi du 06 51 00 30 49 → 04 12 13 60 10
 - [ ] (V) **Transfert** : numéro dédié sans renvoi **ou** toggle « dispo » (choix anti-boucle)
 - [ ] (V) **Infos /CD** (services, horaires, style) pour le persona Design
