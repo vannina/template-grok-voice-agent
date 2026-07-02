@@ -1452,6 +1452,16 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     )
                                     print(f"[standard] appelant identifié : {nom!r}")
 
+                            # Langue Whisper par métier (profile.whisper_language) :
+                            # absent/"fr" = pin fr (comportement historique, évite les
+                            # dérives Hindi/Portugais) ; "auto" = pas de pin, détection
+                            # multilingue (ex. hotel-international FR/EN/IT/DE).
+                            whisper_lang = str(
+                                ctx["profile"].get("whisper_language") or "fr"
+                            ).strip().lower()
+                            transcription = {"model": "whisper-1"}
+                            if whisper_lang != "auto":
+                                transcription["language"] = whisper_lang
                             await xai.send(json.dumps({
                                 "type": "session.update",
                                 "session": {
@@ -1459,10 +1469,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     "instructions": instructions,
                                     "tools": config["tools"],
                                     "turn_detection": {"type": "server_vad"},
-                                    "input_audio_transcription": {
-                                        "model": "whisper-1",
-                                        "language": "fr",
-                                    },
+                                    "input_audio_transcription": transcription,
                                     "audio": {
                                         "input":  {"format": {"type": "audio/pcmu"}},
                                         "output": {"format": {"type": "audio/pcmu"}},
@@ -1522,6 +1529,14 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     "au revoir", "bonne soirée", "bonne journée",
                                     "à très vite", "à bientôt", "bonne fin de",
                                     "merci d'avoir appelé", "à plus tard",
+                                    # métiers multilingues (hotel-international) :
+                                    # EN / IT / DE, jamais prononcés par les agents
+                                    # francophones → aucun impact sur l'existant.
+                                    "goodbye", "good bye", "have a lovely",
+                                    "have a nice", "thank you for calling",
+                                    "arrivederci", "buona giornata", "buona serata",
+                                    "a presto", "auf wiederhören", "auf wiedersehen",
+                                    "schönen tag noch", "einen schönen",
                                 )
                                 if not pending_end_call and any(g in low for g in GOODBYES):
                                     print("[twilio] auto-hangup armed (goodbye in transcript)")

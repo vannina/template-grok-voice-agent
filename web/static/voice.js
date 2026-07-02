@@ -361,7 +361,12 @@ async function start() {
         instructions: config.instructions,
         tools: config.tools,
         turn_detection: { type: "server_vad" },
-        input_audio_transcription: { model: "whisper-1" },
+        // Langue Whisper par métier (profile.whisper_language) : champ absent ou
+        // "auto" = détection automatique (comportement historique du navigateur) ;
+        // un code langue explicite ("fr", "en"...) épingle la transcription.
+        input_audio_transcription: (P.whisper_language && P.whisper_language !== "auto")
+          ? { model: "whisper-1", language: P.whisper_language }
+          : { model: "whisper-1" },
         audio: {
           input:  { format: { type: "audio/pcm", rate: sampleRate } },
           output: { format: { type: "audio/pcm", rate: sampleRate } }

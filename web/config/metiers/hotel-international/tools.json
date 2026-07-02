@@ -1,0 +1,53 @@
+[
+  {
+    "type": "function",
+    "name": "get_business_info",
+    "description": "Renvoie la fiche complète de l'hôtel : chambres et tarifs, services, équipements, petit-déjeuner, horaires de check-in et check-out, adresse et accès. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'une chambre dans le planning pour une date d'arrivée, une heure d'arrivée prévue et un nombre de personnes. À appeler AVANT book_reservation. Renvoie available (bool), chambres_libres (int) et alternatives (dates ou créneaux proches disponibles) si complet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date d'arrivée souhaitée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure d'arrivée prévue, format HH:MM en 24h" },
+        "party_size": { "type": "integer", "description": "Nombre de personnes (1-8)" }
+      },
+      "required": ["date", "time", "party_size"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Enregistre la réservation de chambre dans le planning de l'hôtel. À appeler uniquement après une disponibilité confirmée par check_availability et avec les informations complètes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom du client" },
+        "phone": { "type": "string", "description": "Numéro de téléphone du client" },
+        "date": { "type": "string", "description": "Date d'arrivée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure d'arrivée prévue, format HH:MM en 24h" },
+        "party_size": { "type": "integer", "description": "Nombre de personnes (1-8)" },
+        "notes": { "type": "string", "description": "Nombre de nuits, type de chambre et demandes particulières (lit bébé, étage, vue, arrivée tardive). Vide si rien." }
+      },
+      "required": ["name", "phone", "date", "time", "party_size"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+]
