@@ -35,7 +35,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) Tools standard : identify_caller (pré-fetch nominatif), qualify_lead, request_callback, transfer_to_human (toggle + Dial 20s + reprise), webhook fin d'appel — **fait 2026-07-02, commit 2939e84, 51 checks** (book/check/get/message existaient)
 - [x] (C) 2 agendas Google créés via Composio le 2026-07-02 (RDV Corsica Studio 45e70304…, RDV Corsica Design 5b609809…, tz Europe/Paris, visibles dans le compte contact.corsicastudio@gmail.com)
 - [x] (C) calendar_id branchés en littéral dans `entites/cs|cd/profile.json` — 2026-07-02
-- [ ] (C) Accueil personnalisé (lookup Airtable Contacts)
+- [x] (C) Accueil personnalisé (pré-fetch A.3) + base de connaissances CS enrichie du site (qualif 6 besoins × 7 professions, commit 463e6ff) — 2026-07-02
 - [x] (C) Post-traitement → n8n (Airtable + Telegram) — **fait 2026-07-02 (A.4)** : WF-Standard-Reception `Dif4bdlL818IcUY7` (webhook `standard-fin-appel` → Appels + upsert Contacts + Telegram) et WF-Standard-Digest `afWCvDC016CrlNZU` (cron 21h, digest si ≥1 appel), **créés INACTIFS**, credentials existants auto-assignés ; activation + `STANDARD_WEBHOOK_URL` dans le `.env` = A.5. Resend confirmation RDV : reste à faire
 - [ ] (C) Déploiement VPS (`standard-voice` ou mutualisé) + `.env`
 - [ ] (V+C) **Test bout en bout** (appel non décroché → IA → RDV → notif)
