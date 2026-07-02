@@ -66,3 +66,15 @@ CD utilise desormais son agenda « CORSICA DESIGN »
 (bdd5ed3c996370d7571dff15fbd2e7696a1e36e73f30fbf8dd66202fde061dfd@group.calendar.google.com,
 meme compte, tz Europe/Paris). Doublon « RDV Corsica Design » (5b609809…) supprime.
 CS reste sur « RDV Corsica Studio » (45e70304…).
+
+## 2026-07-02 18:30 CEST — Point d'etape standard bi-marque (fin de session build)
+FAIT (local, commits ci-dessus) : A.1 IVR, A.2 personas (wording final Vannina), A.3 tools
+(caller-ID prefetch, transfert toggle+Dial20s, qualif, rappel, webhook fin d'appel),
+A.4 Airtable (Standard — Appels/Contacts/Config) + WF n8n INACTIFS (Reception
+Dif4bdlL818IcUY7, Digest afWCvDC016CrlNZU) + agendas branches (CS=RDV Corsica Studio
+45e70304…, CD=CORSICA DESIGN bdd5ed3c…, doublons supprimes). Filtrage demarchage/stages/
+emploi. CD accessible (pas que haut de gamme). En cours : enrichissement base de
+connaissances CS depuis corsica-studio.com (agent).
+RESTE : A.5 = DNS+Traefik standard.corsica-studio.com, service Docker, .env (TRANSFER_*,
+STANDARD_*, ENABLE_CALLBACK_TOOL=1, secrets->coffre), webhook Twilio 0412136010,
+activer les 2 WF n8n, recette avec Vannina, PUIS renvoi Free Mobile (dernier).
