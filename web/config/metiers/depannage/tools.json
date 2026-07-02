@@ -1,0 +1,51 @@
+[
+  {
+    "type": "function",
+    "name": "get_business_info",
+    "description": "Renvoie la fiche complète de l'entreprise de dépannage SOS Dépann' 2A : interventions plomberie, électricité et serrurerie, zone d'intervention, délais, tarifs indicatifs en fourchette (déplacement, main d'œuvre, exemples), horaires, questions fréquentes (assurance dégât des eaux, facture, garantie). À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'un créneau dans le planning des techniciens pour une date et une heure. À appeler AVANT book_reservation. Renvoie available (bool), creneaux_libres (int) et alternatives (créneaux proches disponibles) si complet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date souhaitée, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure souhaitée, format HH:MM en 24h" }
+      },
+      "required": ["date", "time"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Enregistre l'intervention de dépannage, la visite de devis ou l'urgence dans le planning de l'entreprise. À appeler uniquement après une disponibilité confirmée par check_availability et avec toutes les informations complètes. Pour une urgence : créneau le plus proche, avec URGENCE en tête des notes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nom du client" },
+        "phone": { "type": "string", "description": "Numéro de téléphone de rappel du client" },
+        "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
+        "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
+        "notes": { "type": "string", "description": "Nature du problème (fuite, panne, serrure...), niveau d'urgence (URGENCE ou planifié) et adresse complète d'intervention." }
+      },
+      "required": ["name", "phone", "date", "time", "notes"]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  }
+]

@@ -1,0 +1,111 @@
+{
+  "nom": "SOS Dépann' 2A",
+  "tagline": "Plomberie · Électricité · Serrurerie · Urgences 24h/24",
+  "positionnement": "Entreprise de dépannage d'urgence à Ajaccio : plomberie, électricité et serrurerie. Un standard joignable 24h/24 et 7j/7, un technicien en général sous une heure en zone Ajaccio, un tarif annoncé avant chaque intervention.",
+  "specialite": "Dépannage d'urgence 24h/24 : fuites d'eau, dégâts des eaux, pannes électriques, portes claquées et serrures bloquées. Petits travaux et remplacements planifiés du lundi au samedi.",
+  "adresse": "4 avenue Noël Franchini, 20090 Ajaccio",
+  "zone_intervention": "Ajaccio et le Grand Ajaccio : Porticcio, Mezzavia, Bastelicaccia, Alata, Afa, Sarrola-Carcopino, Cuttoli-Corticchiato. Au-delà, l'équipe confirme au cas par cas.",
+  "telephone_affiche": "04 95 22 40 40",
+  "email": "contact@sos-depann-2a.fr",
+  "horaires": {
+    "urgences": "Urgences 24h/24, 7j/7, toute l'année : fuite, panne électrique, porte claquée.",
+    "planifie": "Interventions planifiées et devis : du lundi au samedi, de 8h à 19h.",
+    "delai_urgence": "En urgence : rappel d'un technicien sous 10 minutes, intervention en général sous 1 heure en zone Ajaccio.",
+    "delai_planifie": "Travaux planifiés : rendez-vous en général sous 48 heures."
+  },
+  "interventions": {
+    "plomberie": [
+      "Fuite d'eau, dégât des eaux, recherche de fuite",
+      "Débouchage d'évier, WC, canalisation",
+      "Robinetterie : remplacement, joint, mitigeur",
+      "Chauffe-eau : dépannage et remplacement",
+      "WC, chasse d'eau, ballon d'eau chaude"
+    ],
+    "electricite": [
+      "Panne électrique totale ou partielle, remise en service",
+      "Tableau qui disjoncte, disjoncteur, différentiel",
+      "Prises, interrupteurs, points lumineux",
+      "Mise en sécurité de l'installation",
+      "Remise aux normes du tableau (sur devis)"
+    ],
+    "serrurerie": [
+      "Ouverture de porte claquée ou verrouillée, sans destruction quand c'est possible",
+      "Serrure bloquée, clé cassée dans le barillet",
+      "Remplacement de cylindre ou de serrure",
+      "Mise en sécurité après effraction",
+      "Blindage et renforcement de porte (sur devis)"
+    ]
+  },
+  "points_forts": [
+    "Standard joignable 24h/24, 7j/7, même les jours fériés",
+    "Technicien en général sous 1 heure en zone Ajaccio pour les urgences",
+    "Tarif annoncé et validé avant toute intervention",
+    "Facture détaillée systématique, utilisable pour l'assurance",
+    "Trois métiers, une seule entreprise : plomberie, électricité, serrurerie"
+  ],
+  "tarifs_indicatifs": {
+    "note": "Fourchettes indicatives hors taxes. Le tarif exact est annoncé et validé par le technicien AVANT toute intervention. Devis gratuit pour les travaux planifiés.",
+    "deplacement_jour": "Déplacement et diagnostic en journée (8h-19h, lundi-samedi) : entre 45 et 70 € HT",
+    "deplacement_majore": "Soir (19h-8h), dimanche et jours fériés : déplacement entre 80 et 120 € HT",
+    "main_oeuvre": "Main d'œuvre : entre 55 et 85 € HT de l'heure selon l'intervention",
+    "exemples": {
+      "fuite_simple": "Réparation de fuite simple : entre 90 et 180 € HT",
+      "recherche_de_fuite": "Recherche de fuite non destructive : entre 120 et 250 € HT",
+      "debouchage": "Débouchage évier, WC ou canalisation : entre 90 et 190 € HT",
+      "chauffe_eau": "Remplacement de chauffe-eau : entre 350 et 650 € HT de pose, hors fourniture",
+      "panne_electrique": "Recherche de panne et remise en service : entre 90 et 180 € HT",
+      "tableau": "Remise aux normes du tableau électrique : sur devis, en général entre 700 et 1500 € HT",
+      "porte_claquee_jour": "Ouverture de porte claquée en journée : entre 90 et 160 € HT",
+      "porte_claquee_nuit": "Ouverture de porte la nuit, le week-end ou un jour férié : entre 130 et 220 € HT",
+      "cylindre": "Remplacement de cylindre : entre 80 et 150 € HT de pose, hors fourniture"
+    }
+  },
+  "questions_frequentes": {
+    "assurance_degat_des_eaux": "Oui, l'intervention peut être prise en charge par l'assurance habitation selon le contrat. L'entreprise fournit une facture détaillée et un compte rendu d'intervention pour le dossier. La recherche de fuite est souvent couverte : Marc conseille de vérifier auprès de son assureur, et l'équipe peut aider à monter le dossier.",
+    "facture": "Une facture détaillée est remise systématiquement après chaque intervention (déplacement, main d'œuvre, fournitures). Paiement par carte, espèces ou virement.",
+    "tarif_annonce": "Le tarif est toujours annoncé en fourchette au téléphone, puis confirmé précisément par le technicien sur place AVANT de commencer. Aucune intervention sans accord du client.",
+    "delais": "En urgence : rappel d'un technicien sous 10 minutes et intervention en général sous 1 heure en zone Ajaccio. Pour les travaux planifiés : rendez-vous en général sous 48 heures.",
+    "garantie": "Les interventions sont garanties. Les pièces remplacées bénéficient de la garantie fabricant.",
+    "zone": "Ajaccio et le Grand Ajaccio (Porticcio, Mezzavia, Bastelicaccia, Alata, Afa, Sarrola-Carcopino, Cuttoli). Au-delà, l'équipe confirme au cas par cas.",
+    "proprietaire_locataire": "Locataire ou propriétaire : l'entreprise intervient dans les deux cas. Pour la prise en charge (assurance, propriétaire, syndic), la facture détaillée sert de justificatif."
+  },
+  "showcase": [
+    {
+      "titre": "Urgences 24h/24",
+      "items": [
+        "Fuite d'eau, panne électrique, porte claquée",
+        "Rappel d'un technicien sous 10 minutes",
+        "Intervention en général sous 1 heure sur Ajaccio"
+      ]
+    },
+    {
+      "titre": "Nos interventions",
+      "items": [
+        "Plomberie : fuites, débouchage, chauffe-eau",
+        "Électricité : pannes, tableau, mise en sécurité",
+        "Serrurerie : ouverture de porte, cylindre, effraction"
+      ]
+    },
+    {
+      "titre": "Tarifs clairs",
+      "items": [
+        "Déplacement en journée : 45 à 70 € HT",
+        "Tarif annoncé avant toute intervention",
+        "Facture détaillée pour votre assurance"
+      ]
+    },
+    {
+      "titre": "Zone d'intervention",
+      "items": [
+        "Ajaccio et le Grand Ajaccio",
+        "Porticcio, Mezzavia, Bastelicaccia, Alata",
+        "24h/24, 7j/7, jours fériés compris"
+      ]
+    }
+  ],
+  "capacite": {
+    "interventions_par_creneau": 1,
+    "duree_creneau_minutes": 60,
+    "note": "Un technicien par créneau d'une heure. Les urgences passent devant : le technicien rappelle sous 10 minutes."
+  }
+}
