@@ -106,6 +106,7 @@ en tête, hôtellerie multilingue en n°2.
 ---
 
 # PROJET D — Agent de prospection SDR IA (B2B) — *flagship*
+**Périmètre : Corsica Studio UNIQUEMENT** (jamais Corsica Design — /CD n'a que le standard entrant).
 **Objectif** : appelle les entreprises, propose les services CS, valide les leads, prend RDV
 avec Vannina, fait de la pédagogie. **B2B opt-out only** (loi 2025-594). Dogfooding : preuve vivante.
 **Réutilise** : moteur Twilio↔xAI, `_server_tool_call`, Composio, WF-06a (email), tracking.

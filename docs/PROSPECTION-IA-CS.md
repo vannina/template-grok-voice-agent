@@ -3,7 +3,7 @@
 Agent et pipeline de prospection B2B pour Corsica Studio.
 Conçu le 2026-07-01. Cadre légal de référence : loi n°2025-594 applicable au 11/08/2026.
 
-> Périmètre strict : ce document couvre **/CS uniquement** (digital, web, IA, automatisation). La partie /CD (architecture intérieure) est traitée en section séparée 1.2 et ne se mélange jamais avec /CS.
+> Périmètre strict : **/CS uniquement**. Corsica Design est **hors périmètre de la prospection** (voir §1.2) : /CD n'existe côté téléphone que via le standard entrant commun.
 
 ---
 
@@ -40,12 +40,13 @@ La conception entière découle de ces règles. Aucune brique du pipeline ne doi
 
 **Disqualifiants** : secteurs interdits (cf. 0.5), pro déjà équipé d'un standard IA, opposition exprimée, hors zone, structure trop petite (auto-entrepreneur sans flux d'appels).
 
-### 1.2 /CD — nurturing prescripteurs (séparé, pas de cold call)
+### 1.2 Corsica Design — HORS PÉRIMÈTRE de la prospection
 
-**Objectif** : entretenir une relation longue avec les prescripteurs de Corsica Design.
-**Cibles** : promoteurs, agences immobilières, architectes, prescripteurs.
-**Motion** : nurturing relationnel (LinkedIn + email B2B sur intérêt légitime), **pas d'appel vocal de prospection à froid**. Rythme lent, contenu de référence, RDV qualitatif.
-**Cloisonnement** : base Airtable distincte, séquences distinctes, expéditeur distinct. Aucune fusion avec le pipeline /CS.
+**Décision Vannina (2026-07-01)** : l'agent de prospection est **uniquement Corsica Studio**.
+**Corsica Design n'est PAS prospecté** (ni cold call, ni nurturing outbound). La seule
+présence téléphonique de /CD = le **standard entrant** (renvoi d'appel sans réponse,
+commun aux deux entités via l'IVR 1/2, voir ARCHITECTURE-STANDARD-IA-CS-CD). Aucun pipeline
+de prospection pour /CD.
 
 ---
 
@@ -227,14 +228,14 @@ Touche de connexion + 1 message de relance sur les décideurs identifiés (Tier 
 
 | Workflow | Statut | Rôle |
 |---|---|---|
-| **WF-06a** (`HlC0xKnEZjsrx2oH`) | Existant, réutilisé | Moteur cold email B2B, séquences sectorielles, lien `?lead=`. Ajout d'une séquence "prospection /CS" + "nurturing /CD" (bases distinctes). |
+| **WF-06a** (`HlC0xKnEZjsrx2oH`) | Existant, réutilisé | Moteur cold email B2B, séquences sectorielles, lien `?lead=`. Ajout d'une séquence "prospection /CS". |
 | **WF-06b** | Existant, réutilisé | Digest quotidien (envois, démos, RDV). Enrichi des KPIs prospection. |
 | **WF-13** | Existant, étendu | Attribution démo → Airtable `demo_*` + Telegram. Étendu pour notifier RDV pris + opposition. |
 | **WF-SCORING** (nouveau) | À construire | Reçoit le sourcing brut, applique filtre exclusion + scoring Claude (firmo + intention), écrit Hot/Warm/Cold/Skip dans Airtable. |
 | **WF-OUT** (nouveau) | À construire | Sélectionne Hot + `tel_pro` + non-opposé, vérifie horaire ouvré, lance l'appel via Twilio outbound API vers `/twilio/voice?metier=prospection`, log dans `usage.jsonl`. |
 | **WF-SOURCE** (nouveau) | À construire | Sourcing Apify / MCP prospecting + enrichissement (SIRET/NAF/site/avis/tel pro), dédoublonnage, lignée. |
 
-**Données Airtable (base /CS, distincte de la base /CD)** — champs clés à ajouter au schéma prospect existant :
+**Données Airtable (base /CS)** — champs clés à ajouter au schéma prospect existant :
 - Identité : `nom`, `secteur`, `naf`, `siret`, `zone`, `site`, `tel_pro`, `email_pro`, `linkedin_decideur`
 - Sourcing/lignée : `source_url`, `date_source`, `confiance` (High/Medium/Low)
 - Scoring : `score` (Hot/Warm/Cold/Skip), `signal_intention`, `score_qualif` (BANT)
@@ -260,7 +261,7 @@ Touche de connexion + 1 message de relance sur les décideurs identifiés (Tier 
 
 ### 7.2 Plan par étapes
 
-1. **Étape 1 — Base & conformité** : créer la base Airtable /CS (schéma §6), liste d'exclusion secteurs interdits, registre opposition. Cloisonner /CD.
+1. **Étape 1 — Base & conformité** : créer la base Airtable /CS (schéma §6), liste d'exclusion secteurs interdits, registre opposition.
 2. **Étape 2 — Sourcing** : construire WF-SOURCE (Apify/MCP + enrichissement + dédoublonnage + lignée).
 3. **Étape 3 — Scoring** : construire WF-SCORING (filtre exclusion + scorer Claude). Valider sur un échantillon.
 4. **Étape 4 — Email** : brancher la séquence prospection /CS sur WF-06a (4 touches §4.1), tester rendu réel via Resend.
@@ -285,7 +286,7 @@ Touche de connexion + 1 message de relance sur les décideurs identifiés (Tier 
 - **WF-SCORING** : filtre exclusion secteurs interdits + scoring firmo/intention (Claude).
 - **WF-SOURCE** : sourcing Apify/MCP + enrichissement + lignée.
 - **Métier `prospection`** dans l'app : `system_prompt.txt` (script qualif §3.3), `tools.json`, outils `get_offre_info` / `qualifier_lead` / `marquer_opposition` / `book_rdv` dans les deux chemins.
-- **Schéma Airtable /CS** étendu (§6) + base /CD séparée.
+- **Schéma Airtable /CS** étendu (§6).
 
 ---
 

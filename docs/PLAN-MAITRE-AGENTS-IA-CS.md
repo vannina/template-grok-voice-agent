@@ -24,8 +24,9 @@ Docs liés : `BENCHMARK-MARCHE-AGENTS-IA-2026` · `CATALOGUE-AGENTS-VOCAUX-CS` �
 - **Axe A — Agents vocaux (inbound)** : ton standard perso CS+CD **+** la gamme vendable
   (Secrétariat IA en tête), décliné par niche.
 - **Axe B — Chatbot proactif** (CS puis CD) : même cerveau que la voix, sur le site.
-- **Axe C — Prospection IA B2B** : email-first (WF-06a généralisé) + scoring + voix
-  outbound B2B conforme. + wedge **« réveil de devis »**.
+- **Axe C — Prospection IA B2B (Corsica Studio UNIQUEMENT)** : email-first (WF-06a
+  généralisé) + scoring + voix outbound B2B conforme. + wedge **« réveil de devis »**.
+  Corsica Design n'est **jamais prospecté** (uniquement joignable via le standard entrant).
 
 ## 2. Séquencement ordonné (phases)
 
