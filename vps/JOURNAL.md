@@ -60,3 +60,9 @@ RDV Corsica Design = 5b609809397f5c8c83daabf9ed8b40705c17fdb6d640f4fe65f3743883f
 tz Europe/Paris, inseres dans la calendarList, branches en litteral dans entites/*/profile.json.
 Note : 2 doublons orphelins possibles (1re tentative, ids perdus, absents de la calendarList, sans effet).
 Le lien calendar.app.google fourni par Vannina = page de reservation (autre mecanisme, non utilise).
+
+## 2026-07-02 18:00 CEST — Agenda CD remplace par celui de Vannina
+CD utilise desormais son agenda « CORSICA DESIGN »
+(bdd5ed3c996370d7571dff15fbd2e7696a1e36e73f30fbf8dd66202fde061dfd@group.calendar.google.com,
+meme compte, tz Europe/Paris). Doublon « RDV Corsica Design » (5b609809…) supprime.
+CS reste sur « RDV Corsica Studio » (45e70304…).

@@ -38,7 +38,7 @@
   "recap_note": "Il est déjà dans l'agenda de Corsica Design.",
   "event_summary_label": "RDV Corsica Design",
   "calendar_note": "RDV pris par l'assistante vocale du standard IA Corsica Design",
-  "calendar_id": "5b609809397f5c8c83daabf9ed8b40705c17fdb6d640f4fe65f3743883f9c0e5@group.calendar.google.com",
+  "calendar_id": "bdd5ed3c996370d7571dff15fbd2e7696a1e36e73f30fbf8dd66202fde061dfd@group.calendar.google.com",
   "capacity_per_slot": 1,
   "slot_duration_min": 30,
   "greeting_instruction": "Salue en français, ton feutré, posé et élégant, mot pour mot : 'Corsica Design bonjour, je suis l'assistante de Vannina, agent vocal. Je peux vous renseigner sur l'agence, convenir d'un premier échange ou transmettre un message. Que puis-je faire pour vous ?' Si le contexte [Appelant identifié] est présent, personnalise avec son nom en gardant la mention agent vocal. Ne prononce JAMAIS de nom de famille.",
