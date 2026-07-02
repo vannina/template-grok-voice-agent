@@ -24,7 +24,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) **Transfert** : résolu par défaut A.3 = toggle `TRANSFER_ENABLED` (+ fallback Airtable Config) + Dial 20 s → reprise agent ; `TRANSFER_NUMBER` devra être une ligne SANS renvoi (2026-07-02)
 - [x] (V) **Infos /CD** récupérées de corsicadesign.com le 2026-07-02 (services, process, positionnement) ; reste : horaires RDV préférés
 - [ ] (V) Confirmer les 6 points §11 de ARCHITECTURE-STANDARD (agendas, horaires, voix, conteneur)
-- [ ] (C) Webhook Twilio du 04 12 13 60 10 → `/twilio/voice` (à la mise en service L2)
+- [x] (C) Numéro standard = **+33 4 12 13 60 16** acheté (le 10 n'était pas chez Twilio) + webhook branché → standard.corsica-studio.com/twilio/voice — 2026-07-02
 - [x] (C) Base Airtable standard — **fait 2026-07-02 (A.4)** : permission `create_base` refusée au MCP → tables « Standard — » dans « Campagne Agent Vocal » (`appZaFI40YcGBCn8D`) : Appels `tblF0Q3jchpNb8C97`, Contacts `tblHUXSuCWt8Tt1fn`, Config `tbljnAJI1n4jVZ5lK` (record `standard`, transfert off)
 
 ## Sprint 2 — L2 : Standard entrant CS + CD *(réutilise le moteur)*
@@ -36,10 +36,10 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) 2 agendas Google créés via Composio le 2026-07-02 (RDV Corsica Studio 45e70304…, RDV Corsica Design 5b609809…, tz Europe/Paris, visibles dans le compte contact.corsicastudio@gmail.com)
 - [x] (C) calendar_id branchés en littéral dans `entites/cs|cd/profile.json` — 2026-07-02
 - [x] (C) Accueil personnalisé (pré-fetch A.3) + base de connaissances CS enrichie du site (qualif 6 besoins × 7 professions, commit 463e6ff) — 2026-07-02
-- [x] (C) Post-traitement → n8n (Airtable + Telegram) — **fait 2026-07-02 (A.4)** : WF-Standard-Reception `Dif4bdlL818IcUY7` (webhook `standard-fin-appel` → Appels + upsert Contacts + Telegram) et WF-Standard-Digest `afWCvDC016CrlNZU` (cron 21h, digest si ≥1 appel), **créés INACTIFS**, credentials existants auto-assignés ; activation + `STANDARD_WEBHOOK_URL` dans le `.env` = A.5. Resend confirmation RDV : reste à faire
-- [ ] (C) Déploiement VPS (`standard-voice` ou mutualisé) + `.env`
-- [ ] (V+C) **Test bout en bout** (appel non décroché → IA → RDV → notif)
-- [ ] (V) Activer le renvoi conditionnel 06 → 04 12 13 60 10
+- [x] (C) Post-traitement → n8n (Airtable + Telegram) — **fait 2026-07-02 (A.4)** : WF-Standard-Reception `Dif4bdlL818IcUY7` (webhook `standard-fin-appel` → Appels + upsert Contacts + Telegram) et WF-Standard-Digest `afWCvDC016CrlNZU` (cron 21h, digest si ≥1 appel), **créés INACTIFS**, credentials existants auto-assignés ; activation + `STANDARD_WEBHOOK_URL` dans le `.env` = A.5. Resend confirmation RDV : reste à faire (⚠️ pas d'email collecté au téléphone → à remplacer par SMS Twilio de confirmation, à arbitrer)
+- [x] (C) Déploiement VPS : service dédié `standard-voice` + Traefik + `.env` (STANDARD_*, ENABLE_CALLBACK_TOOL=1, TRANSFER_ENABLED=0) — 2026-07-02, IVR public testé 200
+- [ ] (V+C) **Recette EN COURS** : appel test Vannina au 04 12 13 60 16 (IVR→agent→RDV→Telegram)
+- [ ] (V) Activer le renvoi conditionnel Free 06 → **04 12 13 60 16** (APRÈS recette)
 
 ## Sprint 3 — L3 : « Secrétaire générale » CS sur le site
 - [ ] (C) Config agent « secrétaire générale CS » (même cerveau que L2 côté Studio)
@@ -49,7 +49,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [ ] (V+C) Test + publication
 
 ## Sprint 4 — L4 : Pages « agents vocaux spécialisés » sur Framer *(vitrine de vente)*
-- [ ] (C) Page offre + démo **BTP/dépannage** (niche n°1) — persona urgences
+- [x] (C) Démo BTP/dépannage : métier `depannage` (Marc, SOS Dépann' 2A, triage urgences) commit 2622065 + copy page complète (CS-framer 711d5aa) — 2026-07-02 ; reste intégration Framer + 5 validations Vannina
 - [ ] (C) Page offre **hôtellerie multilingue** (FR/IT/EN/DE) — niche n°2
 - [ ] (C) Décliner beauté / resto / santé (réutiliser démos existantes)
 - [ ] (C) Intégrer les offres/pricing (packs) sur les pages
