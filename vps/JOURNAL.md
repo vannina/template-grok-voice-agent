@@ -91,3 +91,9 @@ activer les 2 WF n8n, recette avec Vannina, PUIS renvoi Free Mobile (dernier).
   VoiceUrl deja branche sur le standard.
 - WF n8n ACTIVES : Reception Dif4bdlL818IcUY7, Digest afWCvDC016CrlNZU.
 RESTE : recette (appel reel Vannina au 04 12 13 60 16) puis renvoi Free Mobile 06 -> 0412136016.
+
+## 2026-07-02 20:05 CEST — Demo depannage EN LIGNE (VPS)
+rsync web/config/metiers/depannage -> /opt/demo-voice (bind mount, pas de rebuild).
+Traefik : Host demo-depannage.corsica-studio.com ajoute au routeur demo-voice
+(backup compose .bak), recreate ~6s. Test : HTTP 200, /api/profile = Marc/depannage.
+8e demo metier en prod.
