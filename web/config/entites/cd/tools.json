@@ -33,7 +33,7 @@
         "phone": { "type": "string", "description": "Numéro de téléphone de rappel" },
         "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
         "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
-        "notes": { "type": "string", "description": "Motif du rendez-vous et notes éventuelles. Vide si rien." }
+        "notes": { "type": "string", "description": "Objet du rendez-vous (premier échange ou visite) et qualification du projet : type (résidentiel ou professionnel), nature, surface, localisation, délai, budget uniquement si le client l'a abordé. Vide si rien." }
       },
       "required": ["name", "phone", "date", "time"]
     }

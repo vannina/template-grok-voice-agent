@@ -1,1 +1,54 @@
-{}
+{
+  "nom": "Corsica Design",
+  "entite": "cd",
+  "activite": "Architecture intérieure : rénovation complète, conception d'espaces, espaces professionnels",
+  "fondatrice": "Vannina, architecte d'intérieur, quinze ans d'activité",
+  "localisation": "Chemin de la Fontaine, 20166 Albitreccia, Corse-du-Sud",
+  "zone_intervention": "La Corse en spécialité, avec des interventions au-delà (par exemple Levallois-Perret, en région parisienne)",
+  "contact": {
+    "email": "contact@corsicadesign.com",
+    "instagram": "@corsicadesign",
+    "note": "Ne jamais communiquer le numéro de mobile de Vannina : ce standard prend le relais quand elle ne répond pas."
+  },
+  "positionnement": "Haut de gamme : une approche sensible et exigeante, des projets durables et intemporels. Philosophie : peu de gestes, des matières justes, une lumière travaillée.",
+  "prestations": [
+    {
+      "nom": "Rénovation complète",
+      "description": "Gros œuvre, second œuvre, finitions : le projet est mené de bout en bout."
+    },
+    {
+      "nom": "Architecture intérieure",
+      "description": "Conception d'espaces : volumes, lumière, matières."
+    },
+    {
+      "nom": "Espaces professionnels",
+      "description": "Hôtels, restaurants, commerces, bureaux."
+    }
+  ],
+  "types_de_projets": [
+    "Maisons de village",
+    "Appartements",
+    "Villas",
+    "Commerces et locaux professionnels",
+    "Locations saisonnières (meublés, Airbnb)"
+  ],
+  "methode": {
+    "etapes": [
+      "1. Écoute et découverte du lieu",
+      "2. Étude et conception",
+      "3. Formalisation technique et planning",
+      "4. Suivi de chantier",
+      "5. Réception et mise en lumière"
+    ]
+  },
+  "rendez_vous": {
+    "type": "Premier échange avec Vannina : par téléphone, ou visite sur place à convenir",
+    "duree_minutes": 30
+  },
+  "honoraires": "Aucun honoraire n'est communiqué par téléphone : c'est l'objet du premier échange avec Vannina. Le budget n'est évoqué que si le client l'aborde de lui-même.",
+  "_TODO_VANNINA": [
+    "Horaires de rendez-vous préférés (jours et plages où proposer des créneaux) : en attendant, l'agent propose des créneaux et vérifie via l'agenda",
+    "Durée du premier échange à confirmer (30 minutes par défaut) et durée type d'une visite sur place"
+  ],
+  "note_agent": "Ne rien affirmer au-delà des champs de cette fiche. Pour toute question factuelle non couverte (honoraires, références précises, disponibilités de chantier), prendre un message pour Vannina."
+}

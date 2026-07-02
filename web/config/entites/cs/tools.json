@@ -33,7 +33,7 @@
         "phone": { "type": "string", "description": "Numéro de téléphone de rappel" },
         "date": { "type": "string", "description": "Date, format YYYY-MM-DD" },
         "time": { "type": "string", "description": "Heure, format HH:MM en 24h" },
-        "notes": { "type": "string", "description": "Motif du rendez-vous et notes éventuelles. Vide si rien." }
+        "notes": { "type": "string", "description": "Objet du rendez-vous et qualification : activité de l'appelant, besoin (site, automatisation, agent vocal, formation, audit), urgence. Vide si rien." }
       },
       "required": ["name", "phone", "date", "time"]
     }
