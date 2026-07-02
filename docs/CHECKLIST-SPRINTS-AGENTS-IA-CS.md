@@ -50,7 +50,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 
 ## Sprint 4 — L4 : Pages « agents vocaux spécialisés » sur Framer *(vitrine de vente)*
 - [x] (C) Démo BTP/dépannage : métier `depannage` (Marc, SOS Dépann' 2A, triage urgences) commit 2622065 + copy page complète (CS-framer 711d5aa) — 2026-07-02 ; reste intégration Framer + 5 validations Vannina
-- [ ] (C) Page offre **hôtellerie multilingue** (FR/IT/EN/DE) — niche n°2
+- [x] (C) Hôtellerie multilingue : métier `hotel-international` (Chloé 4 langues, whisper_language par profil, commit 28e96bd) DÉPLOYÉ + copy page (70a10a3) — 2026-07-02 ; reste intégration Framer
 - [ ] (C) Décliner beauté / resto / santé (réutiliser démos existantes)
 - [ ] (C) Intégrer les offres/pricing (packs) sur les pages
 - [ ] (C) CTA démo + prise de contact (lead → Airtable)

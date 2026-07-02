@@ -97,3 +97,9 @@ rsync web/config/metiers/depannage -> /opt/demo-voice (bind mount, pas de rebuil
 Traefik : Host demo-depannage.corsica-studio.com ajoute au routeur demo-voice
 (backup compose .bak), recreate ~6s. Test : HTTP 200, /api/profile = Marc/depannage.
 8e demo metier en prod.
+
+## 2026-07-02 20:40 CEST — Demo hotel-international EN LIGNE (VPS, rebuild)
+rsync complet -> /opt/demo-voice (server.py+voice.js : whisper_language par profil,
+goodbyes EN/IT/DE additifs) + Traefik Host demo-hotel-international + rebuild demo-voice
+(~30 s). Tests : nouveau metier 200 (Chloe, whisper=auto), regression demo/demo-hotel/
+demo-depannage/standard = 200. 9 hosts servis par demo-voice, standard-voice intact.
