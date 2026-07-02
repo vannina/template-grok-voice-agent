@@ -939,9 +939,9 @@ async def _twilio_transfer(call_sid: str, host: str, entite: str) -> None:
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         "<Response>"
-        '<Say language="fr-FR" voice="alice">Je vous mets en relation avec Vannina. Un instant, ne quittez pas.</Say>'
+        '<Say language="fr-FR" voice="Polly.Lea-Neural">Je vous mets en relation avec Vannina. Un instant, ne quittez pas.</Say>'
         f'<Dial timeout="{TRANSFER_DIAL_TIMEOUT}"><Number>{TRANSFER_NUMBER}</Number></Dial>'
-        '<Say language="fr-FR" voice="alice">Vannina n\'est pas joignable pour le moment. '
+        '<Say language="fr-FR" voice="Polly.Lea-Neural">Vannina n\'est pas joignable pour le moment. '
         "Je reprends votre appel pour noter un message.</Say>"
         f"{redirect}"
         "</Response>"
@@ -1265,7 +1265,7 @@ async def twilio_voice(request: Request) -> Response:
             '<?xml version="1.0" encoding="UTF-8"?>'
             '<Response>'
             '<Gather input="dtmf" numDigits="1" timeout="6" action="/twilio/route" method="POST">'
-            '<Say language="fr-FR" voice="alice">'
+            '<Say language="fr-FR" voice="Polly.Lea-Neural">'
             "Bonjour, vous êtes bien chez Vannina. "
             "Pour Corsica Studio, tapez 1. "
             "Pour Corsica Design, tapez 2."
@@ -1346,147 +1346,184 @@ async def twilio_stream(ws: WebSocket) -> None:
     # à response.done pour laisser l'agent annoncer la mise en relation.
     pending_transfer = False
 
+    # --- Pré-lecture Twilio jusqu'à l'événement `start` --------------------
+    # Twilio envoie `connected` puis `start` quelques millisecondes après
+    # l'ouverture du WS. On lit ces événements AVANT le handshake xAI : on
+    # connaît ainsi l'appelant (customParameters) tout de suite, ce qui permet
+    # de lancer le lookup Airtable identify_caller EN PARALLÈLE de l'ouverture
+    # de la session xAI au lieu de tout sérialiser (latence perçue avant le
+    # premier mot de l'assistante après le choix 1/2).
+    start_evt: dict | None = None
+    try:
+        while start_evt is None:
+            raw = await ws.receive_text()
+            evt = json.loads(raw)
+            kind = evt.get("event")
+            if kind == "start":
+                start_evt = evt
+            elif kind == "stop":
+                print("[twilio] stop reçu avant start — fermeture")
+                await ws.close()
+                return
+            # `connected` (et tout autre événement pré-start) : ignoré.
+    except WebSocketDisconnect:
+        print("[twilio] client disconnected avant start")
+        return
+
+    stream_sid = start_evt["start"]["streamSid"]
+    call_sid = start_evt["start"].get("callSid")
+    custom = start_evt["start"].get("customParameters") or {}
+    caller_from = (custom.get("from") or "").strip()
+    print(f"[twilio] start streamSid={stream_sid} callSid={call_sid} from={caller_from!r}")
+
+    # Standard bi-marque : si l'IVR a transmis une entité (Parameter
+    # entite=cs|cd via /twilio/route), la config vient de
+    # web/config/entites/<entite>/ au lieu du métier résolu par Host.
+    # Fallback : dossier absent → config par défaut inchangée + warning.
+    entite_param = (custom.get("entite") or "").strip().lower()
+    if entite_param:
+        slug = _entite_slug(entite_param)
+        if slug:
+            metier = slug
+            ctx = _metier_ctx(slug)
+            config = _load_config(slug)
+            print(f"[standard] entité résolue = {entite_param!r} (config {slug!r})")
+        else:
+            print(f"[standard] WARNING config entités absente pour {entite_param!r} → config par défaut ({metier!r})")
+
+    # Contexte partagé avec les tools server-side (A.3) et le webhook de
+    # fin d'appel. Posé APRÈS la résolution d'entité (ctx vient d'être
+    # rebindé pour le standard).
+    ctx["call_sid"] = call_sid
+    ctx["caller_from"] = caller_from
+    ctx["call_started_ts"] = datetime.now(TZ)
+    ctx["public_host"] = (ws.headers.get("host") or "").split(":")[0]
+
+    # Standard bi-marque : pré-fetch identify_caller lancé EN TÂCHE DE FOND
+    # dès le `start` (archi §5bis), en parallèle du handshake xAI. Son
+    # résultat est attendu au plus 300 ms au moment de composer les
+    # instructions ; au-delà → accueil standard SANS bloquer (le lookup
+    # continue en arrière-plan mais son résultat est ignoré pour cet appel).
+    # Échec ou timeout : SILENCIEUX, jamais bloquant.
+    identify_task: asyncio.Task | None = None
+    if _is_standard_ctx(ctx) and caller_from.lower() not in HIDDEN_CALLERS:
+        async def _identify_caller_bg(phone: str) -> dict:
+            try:
+                return await asyncio.wait_for(_identify_caller(phone), timeout=1.5) or {}
+            except Exception:  # noqa: BLE001 — timeout ou panne : accueil standard
+                return {}
+        identify_task = asyncio.create_task(_identify_caller_bg(caller_from))
+
     xai_url = f"{XAI_REALTIME_WS}?model={MODEL}"
     headers = {"Authorization": f"Bearer {XAI_API_KEY}"}
 
     try:
         async with websockets.connect(xai_url, additional_headers=headers, max_size=None) as xai:
 
-            async def twilio_to_xai() -> None:
-                """Reads Twilio events and forwards audio to xAI.
+            # --- Instructions + session.update + greeting -------------------
+            # Envoyés dès l'ouverture de la session xAI : le `start` Twilio a
+            # déjà été lu ci-dessus (le lookup Airtable a donc tourné pendant
+            # le handshake xAI, pas après).
+            instructions = config["instructions"]
+            # Twilio sends literal strings like "anonymous" / "restricted"
+            # / "unavailable" when the caller's number is hidden. Treat
+            # them as "no CallerID" — otherwise the model passes the
+            # literal "anonymous" as the phone field.
+            if caller_from.lower() in HIDDEN_CALLERS:
+                instructions += (
+                    "\n\n[Contexte de l'appel]\n"
+                    "Le numéro de l'appelant est MASQUÉ (numéro privé). "
+                    "Tu n'as PAS de CallerID exploitable. "
+                    "Tu DOIS demander explicitement un numéro à l'appelant. "
+                    "Si l'appelant dit «utilisez celui qui s'affiche» ou similaire, "
+                    "réponds : «Désolée, votre numéro est masqué. Pouvez-vous me le donner ?»"
+                )
+            else:
+                instructions += (
+                    f"\n\n[Contexte de l'appel]\n"
+                    f"Le numéro depuis lequel l'appelant te contacte (CallerID) "
+                    f"est : {caller_from}. Si l'appelant dit «mon numéro est celui "
+                    f"qui s'affiche», «le numéro depuis lequel j'appelle», ou ne "
+                    f"donne pas explicitement de numéro, utilise CE numéro pour "
+                    f"book_reservation."
+                )
 
-                The session.update + greeting are deferred until we receive
-                the Twilio `start` event, because that's when we learn the
-                caller's phone number (passed in as a custom <Parameter>).
-                We inject it into the system prompt so Margot can honour
-                'use the number I'm calling from'."""
-                nonlocal stream_sid, call_sid, metier, ctx, config
+            # Résultat du pré-fetch identify_caller : attente plafonnée à
+            # 300 ms (la tâche a déjà eu la durée du handshake xAI pour
+            # aboutir). asyncio.shield → le timeout n'annule pas la tâche
+            # de fond, il la laisse simplement finir dans le vide.
+            if identify_task is not None:
+                caller_info: dict = {}
+                try:
+                    caller_info = await asyncio.wait_for(
+                        asyncio.shield(identify_task), timeout=0.3) or {}
+                except Exception:  # noqa: BLE001 — > 300 ms : accueil standard
+                    print("[standard] identify_caller > 300 ms → accueil standard (résultat ignoré pour cet appel)")
+                if caller_info.get("connu"):
+                    nom = caller_info.get("nom") or ""
+                    extras = []
+                    if caller_info.get("entite_habituelle"):
+                        extras.append(f"entité habituelle : {caller_info['entite_habituelle']}")
+                    if caller_info.get("dernier_contact"):
+                        extras.append(f"dernier contact : {caller_info['dernier_contact']}")
+                    if caller_info.get("notes"):
+                        extras.append(f"notes : {caller_info['notes']}")
+                    instructions += (
+                        "\n\n[Appelant identifié]\n"
+                        f"Le numéro appelant correspond à un contact connu : {nom}"
+                        + (f" ({' ; '.join(extras)})" if extras else "")
+                        + ". Salue cette personne NOMINATIVEMENT dès l'ouverture "
+                        f"(ex. « Bonjour {nom}, ravie de vous réentendre »), ne "
+                        "redemande ni son nom ni son numéro, et utilise ce numéro "
+                        "comme numéro de rappel par défaut."
+                    )
+                    print(f"[standard] appelant identifié : {nom!r}")
+
+            # Langue Whisper par métier (profile.whisper_language) :
+            # absent/"fr" = pin fr (comportement historique, évite les
+            # dérives Hindi/Portugais) ; "auto" = pas de pin, détection
+            # multilingue (ex. hotel-international FR/EN/IT/DE).
+            whisper_lang = str(
+                ctx["profile"].get("whisper_language") or "fr"
+            ).strip().lower()
+            transcription = {"model": "whisper-1"}
+            if whisper_lang != "auto":
+                transcription["language"] = whisper_lang
+            await xai.send(json.dumps({
+                "type": "session.update",
+                "session": {
+                    "voice": ctx["profile"].get("voice") or VOICE,
+                    "instructions": instructions,
+                    "tools": config["tools"],
+                    "turn_detection": {"type": "server_vad"},
+                    "input_audio_transcription": transcription,
+                    "audio": {
+                        "input":  {"format": {"type": "audio/pcmu"}},
+                        "output": {"format": {"type": "audio/pcmu"}},
+                    },
+                },
+            }))
+
+            # Trigger an opening greeting — Twilio doesn't speak first.
+            await xai.send(json.dumps({
+                "type": "response.create",
+                "response": {
+                    "instructions": ctx["profile"].get(
+                        "greeting_instruction",
+                        _PROFILE_DEFAULTS["greeting_instruction"]),
+                },
+            }))
+
+            async def twilio_to_xai() -> None:
+                """Forwards Twilio media frames to xAI (le `start` a déjà été
+                consommé avant le handshake xAI ; ici il ne reste que
+                media/stop)."""
                 try:
                     while True:
                         raw = await ws.receive_text()
                         evt = json.loads(raw)
                         kind = evt.get("event")
-                        if kind == "start":
-                            stream_sid = evt["start"]["streamSid"]
-                            call_sid = evt["start"].get("callSid")
-                            custom = evt["start"].get("customParameters") or {}
-                            caller_from = (custom.get("from") or "").strip()
-                            print(f"[twilio] start streamSid={stream_sid} callSid={call_sid} from={caller_from!r}")
-
-                            # Standard bi-marque : si l'IVR a transmis une entité
-                            # (Parameter entite=cs|cd via /twilio/route), la config
-                            # vient de web/config/entites/<entite>/ au lieu du
-                            # métier résolu par Host. Fallback : dossier absent →
-                            # config par défaut inchangée + warning.
-                            entite_param = (custom.get("entite") or "").strip().lower()
-                            if entite_param:
-                                slug = _entite_slug(entite_param)
-                                if slug:
-                                    metier = slug
-                                    ctx = _metier_ctx(slug)
-                                    config = _load_config(slug)
-                                    print(f"[standard] entité résolue = {entite_param!r} (config {slug!r})")
-                                else:
-                                    print(f"[standard] WARNING config entités absente pour {entite_param!r} → config par défaut ({metier!r})")
-
-                            # Contexte partagé avec les tools server-side (A.3) et le
-                            # webhook de fin d'appel. Posé APRÈS la résolution d'entité
-                            # (ctx vient d'être rebindé pour le standard).
-                            ctx["call_sid"] = call_sid
-                            ctx["caller_from"] = caller_from
-                            ctx["call_started_ts"] = datetime.now(TZ)
-                            ctx["public_host"] = (ws.headers.get("host") or "").split(":")[0]
-
-                            instructions = config["instructions"]
-                            # Twilio sends literal strings like "anonymous" / "restricted"
-                            # / "unavailable" when the caller's number is hidden. Treat
-                            # them as "no CallerID" — otherwise the model passes the
-                            # literal "anonymous" as the phone field.
-                            HIDDEN = HIDDEN_CALLERS
-                            if caller_from.lower() in HIDDEN:
-                                instructions += (
-                                    "\n\n[Contexte de l'appel]\n"
-                                    "Le numéro de l'appelant est MASQUÉ (numéro privé). "
-                                    "Tu n'as PAS de CallerID exploitable. "
-                                    "Tu DOIS demander explicitement un numéro à l'appelant. "
-                                    "Si l'appelant dit «utilisez celui qui s'affiche» ou similaire, "
-                                    "réponds : «Désolée, votre numéro est masqué. Pouvez-vous me le donner ?»"
-                                )
-                            else:
-                                instructions += (
-                                    f"\n\n[Contexte de l'appel]\n"
-                                    f"Le numéro depuis lequel l'appelant te contacte (CallerID) "
-                                    f"est : {caller_from}. Si l'appelant dit «mon numéro est celui "
-                                    f"qui s'affiche», «le numéro depuis lequel j'appelle», ou ne "
-                                    f"donne pas explicitement de numéro, utilise CE numéro pour "
-                                    f"book_reservation."
-                                )
-
-                            # Standard bi-marque : pré-fetch identify_caller au `start`
-                            # (archi §5bis). Lookup Airtable ≤ 1,5 s, échec SILENCIEUX
-                            # (accueil standard) — jamais bloquant pour l'appel.
-                            if _is_standard_ctx(ctx) and caller_from.lower() not in HIDDEN:
-                                caller_info: dict = {}
-                                try:
-                                    caller_info = await asyncio.wait_for(
-                                        _identify_caller(caller_from), timeout=1.5) or {}
-                                except Exception:  # noqa: BLE001 — timeout ou panne : accueil standard
-                                    caller_info = {}
-                                if caller_info.get("connu"):
-                                    nom = caller_info.get("nom") or ""
-                                    extras = []
-                                    if caller_info.get("entite_habituelle"):
-                                        extras.append(f"entité habituelle : {caller_info['entite_habituelle']}")
-                                    if caller_info.get("dernier_contact"):
-                                        extras.append(f"dernier contact : {caller_info['dernier_contact']}")
-                                    if caller_info.get("notes"):
-                                        extras.append(f"notes : {caller_info['notes']}")
-                                    instructions += (
-                                        "\n\n[Appelant identifié]\n"
-                                        f"Le numéro appelant correspond à un contact connu : {nom}"
-                                        + (f" ({' ; '.join(extras)})" if extras else "")
-                                        + ". Salue cette personne NOMINATIVEMENT dès l'ouverture "
-                                        f"(ex. « Bonjour {nom}, ravie de vous réentendre »), ne "
-                                        "redemande ni son nom ni son numéro, et utilise ce numéro "
-                                        "comme numéro de rappel par défaut."
-                                    )
-                                    print(f"[standard] appelant identifié : {nom!r}")
-
-                            # Langue Whisper par métier (profile.whisper_language) :
-                            # absent/"fr" = pin fr (comportement historique, évite les
-                            # dérives Hindi/Portugais) ; "auto" = pas de pin, détection
-                            # multilingue (ex. hotel-international FR/EN/IT/DE).
-                            whisper_lang = str(
-                                ctx["profile"].get("whisper_language") or "fr"
-                            ).strip().lower()
-                            transcription = {"model": "whisper-1"}
-                            if whisper_lang != "auto":
-                                transcription["language"] = whisper_lang
-                            await xai.send(json.dumps({
-                                "type": "session.update",
-                                "session": {
-                                    "voice": ctx["profile"].get("voice") or VOICE,
-                                    "instructions": instructions,
-                                    "tools": config["tools"],
-                                    "turn_detection": {"type": "server_vad"},
-                                    "input_audio_transcription": transcription,
-                                    "audio": {
-                                        "input":  {"format": {"type": "audio/pcmu"}},
-                                        "output": {"format": {"type": "audio/pcmu"}},
-                                    },
-                                },
-                            }))
-
-                            # Trigger an opening greeting — Twilio doesn't speak first.
-                            await xai.send(json.dumps({
-                                "type": "response.create",
-                                "response": {
-                                    "instructions": ctx["profile"].get(
-                                        "greeting_instruction",
-                                        _PROFILE_DEFAULTS["greeting_instruction"]),
-                                },
-                            }))
-                        elif kind == "media":
+                        if kind == "media":
                             await xai.send(json.dumps({
                                 "type": "input_audio_buffer.append",
                                 "audio": evt["media"]["payload"],
