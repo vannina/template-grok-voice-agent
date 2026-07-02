@@ -35,3 +35,8 @@ IVR CS/CD implémenté dans `web/server.py` (commit `d07a6a5`) : Host standard.c
 config `web/config/entites/<e>/`. Rétro-compatible démo (smoke S1 OK + 26 checks).
 Rien touché sur le VPS. Déploiement prévu au Sprint A.5 (avec sous-domaine Traefik +
 webhook Twilio 04 12 13 60 10). Renvoi Free Mobile : à activer en DERNIER, après recette.
+
+## 2026-07-02 15:40 CEST — A.2 personas entites cs|cd (local)
+Commit 38cdfd6. Personas 8 sections + business.json (CS : offres/fourchettes HT ; CD :
+faits corsicadesign.com) + profile.json (RDV 30 min, capacite 1, greetings dedies).
+Note deploiement : ENABLE_CALLBACK_TOOL=1 requis dans le .env standard (prendre_message).

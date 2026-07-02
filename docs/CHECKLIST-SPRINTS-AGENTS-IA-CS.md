@@ -31,7 +31,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) IVR `/twilio/voice` : annonce légale + Gather 1/2 — **fait 2026-07-02, commit d07a6a5, 26/26 checks**
 - [x] (C) `/twilio/route` : route 1→cs / 2→cd → `<Connect><Stream entite=…>` — **fait 2026-07-02**
 - [x] (C) Dossiers config `entites/cs|cd/` créés (squelettes ; personas = A.2 en cours) — **2026-07-02**
-- [ ] (C) Persona CS (digital/IA) + persona CD (archi) — vouvoiement, jamais fusionner
+- [x] (C) Personas CS + CD (vraies infos corsicadesign.com, 8 sections, R1/R2) — **fait 2026-07-02, commit 38cdfd6, 54 checks** ; TODO restant : horaires RDV (V)
 - [ ] (C) Tools : `identify_caller`, `get_infos`, `book_appointment`, `check_availability`,
       `take_message`, `qualify_lead`, `request_callback`, `transfer_to_human`, `end_call`
 - [ ] (C) 2 agendas Composio (RDV CS / RDV CD)
