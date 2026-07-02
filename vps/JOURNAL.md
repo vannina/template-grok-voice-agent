@@ -47,3 +47,9 @@ request_callback, transfer_to_human (TRANSFER_ENABLED + Dial 20s -> reprise agen
 webhook fin d'appel (STANDARD_WEBHOOK_URL). Wording Vannina final (agent vocal, pas
 d'"enregistre", pas de nom de famille, IVR court, fluide). Nouvelles env documentees
 archi §8. Requis avant deploiement : base Airtable Standard IA + ENABLE_CALLBACK_TOOL=1.
+
+## 2026-07-02 17:10 CEST — A.4 donnees + notifications (aucune action VPS)
+Commit 5fc7169. Airtable (base appZaFI40YcGBCn8D) : Standard — Appels tblF0Q3jchpNb8C97,
+Contacts tblHUXSuCWt8Tt1fn, Config tbljnAJI1n4jVZ5lK. n8n INACTIFS :
+WF-Standard-Reception Dif4bdlL818IcUY7 (webhook standard-fin-appel), WF-Standard-Digest
+afWCvDC016CrlNZU (cron 21h). A.5 : activer WFs + STANDARD_WEBHOOK_URL + deploiement.

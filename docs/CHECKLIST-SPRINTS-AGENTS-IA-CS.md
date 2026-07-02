@@ -21,8 +21,8 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 ## Sprint 1 — Déblocage & fondations *(à faire en premier)*
 - [x] (V+C) **Auth API Framer** : projet `OjzOQVoVRE6fGasAiFsZ` autorisé le 2026-07-01 ✅
 - [x] (V) **Opérateur mobile identifié le 2026-07-02 : Free Mobile** (renvoi via espace abonné ou `**61*`) ; activation du renvoi = dernière étape A.5, après recette
-- [ ] (V) **Transfert** : numéro dédié sans renvoi **ou** toggle « dispo » (choix anti-boucle)
-- [ ] (V) **Infos /CD** (services, horaires, style) pour le persona Design
+- [x] (C) **Transfert** : résolu par défaut A.3 = toggle `TRANSFER_ENABLED` (+ fallback Airtable Config) + Dial 20 s → reprise agent ; `TRANSFER_NUMBER` devra être une ligne SANS renvoi (2026-07-02)
+- [x] (V) **Infos /CD** récupérées de corsicadesign.com le 2026-07-02 (services, process, positionnement) ; reste : horaires RDV préférés
 - [ ] (V) Confirmer les 6 points §11 de ARCHITECTURE-STANDARD (agendas, horaires, voix, conteneur)
 - [ ] (C) Webhook Twilio du 04 12 13 60 10 → `/twilio/voice` (à la mise en service L2)
 - [x] (C) Base Airtable standard — **fait 2026-07-02 (A.4)** : permission `create_base` refusée au MCP → tables « Standard — » dans « Campagne Agent Vocal » (`appZaFI40YcGBCn8D`) : Appels `tblF0Q3jchpNb8C97`, Contacts `tblHUXSuCWt8Tt1fn`, Config `tbljnAJI1n4jVZ5lK` (record `standard`, transfert off)
