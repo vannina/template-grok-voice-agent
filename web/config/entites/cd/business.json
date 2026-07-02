@@ -50,5 +50,11 @@
     "Horaires de rendez-vous préférés (jours et plages où proposer des créneaux) : en attendant, l'agent propose des créneaux et vérifie via l'agenda",
     "Durée du premier échange à confirmer (30 minutes par défaut) et durée type d'une visite sur place"
   ],
-  "note_agent": "Ne rien affirmer au-delà des champs de cette fiche. Pour toute question factuelle non couverte (honoraires, références précises, disponibilités de chantier), prendre un message pour Vannina."
+  "note_agent": "Ne rien affirmer au-delà des champs de cette fiche. Pour toute question factuelle non couverte (honoraires, références précises, disponibilités de chantier), prendre un message pour Vannina.",
+  "services": [
+    {
+      "nom": "Prestations ponctuelles et accessibles",
+      "detail": "Plans (aménagement), aménagement d'une pièce ou d'une chambre, conseil ponctuel. Corsica Design n'est pas réservé aux grands projets : les petites missions sont bienvenues."
+    }
+  ]
 }
