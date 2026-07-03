@@ -54,6 +54,9 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [ ] (C) Décliner beauté / resto / santé (réutiliser démos existantes)
 - [ ] (C) Intégrer les offres/pricing (packs) sur les pages
 - [ ] (C) CTA démo + prise de contact (lead → Airtable)
+- [ ] (C) **Menu/navbar** : ajouter les 3 pages agents vocaux au dropdown + footer + maillage interne
+- [ ] (C) **SEO des 3 pages** comme toute page du site : title + meta description (copys §1), **image OG dédiée** (générateur og-image), JSON-LD vérifié en SSR, sitemap, breakpoints mobile
+- [ ] (V) Validation visuelle des 3 pages puis PUBLICATION
 
 ## Sprint 5 — Wedge « réveil de devis » *(produit d'appel, signe vite)*
 - [ ] (C) Script agent de relance (devis sans suite / clients existants — consentement OK)
