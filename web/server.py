@@ -170,6 +170,39 @@ OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
 # s'entendre. C'est pourquoi c'est DÉSACTIVÉ par défaut (env vide) — n'activer
 # qu'après test en réel (ex. OUTBOUND_OPENER="Bonjour !").
 OUTBOUND_OPENER = os.environ.get("OUTBOUND_OPENER", "").strip()
+# Détection répondeur Twilio (AMD). "DetectMessageEnd" = Twilio analyse le
+# décroché et POSTe AnsweredBy au webhook voice-out (human / machine_end_* /
+# fax / unknown) ; pour un répondeur, le webhook part à la FIN de l'annonce,
+# donc Léa parle après le bip. Compromis assumé : l'AMD synchrone ajoute un
+# peu de latence au décroché humain (Twilio attend d'entendre « allô » pour
+# trancher) — mesurable via la métrique t_start→t_first_response_create.
+# Vide = AMD désactivé : calls.create sans MachineDetection et TwiML voice-out
+# sans Parameter answered_by (rétro-compat totale).
+OUTBOUND_AMD = os.environ.get("OUTBOUND_AMD", "DetectMessageEnd").strip()
+_OUTBOUND_AMD_TIMEOUT_S = 8  # délai max d'analyse AMD (raisonnable, Twilio défaut 30)
+# Plafond DUR de durée d'appel sortant (secondes) : TimeLimit Twilio — l'appel
+# est coupé quoi qu'il arrive, garantie de ne jamais payer des minutes dans le
+# vide (répondeur bavard, modèle qui boucle, interlocuteur parti).
+try:
+    OUTBOUND_TIME_LIMIT = int(os.environ.get("OUTBOUND_TIME_LIMIT", "240"))
+except ValueError:
+    OUTBOUND_TIME_LIMIT = 240
+
+# Message répondeur unique (AMD machine_end_* OU watchdog 6 s sans voix) :
+# 12 secondes max, qui + bénéfice + numéro de démo, puis end_call.
+_OUTBOUND_VOICEMAIL_INSTRUCTION = (
+    "RÉPONDEUR détecté : tu parles à une messagerie, personne n'écoute en "
+    "direct. Laisse EXACTEMENT ce message, en douze secondes maximum, rien "
+    "d'autre : « Bonjour, c'est Léa de Corsica Studio à Ajaccio. On aide les "
+    "artisans à ne plus perdre d'appels quand ils sont sur intervention. "
+    "Pour écouter une démo, appelez le zéro quatre, douze, treize, soixante, "
+    "vingt. Bonne journée ! » Puis appelle end_call immédiatement. Ne pose "
+    "AUCUNE question, n'attends AUCUNE réponse."
+)
+# Watchdog d'inactivité (chemin outbound uniquement, secondes).
+_WD_NO_SPEECH_S = 6.0    # aucun son humain depuis le début → répondeur raté par l'AMD
+_WD_IDLE_NUDGE_S = 20.0  # silence après la dernière réplique → une relance
+_WD_IDLE_CLOSE_S = 10.0  # silence après la relance → clôture polie + end_call
 # Table Airtable du registre d'opposition (base STANDARD_AIRTABLE_BASE_ID).
 # Schéma attendu : telephone (texte, clé), date (date), source (texte).
 OPPOSITIONS_TABLE = os.environ.get("OPPOSITIONS_TABLE", "Oppositions").strip()
@@ -1551,13 +1584,23 @@ async def _twilio_call_create(to: str, from_number: str, url: str) -> dict:
     if not (TWILIO_ACCOUNT_SID and auth):
         return {"error": "Twilio REST non configuré (TWILIO_ACCOUNT_SID / auth)"}
     api = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls.json"
+    data = {
+        "To": to, "From": from_number,
+        "Url": url, "Method": "POST",
+        "Timeout": "25",
+        # Plafond dur de facturation : Twilio raccroche à TimeLimit quoi
+        # qu'il arrive (protection coûts, env OUTBOUND_TIME_LIMIT).
+        "TimeLimit": str(OUTBOUND_TIME_LIMIT),
+    }
+    if OUTBOUND_AMD:
+        # AMD : Twilio POSTe AnsweredBy= au webhook voice-out. Avec
+        # DetectMessageEnd, machine_end_* arrive APRÈS le bip → le message
+        # répondeur de Léa est enregistré en entier.
+        data["MachineDetection"] = OUTBOUND_AMD
+        data["MachineDetectionTimeout"] = str(_OUTBOUND_AMD_TIMEOUT_S)
     try:
         async with httpx.AsyncClient(timeout=15, auth=auth) as client:
-            r = await client.post(api, data={
-                "To": to, "From": from_number,
-                "Url": url, "Method": "POST",
-                "Timeout": "25",
-            })
+            r = await client.post(api, data=data)
         body = r.json()
         if r.status_code >= 300:
             return {"error": f"HTTP {r.status_code}: {str(body)[:300]}"}
@@ -1642,7 +1685,12 @@ async def twilio_voice_out(request: Request) -> Response:
     form = await request.form()
     to = _xml_attr(form.get("To") or "")          # numéro du prospect (Twilio POSTe To=)
     rid = _xml_attr(request.query_params.get("rid") or "")
+    # Résultat AMD (si MachineDetection actif dans calls.create) : human,
+    # machine_end_beep/silence/other, fax, unknown. Absent → Parameter omis,
+    # TwiML strictement identique à avant (rétro-compat).
+    answered_by = _xml_attr(form.get("AnsweredBy") or "").lower()
     print(f"[outbound] voice-out host={host!r} to={to!r} rid={rid!r}"
+          + (f" answered_by={answered_by!r}" if answered_by else "")
           + (" opener=ON" if OUTBOUND_OPENER else ""))
     ws_url = f"wss://{host}/twilio/stream"
     # Filler optionnel (env OUTBOUND_OPENER, vide = désactivé, TwiML identique
@@ -1659,7 +1707,8 @@ async def twilio_voice_out(request: Request) -> Response:
         f'<Parameter name="direction" value="out" />'
         f'<Parameter name="rid" value="{rid}" />'
         f'<Parameter name="to" value="{to}" />'
-        '</Stream></Connect>'
+        + (f'<Parameter name="answered_by" value="{answered_by}" />' if answered_by else '')
+        + '</Stream></Connect>'
         '</Response>'
     )
     return Response(content=twiml, media_type="application/xml")
@@ -1773,6 +1822,22 @@ async def twilio_stream(ws: WebSocket) -> None:
     metier_param = (custom.get("metier") or "").strip().lower()
     out_rid = (custom.get("rid") or "").strip()
     out_to = (custom.get("to") or "").strip()
+    # Résultat AMD relayé par voice-out (vide si AMD désactivé / non conclu).
+    out_answered_by = (custom.get("answered_by") or "").strip().lower()
+    # Répondeur confirmé par l'AMD (machine_end_* : le bip est passé) ou fax :
+    # message court + raccrochage, pas de conversation.
+    out_is_machine = direction == "out" and (
+        out_answered_by.startswith("machine") or out_answered_by == "fax")
+    # État du watchdog d'inactivité (chemin outbound uniquement) :
+    # - user_spoke : au moins un son de l'interlocuteur depuis le début
+    #   (pré-armé si l'AMD a répondu human : la personne a déjà dit « allô »
+    #   PENDANT l'analyse AMD, avant l'ouverture du Media Stream) ;
+    # - last_user_speech / last_agent_done : horodatages pour le silence ;
+    # - nudged : une relance « vous êtes toujours là ? » déjà envoyée ;
+    # - vm_played : message répondeur déjà déclenché (AMD ou watchdog).
+    wd = {"user_spoke": out_answered_by == "human",
+          "last_user_speech": 0.0, "last_agent_done": 0.0,
+          "nudged": False, "vm_played": out_is_machine}
     if metier_param and not entite_param:
         m2 = _metier_exists(metier_param)
         if m2:
@@ -1936,6 +2001,15 @@ async def twilio_stream(ws: WebSocket) -> None:
                                             str(prospect.get("entreprise") or "").strip()) if x)
                 if who:
                     greeting += f" Tu appelles : {who}."
+            if out_is_machine:
+                # AMD : répondeur confirmé → le « greeting » devient le message
+                # répondeur de 12 s, et le raccrochage est armé TOUT DE SUITE
+                # (pending_end_call) : au response.done du message, on coupe,
+                # même si le modèle oublie end_call. Zéro minute dans le vide.
+                greeting = _OUTBOUND_VOICEMAIL_INSTRUCTION
+                pending_end_call = True
+                print(f"[outbound] AMD répondeur ({out_answered_by!r}) → "
+                      "message 12 s + raccrochage armé")
             await xai.send(json.dumps({
                 "type": "response.create",
                 "response": {"instructions": greeting},
@@ -1950,6 +2024,73 @@ async def twilio_stream(ws: WebSocket) -> None:
                 print(f"[outbound] t_start→t_first_response_create = "
                       f"{(now_m - t_start) * 1000:.0f} ms "
                       f"(ws_accept→start = {(t_start - t_ws_accept) * 1000:.0f} ms)")
+
+            async def outbound_watchdog() -> None:
+                """Watchdog d'inactivité (chemin SORTANT uniquement) —
+                protection coûts, l'entrant n'est pas touché :
+                1) aucun son de l'interlocuteur dans les 6 premières secondes
+                   et l'AMD n'a pas conclu human → répondeur raté par l'AMD :
+                   message court + raccrochage armé ;
+                2) 20 s de silence après la dernière réplique → UNE relance ;
+                3) 10 s de silence après la relance → clôture polie + end_call.
+                Le raccrochage passe par pending_end_call → response.done →
+                _twilio_hangup (mécanique existante). TimeLimit reste le
+                filet ultime côté Twilio."""
+                nonlocal pending_end_call
+                t0 = time.monotonic()
+                try:
+                    while not pending_end_call:
+                        await asyncio.sleep(1.0)
+                        now = time.monotonic()
+                        if pending_end_call:
+                            return
+                        if not wd["user_spoke"]:
+                            if not wd["vm_played"] and now - t0 > _WD_NO_SPEECH_S:
+                                wd["vm_played"] = True
+                                pending_end_call = True
+                                print(f"[outbound] watchdog : aucun son humain "
+                                      f"en {_WD_NO_SPEECH_S:.0f} s → message "
+                                      "répondeur + raccrochage armé")
+                                await xai.send(json.dumps({
+                                    "type": "response.create",
+                                    "response": {"instructions":
+                                                 _OUTBOUND_VOICEMAIL_INSTRUCTION},
+                                }))
+                                return
+                            continue
+                        last = max(wd["last_user_speech"], wd["last_agent_done"])
+                        if not last:
+                            continue
+                        idle = now - last
+                        if not wd["nudged"] and idle > _WD_IDLE_NUDGE_S:
+                            wd["nudged"] = True
+                            wd["last_agent_done"] = now  # fenêtre de clôture
+                            print(f"[outbound] watchdog : {idle:.0f} s de "
+                                  "silence → relance")
+                            await xai.send(json.dumps({
+                                "type": "response.create",
+                                "response": {"instructions":
+                                             "Silence prolongé : demande "
+                                             "simplement, en UNE phrase courte : "
+                                             "« Vous êtes toujours là ? » "
+                                             "Rien d'autre."},
+                            }))
+                        elif wd["nudged"] and idle > _WD_IDLE_CLOSE_S:
+                            pending_end_call = True
+                            print("[outbound] watchdog : silence après relance "
+                                  "→ clôture polie + raccrochage armé")
+                            await xai.send(json.dumps({
+                                "type": "response.create",
+                                "response": {"instructions":
+                                             "L'interlocuteur ne répond plus : "
+                                             "dis UNE phrase de clôture polie "
+                                             "(« Je vous laisse, bonne journée, "
+                                             "au revoir ! ») puis appelle "
+                                             "end_call immédiatement."},
+                            }))
+                            return
+                except asyncio.CancelledError:
+                    pass
 
             async def twilio_to_xai() -> None:
                 """Forwards Twilio media frames to xAI (le `start` a déjà été
@@ -1976,6 +2117,17 @@ async def twilio_stream(ws: WebSocket) -> None:
                 async for raw in xai:
                     evt = json.loads(raw)
                     t = evt.get("type", "")
+                    # Watchdog outbound : trace la parole entrante (VAD +
+                    # transcript) et la fin des répliques de Léa. Un son de
+                    # l'interlocuteur ré-arme la relance (nudged=False).
+                    if direction == "out":
+                        if t in ("input_audio_buffer.speech_started",
+                                 "conversation.item.input_audio_transcription.completed"):
+                            wd["user_spoke"] = True
+                            wd["last_user_speech"] = time.monotonic()
+                            wd["nudged"] = False
+                        elif t == "response.done":
+                            wd["last_agent_done"] = time.monotonic()
                     # Log every non-audio event so we can see MCP calls,
                     # transcripts, errors, etc. Audio deltas are excluded
                     # because there are dozens per second.
@@ -2084,12 +2236,18 @@ async def twilio_stream(ws: WebSocket) -> None:
 
             twilio_task = asyncio.create_task(twilio_to_xai())
             xai_task = asyncio.create_task(xai_to_twilio())
+            # Watchdog hors de l'asyncio.wait : sa fin normale (répondeur,
+            # clôture) ne doit PAS couper le pont pendant que l'audio joue.
+            wd_task = (asyncio.create_task(outbound_watchdog())
+                       if direction == "out" else None)
             done, pending = await asyncio.wait(
                 [twilio_task, xai_task],
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for t in pending:
                 t.cancel()
+            if wd_task is not None:
+                wd_task.cancel()
 
     except Exception as e:
         print(f"[twilio/stream] error: {e!r}")
