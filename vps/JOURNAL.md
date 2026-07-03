@@ -114,3 +114,11 @@ Test : TwiML Polly OK. Feu vert donne a Vannina pour le renvoi Free -> 041213601
 Vannina a active les renvois conditionnels 06 51 00 30 49 -> 04 12 13 60 16.
 Tout appel manque tombe sur l'assistante bi-marque. Coffre re-chiffre (1b1ff23).
 Re-verification finale par Vannina a venir. TRANSFER_ENABLED reste 0.
+
+## 2026-07-03 11:00 CEST — Point : pages Framer agents vocaux (aucune action VPS)
+Composant V2_Template_AgentVocal (FDm0ZK7) cree dans Framer, porte les 3 offres
+(assistante/depannage/hotel) + page QA canvas. 3 pages dupliquees par Vannina,
+swap du contenu FAIT par MCP (pages sources intactes). Reste : renommage des paths
+par Vannina (limite MCP), menu+SEO+schema (agent en cours), OG images, validation
+visuelle puis publication. Buglog CS-framer : duplicateNode ne supporte pas les Pages.
+Standard en production (renvois Free actifs), monitoring logs 1h sans anomalie signalee.
