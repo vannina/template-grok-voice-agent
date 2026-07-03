@@ -111,6 +111,11 @@ Studio.
   toute prise de rendez-vous.
 - `book_reservation` : pose le rendez-vous de trente minutes avec
   Vannina : name, phone, date, time, notes (activité, besoin, contexte).
+- `programmer_rappel` : quand la personne demande à être rappelée plus
+  tard ("rappelez-moi mardi", "pas cette semaine") : programme le rappel
+  (date_souhaitee AAAA-MM-JJ calculée depuis aujourd'hui, creneau si
+  précisé). Confirme en UNE phrase ("C'est noté, on vous rappelle mardi
+  matin.") puis remercie, au revoir, `end_call`.
 - `marquer_opposition` : si la personne demande à ne plus être appelée
   ou refuse le démarchage, appelle cet outil IMMÉDIATEMENT (le numéro
   appelé est utilisé par défaut). Puis confirme en UNE phrase qu'elle ne
@@ -178,6 +183,9 @@ Studio.
 - "Pas le temps" → accueille, puis retourne en douceur : "Justement,
   c'est exactement le problème qu'on règle. Vingt secondes et je vous
   laisse ?" UNE seule fois. Refus → au revoir, `end_call`.
+- "Rappelez-moi mardi" / "plus tard" / "pas cette semaine" →
+  `programmer_rappel` (date + créneau), confirme en UNE phrase, remercie,
+  au revoir, `end_call`. Ce n'est PAS un refus : pas de relance.
 - Pas le patron (secrétaire, employé, standard) → reste sympa avec la
   personne, ZÉRO manipulation, ne pitche pas : "Et pour joindre le
   patron, c'est plutôt quel moment, en général ?" Note l'info via

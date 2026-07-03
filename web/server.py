@@ -159,7 +159,10 @@ TRANSFER_DIAL_TIMEOUT = int(os.environ.get("TRANSFER_DIAL_TIMEOUT", "20"))
 # (loi 2025-594 : B2B opt-out + droit d'opposition immédiat).
 OUTBOUND_TOKEN = os.environ.get("OUTBOUND_TOKEN", "").strip()          # auth n8n → header X-Outbound-Token
 OUTBOUND_HOURS = os.environ.get("OUTBOUND_HOURS", "9-12,14-18").strip()  # plages locales Europe/Paris, lun-ven
-OUTBOUND_FROM_NUMBER = os.environ.get("OUTBOUND_FROM_NUMBER", "+33412136016").strip()
+# Numéro DÉDIÉ prospection (+33 4 12 13 60 43, PN d0b57bf4…) : sortants Léa,
+# rappels entrants (webhook /twilio/voice-prospection) et SMS post-appel.
+# L'env prime toujours sur ce défaut.
+OUTBOUND_FROM_NUMBER = os.environ.get("OUTBOUND_FROM_NUMBER", "+33412136043").strip()
 OUTBOUND_METIER = os.environ.get("OUTBOUND_METIER", "prospection").strip().lower()
 # Host public embarqué dans l'Url Twilio (fallback : Host de la requête n8n).
 OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
@@ -203,6 +206,20 @@ _OUTBOUND_VOICEMAIL_INSTRUCTION = (
 _WD_NO_SPEECH_S = 6.0    # aucun son humain depuis le début → répondeur raté par l'AMD
 _WD_IDLE_NUDGE_S = 20.0  # silence après la dernière réplique → une relance
 _WD_IDLE_CLOSE_S = 10.0  # silence après la relance → clôture polie + end_call
+
+# Table Airtable des prospects de la campagne (base STANDARD_AIRTABLE_BASE_ID) :
+# lookup au rappel entrant (/twilio/voice-prospection) + écriture du tool
+# programmer_rappel (statut=rappeler + date_rappel).
+PROSPECTS_TABLE = os.environ.get("PROSPECTS_TABLE", "Prospection — Prospects").strip()
+# SMS post-appel sortant (répondeur, ou intéressé sans RDV) : OPT-IN par env
+# OUTBOUND_SMS=1 (défaut 0 = désactivé). Envoi best-effort, jamais bloquant,
+# jamais si l'interlocuteur s'est opposé (marquer_opposition) pendant l'appel.
+OUTBOUND_SMS = os.environ.get("OUTBOUND_SMS", "0").strip()
+_OUTBOUND_SMS_BODY = (
+    "Bonjour, c'était Léa de Corsica Studio 😊 Pour écouter notre assistante "
+    "en démo : 04 12 13 60 20. Le site : corsica-studio.com/assistante-vocale. "
+    "Pour ne plus être contacté, répondez STOP."
+)
 # Table Airtable du registre d'opposition (base STANDARD_AIRTABLE_BASE_ID).
 # Schéma attendu : telephone (texte, clé), date (date), source (texte).
 OPPOSITIONS_TABLE = os.environ.get("OPPOSITIONS_TABLE", "Oppositions").strip()
@@ -1182,6 +1199,88 @@ async def _marquer_opposition(ctx: dict, args: dict) -> dict:
                        "et raccroche immédiatement (end_call), sans argumenter."}
 
 
+async def _find_prospect_by_phone(phone: str) -> dict:
+    """Fiche prospect (table PROSPECTS_TABLE) dont {telephone} correspond au
+    numéro, en E.164 (+33…) OU en format national (0…). Best-effort :
+    {} si absente, non configurée ou en panne — ne lève JAMAIS."""
+    phone = (phone or "").strip()
+    if not phone or phone.lower() in HIDDEN_CALLERS or not _standard_airtable_ready():
+        return {}
+    e164 = _normalize_fr_phone(phone) or phone
+    national = "0" + e164[3:] if e164.startswith("+33") else e164
+    body = await _airtable_request("GET", PROSPECTS_TABLE, params={
+        "filterByFormula": (f"OR({{telephone}}='{_at_escape(e164)}',"
+                            f"{{telephone}}='{_at_escape(national)}')"),
+        "maxRecords": 1,
+    })
+    recs = (body or {}).get("records") or []
+    if not recs:
+        return {}
+    f = recs[0].get("fields", {})
+    return {"record_id": recs[0].get("id") or "",
+            "nom": str(f.get("nom") or "").strip(),
+            "entreprise": str(f.get("entreprise") or "").strip(),
+            "metier": str(f.get("metier") or "").strip(),
+            "ville": str(f.get("ville") or "").strip()}
+
+
+async def _send_outbound_sms(to: str) -> None:
+    """SMS post-appel de prospection (Twilio REST Messages, From = numéro
+    dédié OUTBOUND_FROM_NUMBER). Best-effort : loggé, jamais bloquant."""
+    auth = _twilio_rest_auth()
+    if not (TWILIO_ACCOUNT_SID and auth and to):
+        print("[outbound] SMS post-appel ignoré : Twilio REST ou numéro absent")
+        return
+    api = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+    try:
+        async with httpx.AsyncClient(timeout=10, auth=auth) as client:
+            r = await client.post(api, data={
+                "To": to, "From": OUTBOUND_FROM_NUMBER,
+                "Body": _OUTBOUND_SMS_BODY,
+            })
+        if r.status_code >= 300:
+            print(f"[outbound] SMS post-appel échec HTTP {r.status_code}: {r.text[:200]}")
+        else:
+            print(f"[outbound] SMS post-appel envoyé → {to}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[outbound] SMS post-appel échec: {e!r}")
+
+
+async def _programmer_rappel(ctx: dict, args: dict) -> dict:
+    """Tool programmer_rappel (prospection) : « rappelez-moi mardi » →
+    statut=rappeler + date_rappel sur la fiche prospect Airtable. Fiche
+    résolue par ctx['rid'] (appel sortant / rappel identifié), sinon par le
+    numéro de l'interlocuteur. Best-effort : un échec est dit simplement."""
+    date = str(args.get("date_souhaitee") or "").strip()[:10]
+    creneau = str(args.get("creneau") or "").strip()[:60]
+    if not _standard_airtable_ready():
+        print("[outbound] WARNING programmer_rappel : Airtable non configuré")
+        return {"status": "non_configuré",
+                "message": "CRM indisponible : confirme oralement et note le "
+                           "rappel via qualify_lead (champ delai)."}
+    rid = str(ctx.get("rid") or "").strip()
+    if not rid:
+        prospect = await _find_prospect_by_phone(ctx.get("caller_from") or "")
+        rid = str(prospect.get("record_id") or "")
+    if not rid:
+        return {"status": "introuvable",
+                "message": "Fiche prospect introuvable : confirme oralement et "
+                           "note le rappel via qualify_lead (champ delai)."}
+    fields: dict = {"statut": "rappeler"}
+    if date:
+        fields["date_rappel"] = date
+    body = await _airtable_request("PATCH", PROSPECTS_TABLE, record_id=rid,
+                                   payload={"fields": fields, "typecast": True})
+    if body is None:
+        return {"status": "erreur",
+                "message": "Écriture CRM échouée : confirme oralement et note "
+                           "le rappel via qualify_lead."}
+    print(f"[outbound] rappel programmé rid={rid!r} date={date!r} creneau={creneau!r}")
+    return {"status": "ok", "date_rappel": date, "creneau": creneau,
+            "message": "Rappel programmé sur la fiche prospect. Confirme la "
+                       "date en une phrase puis conclus."}
+
+
 async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
     """Function-tool dispatcher for the Twilio path (no browser to handle them).
     Mirrors the FUNCTIONS map in voice.js — keep them in sync when adding tools.
@@ -1220,6 +1319,10 @@ async def _server_tool_call(name: str, args: dict, ctx: dict) -> dict:
         # Prospection sortante (D.3) : opt-out immédiat, registre local +
         # Airtable Oppositions, best-effort — voir _marquer_opposition.
         return await _marquer_opposition(ctx, args)
+    if name == "programmer_rappel":
+        # Prospection : « rappelez-moi mardi » → statut=rappeler + date_rappel
+        # sur la fiche prospect (best-effort) — voir _programmer_rappel.
+        return await _programmer_rappel(ctx, args)
     if name == "end_call":
         # Actual hang-up is deferred to the relay loop so we don't cut off the
         # goodbye mid-word; this just acknowledges so the model continues.
@@ -1714,6 +1817,33 @@ async def twilio_voice_out(request: Request) -> Response:
     return Response(content=twiml, media_type="application/xml")
 
 
+@app.post("/twilio/voice-prospection")
+async def twilio_voice_prospection(request: Request) -> Response:
+    """Webhook TwiML du numéro DÉDIÉ prospection (+33 4 12 13 60 43) : un
+    prospect RAPPELLE, très probablement après un appel manqué de Léa. Ouvre
+    le Media Stream avec metier=prospection + direction=in_rappel + le numéro
+    appelant ; le WS fait le lookup fiche prospect (best-effort) et adapte
+    l'accueil (« Vous me rappelez, merci ! »)."""
+    host = request.headers.get("host") or request.url.hostname or "example.com"
+    form = await request.form()
+    caller_from = _xml_attr(form.get("From") or "")
+    print(f"[outbound] rappel entrant host={host!r} from={caller_from!r}")
+    _usage_append({"event": "start", "path": "rappel",
+                   "metier": OUTBOUND_METIER, "from": caller_from})
+    ws_url = f"wss://{host}/twilio/stream"
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response>'
+        f'<Connect><Stream url="{ws_url}">'
+        f'<Parameter name="metier" value="{_xml_attr(OUTBOUND_METIER)}" />'
+        f'<Parameter name="direction" value="in_rappel" />'
+        + (f'<Parameter name="from" value="{caller_from}" />' if caller_from else '')
+        + '</Stream></Connect>'
+        '</Response>'
+    )
+    return Response(content=twiml, media_type="application/xml")
+
+
 @app.websocket("/twilio/stream")
 async def twilio_stream(ws: WebSocket) -> None:
     """Bridge a Twilio Media Stream to an xAI realtime WS.
@@ -1837,7 +1967,11 @@ async def twilio_stream(ws: WebSocket) -> None:
     # - vm_played : message répondeur déjà déclenché (AMD ou watchdog).
     wd = {"user_spoke": out_answered_by == "human",
           "last_user_speech": 0.0, "last_agent_done": 0.0,
-          "nudged": False, "vm_played": out_is_machine}
+          "nudged": False, "vm_played": out_is_machine,
+          # Résultat d'appel pour le SMS post-appel (OUTBOUND_SMS=1) :
+          # répondeur OU intéressé (qualify_lead) sans RDV (book confirmé),
+          # et JAMAIS après une opposition.
+          "qualified": False, "booked": False, "opposed": False}
     if metier_param and not entite_param:
         m2 = _metier_exists(metier_param)
         if m2:
@@ -1876,6 +2010,21 @@ async def twilio_stream(ws: WebSocket) -> None:
             except Exception:  # noqa: BLE001 — timeout ou panne : accueil standard
                 return {}
         identify_task = asyncio.create_task(_identify_caller_bg(caller_from))
+
+    # Rappel ENTRANT prospection (/twilio/voice-prospection) : lookup de la
+    # fiche prospect lancé EN TÂCHE DE FOND (parallèle du handshake xAI),
+    # attendu au plus 300 ms au moment des instructions — même mécanique que
+    # identify_caller côté standard. Échec/timeout → accueil neutre, jamais
+    # bloquant.
+    rappel_task: asyncio.Task | None = None
+    if direction == "in_rappel" and caller_from and caller_from.lower() not in HIDDEN_CALLERS:
+        async def _prospect_bg(phone: str) -> dict:
+            try:
+                return await asyncio.wait_for(
+                    _find_prospect_by_phone(phone), timeout=1.5) or {}
+            except Exception:  # noqa: BLE001 — panne/timeout : accueil neutre
+                return {}
+        rappel_task = asyncio.create_task(_prospect_bg(caller_from))
 
     try:
         # Le handshake xAI a couru pendant la pré-lecture du `start` Twilio
@@ -1953,6 +2102,45 @@ async def twilio_stream(ws: WebSocket) -> None:
                     )
                     print(f"[standard] appelant identifié : {nom!r}")
 
+            # Rappel entrant prospection : fiche prospect (best-effort, 300 ms
+            # max — la tâche a déjà eu la durée du handshake xAI pour aboutir).
+            rappel_prospect: dict = {}
+            if direction == "in_rappel":
+                if rappel_task is not None:
+                    try:
+                        rappel_prospect = await asyncio.wait_for(
+                            asyncio.shield(rappel_task), timeout=0.3) or {}
+                    except Exception:  # noqa: BLE001 — > 300 ms : accueil neutre
+                        print("[outbound] lookup prospect rappel > 300 ms → accueil neutre")
+                if rappel_prospect.get("record_id"):
+                    # programmer_rappel / traçabilité : la fiche est identifiée.
+                    ctx["rid"] = rappel_prospect["record_id"]
+                lines = ["\n\n[RAPPEL ENTRANT — prospection]",
+                         "La personne t'appelle sur le numéro de prospection : "
+                         "elle te RAPPELLE très probablement après un appel "
+                         "manqué de ta part. C'est ELLE qui appelle : ne dis "
+                         "pas que tu la déranges, remercie-la de rappeler. "
+                         "Après l'accueil, déroule le flux prospection normal "
+                         "(découverte, douleur, révélation IA, rendez-vous)."]
+                if rappel_prospect.get("nom"):
+                    lines.append(f"Interlocuteur attendu : {rappel_prospect['nom']}.")
+                if rappel_prospect.get("entreprise"):
+                    lines.append(f"Entreprise : {rappel_prospect['entreprise']}.")
+                if rappel_prospect.get("metier"):
+                    lines.append(f"Métier précis : {rappel_prospect['metier']} — "
+                                 "pioche tes images dans la ligne de CE métier "
+                                 "(section Ancrage métier).")
+                if rappel_prospect.get("ville"):
+                    lines.append(f"Ville : {rappel_prospect['ville']}.")
+                if not (rappel_prospect.get("nom") or rappel_prospect.get("entreprise")):
+                    lines.append("Numéro inconnu du fichier prospects : accueil "
+                                 "neutre, demande à qui tu t'adresses avant "
+                                 "tout pitch.")
+                instructions += "\n".join(lines)
+                print(f"[outbound] rappel entrant : fiche "
+                      f"{'trouvée : ' + (rappel_prospect.get('entreprise') or rappel_prospect.get('nom')) if rappel_prospect.get('record_id') else 'introuvable'} "
+                      f"(from={caller_from!r})")
+
             # Langue Whisper par métier (profile.whisper_language) :
             # absent/"fr" = pin fr (comportement historique, évite les
             # dérives Hindi/Portugais) ; "auto" = pas de pin, détection
@@ -2010,6 +2198,30 @@ async def twilio_stream(ws: WebSocket) -> None:
                 pending_end_call = True
                 print(f"[outbound] AMD répondeur ({out_answered_by!r}) → "
                       "message 12 s + raccrochage armé")
+            if direction == "in_rappel":
+                # Rappel entrant : le greeting sortant (2 temps) ne colle pas —
+                # ici c'est le prospect qui appelle.
+                if rappel_prospect.get("nom") or rappel_prospect.get("entreprise"):
+                    greeting = (
+                        "Rappel ENTRANT d'un prospect connu (fiche dans le "
+                        "contexte [RAPPEL ENTRANT]). Accueille chaleureusement, "
+                        "exactement : « Corsica Studio, Léa à l'appareil ! Vous "
+                        "me rappelez, merci ! » Puis UNE phrase sur le pourquoi "
+                        "de ton appel manqué (on aide les artisans à ne plus "
+                        "perdre d'appels quand ils sont sur intervention), et "
+                        "tais-toi. Ne dis PAS que tu es une IA dans cette "
+                        "ouverture ; si on te le demande, réponds honnêtement, "
+                        "immédiatement.")
+                else:
+                    greeting = (
+                        "Appel ENTRANT sur le numéro de prospection, numéro "
+                        "inconnu du fichier. Accueil neutre et court : "
+                        "« Corsica Studio, Léa à l'appareil, bonjour ! » Puis "
+                        "écoute. Si la personne dit qu'elle rappelle suite à un "
+                        "appel manqué, remercie-la et déroule le flux "
+                        "prospection. Ne dis PAS que tu es une IA dans cette "
+                        "ouverture ; si on te le demande, réponds honnêtement, "
+                        "immédiatement.")
             await xai.send(json.dumps({
                 "type": "response.create",
                 "response": {"instructions": greeting},
@@ -2202,6 +2414,15 @@ async def twilio_stream(ws: WebSocket) -> None:
                             pending_end_call = True
                         if name == "transfer_to_human" and result.get("status") == "transfert":
                             pending_transfer = True
+                        # Résultat d'appel sortant → SMS post-appel (finally).
+                        if direction == "out":
+                            if name == "qualify_lead":
+                                wd["qualified"] = True
+                            elif (name == "book_reservation"
+                                  and result.get("status") == "confirmed"):
+                                wd["booked"] = True
+                            elif name == "marquer_opposition":
+                                wd["opposed"] = True
                         await xai.send(json.dumps({
                             "type": "conversation.item.create",
                             "item": {
@@ -2258,6 +2479,17 @@ async def twilio_stream(ws: WebSocket) -> None:
             await _standard_call_webhook(ctx)
         except Exception as e:  # noqa: BLE001
             print(f"[standard] webhook fin d'appel (finally) échoué: {e}")
+        # SMS post-appel sortant (OUTBOUND_SMS=1) : répondeur OU intéressé
+        # (qualify_lead) sans rendez-vous confirmé — JAMAIS après opposition.
+        # Best-effort : n'empêche jamais la fermeture propre du WS.
+        try:
+            if (direction == "out" and OUTBOUND_SMS == "1"
+                    and not wd.get("opposed")
+                    and (wd.get("vm_played")
+                         or (wd.get("qualified") and not wd.get("booked")))):
+                await _send_outbound_sms(out_to or caller_from)
+        except Exception as e:  # noqa: BLE001
+            print(f"[outbound] SMS post-appel (finally) échoué: {e}")
         try:
             await ws.close()
         except Exception:

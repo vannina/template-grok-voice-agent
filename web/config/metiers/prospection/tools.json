@@ -110,6 +110,27 @@
   },
   {
     "type": "function",
+    "name": "programmer_rappel",
+    "description": "À utiliser quand l'interlocuteur demande à être rappelé plus tard (« rappelez-moi mardi », « pas cette semaine ») : programme le rappel sur sa fiche prospect. Confirmer la date oralement en une phrase, puis conclure l'appel.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date_souhaitee": {
+          "type": "string",
+          "description": "Date souhaitée du rappel, format YYYY-MM-DD (calculée depuis aujourd'hui si relative : « mardi », « la semaine prochaine »)"
+        },
+        "creneau": {
+          "type": "string",
+          "description": "Créneau souhaité si précisé (matin, après-midi, ou heure)"
+        }
+      },
+      "required": [
+        "date_souhaitee"
+      ]
+    }
+  },
+  {
+    "type": "function",
     "name": "end_call",
     "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
     "parameters": {
