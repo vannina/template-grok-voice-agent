@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from string import Template
@@ -162,6 +163,13 @@ OUTBOUND_FROM_NUMBER = os.environ.get("OUTBOUND_FROM_NUMBER", "+33412136016").st
 OUTBOUND_METIER = os.environ.get("OUTBOUND_METIER", "prospection").strip().lower()
 # Host public embarqué dans l'Url Twilio (fallback : Host de la requête n8n).
 OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
+# Filler TwiML optionnel au décroché (TTFB) : si non vide, /twilio/voice-out
+# insère un <Say> Polly AVANT le <Connect> — la personne entend « Bonjour ! »
+# immédiatement pendant que la session xAI s'ouvre. RISQUE assumé : la voix
+# Polly (Lea-Neural) est DIFFÉRENTE de la voix xAI de Léa ; le raccord peut
+# s'entendre. C'est pourquoi c'est DÉSACTIVÉ par défaut (env vide) — n'activer
+# qu'après test en réel (ex. OUTBOUND_OPENER="Bonjour !").
+OUTBOUND_OPENER = os.environ.get("OUTBOUND_OPENER", "").strip()
 # Table Airtable du registre d'opposition (base STANDARD_AIRTABLE_BASE_ID).
 # Schéma attendu : telephone (texte, clé), date (date), source (texte).
 OPPOSITIONS_TABLE = os.environ.get("OPPOSITIONS_TABLE", "Oppositions").strip()
@@ -1494,6 +1502,13 @@ def _xml_attr(v: str) -> str:
     return "".join(ch for ch in str(v or "") if ch.isalnum() or ch in "+@._- ")[:80]
 
 
+def _xml_text(v: str) -> str:
+    """Échappe une valeur injectée en TEXTE d'un élément TwiML (<Say>…</Say>).
+    Contrairement à _xml_attr, conserve accents et ponctuation française."""
+    return (str(v or "").replace("&", "&amp;")
+            .replace("<", "&lt;").replace(">", "&gt;"))[:200]
+
+
 def _outbound_prospect_block(prospect: dict, to: str) -> str:
     """Bloc [Appel SORTANT] injecté dans les instructions avant response.create
     (même mécanique que l'accueil personnalisé du standard). Donne à Léa le
@@ -1512,6 +1527,11 @@ def _outbound_prospect_block(prospect: dict, to: str) -> str:
     if secteur:
         lines.append(f"Secteur d'activité : {secteur} — adapte ton pitch et tes "
                      "exemples à CE secteur (fiche get_business_info, par_profession).")
+    metier_pro = str(prospect.get("metier") or "").strip()
+    if metier_pro:
+        lines.append(f"Métier précis : {metier_pro}. Pioche tes images et tes "
+                     "douleurs dans la ligne de CE métier (section Ancrage métier) "
+                     "et nomme-le naturellement dans l'accroche si c'est fluide.")
     if ville:
         lines.append(f"Ville : {ville}.")
     if to:
@@ -1622,11 +1642,18 @@ async def twilio_voice_out(request: Request) -> Response:
     form = await request.form()
     to = _xml_attr(form.get("To") or "")          # numéro du prospect (Twilio POSTe To=)
     rid = _xml_attr(request.query_params.get("rid") or "")
-    print(f"[outbound] voice-out host={host!r} to={to!r} rid={rid!r}")
+    print(f"[outbound] voice-out host={host!r} to={to!r} rid={rid!r}"
+          + (" opener=ON" if OUTBOUND_OPENER else ""))
     ws_url = f"wss://{host}/twilio/stream"
+    # Filler optionnel (env OUTBOUND_OPENER, vide = désactivé, TwiML identique
+    # à avant) : un <Say> Polly immédiat au décroché pendant l'ouverture de la
+    # session xAI. Voir le commentaire sur OUTBOUND_OPENER (risque 2 voix).
+    opener = (f'<Say language="fr-FR" voice="Polly.Lea-Neural">'
+              f'{_xml_text(OUTBOUND_OPENER)}</Say>') if OUTBOUND_OPENER else ""
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Response>'
+        f'{opener}'
         f'<Connect><Stream url="{ws_url}">'
         f'<Parameter name="metier" value="{_xml_attr(OUTBOUND_METIER)}" />'
         f'<Parameter name="direction" value="out" />'
@@ -1647,6 +1674,7 @@ async def twilio_stream(ws: WebSocket) -> None:
     No transcoding is needed: we just unwrap/rewrap the JSON envelope.
     """
     await ws.accept()
+    t_ws_accept = time.monotonic()   # métrique TTFB décroché (outbound)
     print("[twilio] WS connected")
 
     if not XAI_API_KEY:
@@ -1715,6 +1743,7 @@ async def twilio_stream(ws: WebSocket) -> None:
         await _xai_abort()
         return
 
+    t_start = time.monotonic()       # `start` Twilio = média ouvert côté appelé
     stream_sid = start_evt["start"]["streamSid"]
     call_sid = start_evt["start"].get("callSid")
     custom = start_evt["start"].get("customParameters") or {}
@@ -1911,6 +1940,16 @@ async def twilio_stream(ws: WebSocket) -> None:
                 "type": "response.create",
                 "response": {"instructions": greeting},
             }))
+            # Métrique TTFB décroché (outbound) : sur ce chemin, tout entre le
+            # `start` Twilio et ce response.create est en mémoire process
+            # (aucun I/O hors handshake xAI, déjà parallélisé). Le restant du
+            # délai perçu = TTFB de génération xAI, réduit par le greeting en
+            # deux temps (première phrase ultra-courte).
+            if direction == "out":
+                now_m = time.monotonic()
+                print(f"[outbound] t_start→t_first_response_create = "
+                      f"{(now_m - t_start) * 1000:.0f} ms "
+                      f"(ws_accept→start = {(t_start - t_ws_accept) * 1000:.0f} ms)")
 
             async def twilio_to_xai() -> None:
                 """Forwards Twilio media frames to xAI (le `start` a déjà été
