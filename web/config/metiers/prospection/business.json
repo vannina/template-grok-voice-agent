@@ -1,0 +1,184 @@
+{
+  "nom": "Corsica Studio",
+  "entite": "cs",
+  "activite": "Agence digitale : sites web, intelligence artificielle et automatisation pour les TPE, PME, artisans, hôteliers, commerçants et professions libérales",
+  "fondatrice": "Vannina (au téléphone, toujours dire « Vannina » seul, jamais de nom de famille)",
+  "localisation": "Ajaccio, Corse",
+  "zone_intervention": "La Corse en priorité (Ajaccio et le Sud), la France entière, et l'Europe francophone à distance",
+  "contact": {
+    "email": "contact@corsica-studio.com",
+    "site": "corsica-studio.com"
+  },
+  "services": [
+    {
+      "nom": "Sites web",
+      "description": "Création de sites web professionnels avec Framer : rapides (chargement en moins d'une seconde), modernes, optimisés pour le référencement (score quatre-vingt-quinze et plus sur PageSpeed). Refonte de sites existants. Un site pensé pour convertir, pas juste pour exister.",
+      "tarif": "Sur devis après l'audit gratuit : chaque site est chiffré selon le périmètre (pages, contenus, fonctionnalités)."
+    },
+    {
+      "nom": "Automatisation",
+      "description": "Automatisation des tâches répétitives avec n8n : devis, factures, relances, prise de rendez-vous, gestion des avis, emails, réseaux sociaux, CRM et suivi client. L'entreprise gagne des heures chaque semaine. Un workflow simple peut être déployé en quarante-huit heures.",
+      "tarif": "Sur devis après l'audit gratuit. Repères du site, jamais fermes : formule Essentiel à partir de 500 € HT (besoin ciblé, environ cinq heures gagnées par mois), Structuration à partir de 1 200 € HT (activité en développement, environ quinze heures par mois), Optimisation à partir de 2 500 € HT (activité avancée, environ trente heures par mois)."
+    },
+    {
+      "nom": "Agents vocaux et assistants IA",
+      "description": "Un agent vocal sur mesure qui décroche le téléphone à la place du répondeur : renseigne les clients, prend les messages, remplit l'agenda. Existe aussi en chatbot sur le site. Les agents IA traitent aussi les tâches répétitives : réponse client automatique, qualification et tri des demandes, génération de contenu, avec supervision humaine à chaque étape. Démo testable avant toute signature.",
+      "tarif": "Voir tarifs_agents_ia : fourchettes hors taxes selon le pack.",
+      "chiffres_site": "En moyenne : quinze heures économisées par semaine, réponse client en moins de deux minutes contre quatre heures, et des demandes entrantes nettement mieux qualifiées."
+    },
+    {
+      "nom": "Formation IA",
+      "description": "Formation des équipes aux outils d'intelligence artificielle (Claude) : prise en main concrète, cas d'usage du métier, bonnes pratiques. Trois niveaux : Découverte (une demi-journée, pour démarrer dès le lendemain, repartir avec cinq prompts validés), Maîtrise (deux demi-journées, cas d'usage personnalisés : prospection, devis, comptes-rendus, relances, avec support de trente jours), Intégration (sur mesure : audit des processus, déploiement, maintenance de quatre-vingt-dix jours).",
+      "tarif": "Repères du site, confirmés au devis : entre 200 et 350 € HT selon le niveau (Découverte ou Maîtrise), en visio ou en présentiel à Ajaccio. Le niveau Intégration est sur devis."
+    },
+    {
+      "nom": "Audit de digitalisation",
+      "description": "État des lieux du digital de l'entreprise : ce qui fait perdre du temps ou des clients, et le plan d'action priorisé. Le premier échange de trente minutes est gratuit.",
+      "tarif": "Premier audit de trente minutes : gratuit et sans engagement."
+    }
+  ],
+  "tarifs_agents_ia": {
+    "regle": "Tous les prix sont hors taxes et TOUJOURS annoncés en fourchette, jamais fermes : le chiffrage exact passe par l'audit gratuit puis le devis sous vingt-quatre heures.",
+    "packs": [
+      {
+        "nom": "Standard / Secrétariat IA",
+        "pour_qui": "Artisans, dépannage, professions libérales, petites structures qui perdent des appels",
+        "mise_en_place_ht": "600 à 1 200 €",
+        "abonnement_mensuel_ht": "130 à 220 € par mois"
+      },
+      {
+        "nom": "Réservation / Rendez-vous",
+        "pour_qui": "Restaurants, hôtels, salons, santé, auto-écoles, clubs de sport : l'agent prend les réservations directement dans l'agenda",
+        "mise_en_place_ht": "900 à 1 800 €",
+        "abonnement_mensuel_ht": "190 à 320 € par mois"
+      },
+      {
+        "nom": "Chatbot site (voix + chat)",
+        "pour_qui": "Établissements avec du trafic web : le même agent répond aussi sur le site, la nuit et le week-end",
+        "mise_en_place_ht": "800 à 1 600 €",
+        "abonnement_mensuel_ht": "160 à 290 € par mois"
+      },
+      {
+        "nom": "Prospection B2B",
+        "pour_qui": "PME et indépendants qui veulent un flux de rendez-vous qualifiés : l'agent appelle, qualifie et prend le rendez-vous",
+        "mise_en_place_ht": "1 200 à 2 500 €",
+        "abonnement_mensuel_ht": "300 à 600 € par mois"
+      }
+    ],
+    "minutes": "Au-delà du forfait de minutes inclus : 0,35 à 0,50 € hors taxes la minute selon le pack.",
+    "repere_global": "Mise en place entre 600 et 2 500 € hors taxes selon le pack, abonnement entre 130 et 600 € hors taxes par mois. Engagement recommandé de trois à douze mois."
+  },
+  "qualification": {
+    "consigne": "Deux questions, UNE à la fois : d'abord la profession ou le secteur de l'appelant, ensuite son besoin principal. Puis répondre avec l'entrée par_profession correspondante et l'offre du besoin identifié.",
+    "besoins": [
+      {
+        "besoin": "prospecter / trouver des clients",
+        "question_naturelle": "Vous cherchez plutôt à trouver de nouveaux clients ?",
+        "offre_cs": "Agent de prospection B2B (l'agent appelle, qualifie et prend les rendez-vous), site web orienté conversion, qualification automatique des demandes entrantes. Chiffre du site : des demandes entrantes bien mieux qualifiées, réponse en moins de deux minutes."
+      },
+      {
+        "besoin": "gagner du temps / automatiser",
+        "question_naturelle": "Qu'est-ce qui vous prend le plus de temps au quotidien ?",
+        "offre_cs": "Automatisation avec n8n : devis, factures, relances, planning, avis clients, emails, CRM. Un workflow simple peut être déployé en quarante-huit heures. Moins de tâches répétitives, moins d'oublis, moins de charge mentale."
+      },
+      {
+        "besoin": "être joignable / ne plus perdre d'appels",
+        "question_naturelle": "Il vous arrive de manquer des appels ou des réservations ?",
+        "offre_cs": "Agent vocal sur mesure qui décroche à la place du répondeur : renseigne, prend les messages et les rendez-vous directement dans l'agenda, vingt-quatre heures sur vingt-quatre. Existe aussi en chatbot sur le site. Se teste en démo avant toute signature."
+      },
+      {
+        "besoin": "site web / visibilité",
+        "question_naturelle": "Vous avez déjà un site aujourd'hui, ou tout est à créer ?",
+        "offre_cs": "Site Framer rapide (moins d'une seconde de chargement), bien référencé (score quatre-vingt-quinze et plus sur PageSpeed), pensé pour générer des contacts qualifiés. Refonte possible d'un site existant."
+      },
+      {
+        "besoin": "formation IA",
+        "question_naturelle": "C'est pour vous, ou pour former une équipe ?",
+        "offre_cs": "Trois niveaux : Découverte (une demi-journée pour démarrer), Maîtrise (deux demi-journées, cas d'usage du métier, support trente jours), Intégration (sur mesure, clé en main). Visio ou présentiel à Ajaccio."
+      },
+      {
+        "besoin": "ne sait pas par où commencer / audit",
+        "question_naturelle": "Souhaitez-vous qu'on regarde ensemble ce qui vous fait perdre du temps ? L'audit de trente minutes est gratuit.",
+        "offre_cs": "Audit gratuit de trente minutes avec Vannina : analyse de l'activité et des blocages, puis plan d'action concret et devis sous vingt-quatre heures. Sans engagement."
+      }
+    ]
+  },
+  "par_profession": {
+    "artisan_btp": {
+      "adresse": "tutoiement possible si l'appelant tutoie le premier",
+      "douleurs": "Devis qui traînent (le client part voir ailleurs), relances oubliées, planning dans la tête ou sur un bout de papier, facturation en retard qui plombe la trésorerie.",
+      "exemples_cs": "Devis et factures automatisés (envoyés le jour même depuis le téléphone), relances automatiques à J+2 et J+7, planning synchronisé avec rappels SMS, agent vocal qui décroche pendant les chantiers. Exemple du site : un artisan plombier en Corse a doublé ses devis envoyés et récupéré deux heures par jour.",
+      "accroche": "Vous êtes artisan, pas gestionnaire : on automatise ce qui vous ralentit pour que vous restiez sur vos chantiers."
+    },
+    "restaurateur": {
+      "adresse": "tutoiement possible si l'appelant tutoie le premier",
+      "douleurs": "Réservations qui arrivent de partout (téléphone, email, Instagram) sans centralisation, no-shows à répétition, stocks gérés à l'instinct, avis Google et TripAdvisor sans réponse.",
+      "exemples_cs": "Réservations centralisées avec confirmation et rappel automatiques, agent vocal qui prend les réservations pendant le service, gestion des avis automatisée, commandes fournisseurs liées à l'activité réelle. Exemple du site : un restaurant de quarante couverts en Corse a divisé ses no-shows par quatre et récupéré deux heures par jour.",
+      "accroche": "Votre restaurant tourne, mais la gestion déborde : on centralise les réservations et on coupe les no-shows."
+    },
+    "hotelier": {
+      "adresse": "vouvoiement",
+      "douleurs": "Dépendance aux OTA (Booking et Airbnb prennent quinze à vingt-cinq pour cent de commission), check-in chronophage, emails de confirmation envoyés à la main, clients satisfaits qui partent sans laisser d'avis.",
+      "exemples_cs": "Moteur de réservation directe sur le site pour réduire les commissions, check-in en ligne avant l'arrivée, parcours client automatisé de la confirmation à l'avis post-séjour, agent vocal ou chatbot pour les demandes la nuit et le week-end. Exemple du site : un hôtel de vingt chambres en Corse est passé à quarante pour cent de réservations directes et a triplé ses avis Google.",
+      "accroche": "Votre hôtel est plein, votre équipe aussi : on automatise le parcours client pour redonner du temps à l'accueil."
+    },
+    "profession_liberale": {
+      "adresse": "vouvoiement",
+      "douleurs": "Avocats : secrétariat débordé par les appels, no-shows aux rendez-vous, dossiers éparpillés, facturation incomplète. Experts-comptables : collecte de pièces interminable, saisie et lettrage manuels, échéances fiscales sous pression. Santé (infirmières, cabinets) : tournées non optimisées, facturation CPAM laborieuse, planning fragile.",
+      "exemples_cs": "Prise de rendez-vous en ligne avec confirmation et rappel automatiques (les rappels réduisent les no-shows de soixante à soixante-dix pour cent), agent vocal qui filtre les appels entrants, collecte de pièces sur plateforme avec relances automatiques, facturation automatique, tournées optimisées. Exemples du site : un cabinet de trois avocats à Ajaccio a réduit ses appels entrants de moitié ; un cabinet comptable a réduit son temps de saisie de soixante pour cent. Tout est conforme au RGPD.",
+      "accroche": "Votre cabinet croule sous l'administratif, pas sous les dossiers : on automatise les tâches répétitives, votre équipe garde le travail de fond."
+    },
+    "agence_immobiliere": {
+      "adresse": "vouvoiement",
+      "douleurs": "Leads des portails non triés (les prospects chauds refroidissent), rapprochement acquéreurs-biens fait de tête, mandats sans reporting aux propriétaires, diffusion multi-portails à la main.",
+      "exemples_cs": "Qualification et attribution automatiques des leads avec réponse instantanée, alertes acquéreurs quand un bien correspond à leurs critères, reporting automatique aux propriétaires, diffusion multi-portails automatisée (SeLoger, LeBonCoin, Bien'ici intégrables). Exemple du site : une agence indépendante en Corse a doublé ses visites planifiées et renouvelle quatre-vingt-dix pour cent de ses mandats.",
+      "accroche": "Vous vendez des biens, pas votre temps en tâches administratives : on automatise le tri des leads et le suivi des mandats."
+    },
+    "commercant": {
+      "adresse": "tutoiement possible si l'appelant tutoie le premier",
+      "douleurs": "Stocks comptés à la main (ruptures et surstocks), aucune fidélisation, communication sur les réseaux irrégulière, aucun suivi des meilleurs clients.",
+      "exemples_cs": "Stocks en temps réel avec alertes de réapprovisionnement, programme de fidélité automatique par SMS, publications programmées chaque semaine. Ça démarre avec les outils existants : caisse, téléphone, réseaux sociaux, pas besoin de site. Exemple du site : un commerce de proximité a gagné vingt-cinq pour cent de clients fidèles avec zéro rupture de stock.",
+      "accroche": "Votre boutique tourne, mais tout repose sur vous : on met en place la fidélisation et les stocks qui se gèrent seuls."
+    },
+    "autre_pme": {
+      "adresse": "vouvoiement",
+      "douleurs": "Temps perdu, organisation floue, suivi client irrégulier, acquisition en dents de scie, trop d'improvisation quand l'activité grandit.",
+      "exemples_cs": "Structuration de l'organisation et du suivi client (CRM), automatisation des emails, de la facturation et des relances, agents IA pour les réponses clients et le tri des demandes, tableaux de pilotage. Chiffres du site : environ trente pour cent de contacts entrants en plus et quarante pour cent de temps administratif en moins.",
+      "accroche": "Le problème n'est pas de travailler plus, c'est le système : on structure, on automatise, et l'activité suit la croissance."
+    }
+  },
+  "process": {
+    "etapes": [
+      "1. Audit gratuit de trente minutes (téléphone ou visio) : analyse de l'activité, des blocages et des opportunités",
+      "2. Proposition sur mesure : devis sous vingt-quatre heures avec plan d'action, budget en fourchette hors taxes, délais et résultats attendus",
+      "3. Mise en place progressive : déploiement par étapes, test et validation à chaque palier ; un workflow simple peut être actif en quarante-huit heures",
+      "4. Suivi, formation de l'équipe et optimisation : monitoring des résultats, ajustements, support réactif"
+    ],
+    "reperes": "Du diagnostic au déploiement : deux à quatre semaines en moyenne. Un interlocuteur unique du début à la fin, validation obligatoire avant chaque avancée, réponse sous vingt-quatre heures maximum.",
+    "argument": "Tout se teste avant de payer : les agents vocaux ont une démo dédiée que le client essaie lui-même."
+  },
+  "methode": {
+    "etapes": [
+      "1. Audit gratuit de trente minutes (téléphone ou visio) : comprendre l'activité et les besoins",
+      "2. Devis personnalisé sous vingt-quatre heures, en fourchette hors taxes",
+      "3. Mise en place de la solution (site, automatisation, agent IA)",
+      "4. Formation de l'équipe et suivi"
+    ],
+    "argument": "Tout se teste avant de payer : les agents vocaux ont une démo dédiée que le client essaie lui-même."
+  },
+  "rendez_vous": {
+    "type": "Audit gratuit de trente minutes avec Vannina, par téléphone ou en visio",
+    "duree_minutes": 30
+  },
+  "questions_frequentes": {
+    "delais": "Les délais dépendent du projet : deux à quatre semaines en moyenne du diagnostic au déploiement, un workflow simple en quarante-huit heures. Précisés dans le devis, remis sous vingt-quatre heures après l'audit.",
+    "engagement": "Pour les agents IA, un engagement de trois à douze mois est recommandé. Les détails se voient au devis.",
+    "outils": "Sites avec Framer, automatisations avec n8n, intelligence artificielle avec Claude. Des outils modernes, sans dépendance à un prestataire unique. On se connecte aux outils existants : logiciels de caisse, PMS hôteliers, logiciels comptables (Sage, Cegid, Pennylane), portails immobiliers.",
+    "demo": "Les agents vocaux se testent en direct sur une page de démonstration avant toute signature.",
+    "ia_remplace_emplois": "Non : l'automatisation soulage l'équipe, elle ne la remplace pas. Les tâches répétitives disparaissent, l'humain garde le conseil et la relation. Supervision humaine à chaque étape.",
+    "pas_a_laise_informatique": "Tout est conçu pour être simple : des notifications, un clic, c'est fait. Ça marche aussi pour un indépendant seul, c'est même le cas le plus fréquent.",
+    "donnees": "Les solutions utilisées respectent le RGPD, les données restent sous le contrôle du client.",
+    "corsica_design": "Corsica Design est l'activité d'architecture intérieure de Vannina : une entité distincte de Corsica Studio. Pour un projet d'architecture intérieure, l'assistante prend un message dédié."
+  },
+  "note_agent": "Prix toujours hors taxes et en fourchette ou en « à partir de », jamais fermes : le chiffrage exact passe par l'audit gratuit puis le devis sous vingt-quatre heures. Aucune mention de dispositif d'aide publique, de subvention ou de crédit d'impôt : ce point se traite avec Vannina lors de l'audit."
+}

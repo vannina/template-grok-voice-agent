@@ -1,0 +1,142 @@
+[
+  {
+    "type": "function",
+    "name": "get_business_info",
+    "description": "Renvoie la fiche complète de l'entité : services, offres, tarifs indicatifs, horaires, contact. À appeler dès qu'une question dépasse le contexte connu. Ne pas réciter la fiche entière : répondre uniquement à la question posée.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "check_availability",
+    "description": "Vérifie la disponibilité réelle d'un créneau de rendez-vous dans l'agenda pour une date et une heure. À appeler AVANT book_reservation. Renvoie available (bool) et alternatives (heures proches disponibles) si le créneau est pris.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "Date souhaitée, format YYYY-MM-DD"
+        },
+        "time": {
+          "type": "string",
+          "description": "Heure souhaitée, format HH:MM en 24h"
+        }
+      },
+      "required": [
+        "date",
+        "time"
+      ]
+    }
+  },
+  {
+    "type": "function",
+    "name": "book_reservation",
+    "description": "Enregistre le rendez-vous dans l'agenda. À appeler uniquement après une disponibilité confirmée par check_availability et avec le nom, le numéro, la date et l'heure.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nom de la personne"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Numéro de téléphone de rappel"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date, format YYYY-MM-DD"
+        },
+        "time": {
+          "type": "string",
+          "description": "Heure, format HH:MM en 24h"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Objet du rendez-vous et qualification : activité de l'appelant, besoin (site, automatisation, agent vocal, formation, audit), urgence. Vide si rien."
+        }
+      },
+      "required": [
+        "name",
+        "phone",
+        "date",
+        "time"
+      ]
+    }
+  },
+  {
+    "type": "function",
+    "name": "qualify_lead",
+    "description": "Enregistre la qualification du besoin dans le fichier prospects. À appeler discrètement dès que le besoin est cerné, même sans rendez-vous. Ne commente pas cet enregistrement à voix haute.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "besoin": {
+          "type": "string",
+          "description": "Besoin principal (site, automatisation, agent vocal, formation, audit)"
+        },
+        "type_projet": {
+          "type": "string",
+          "description": "Type de projet ou activité de l'appelant"
+        },
+        "delai": {
+          "type": "string",
+          "description": "Urgence ou échéance souhaitée"
+        },
+        "canal_rappel": {
+          "type": "string",
+          "description": "Canal de rappel préféré (téléphone, email)"
+        },
+        "budget": {
+          "type": "string",
+          "description": "Budget indicatif, UNIQUEMENT si abordé spontanément"
+        },
+        "nom": {
+          "type": "string",
+          "description": "Nom de l'appelant si connu"
+        },
+        "telephone": {
+          "type": "string",
+          "description": "Numéro de l'appelant si différent du numéro appelant"
+        }
+      },
+      "required": [
+        "besoin"
+      ]
+    }
+  },
+  {
+    "type": "function",
+    "name": "end_call",
+    "description": "Raccroche l'appel. À appeler UNIQUEMENT juste après avoir dit au revoir, dans le même tour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "function",
+    "name": "marquer_opposition",
+    "description": "À utiliser IMMÉDIATEMENT si l'interlocuteur demande à ne plus être appelé ou refuse le démarchage : l'inscrit sur la liste d'opposition de Corsica Studio. Confirmer oralement puis terminer l'appel.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "telephone": {
+          "type": "string",
+          "description": "Numéro de l'interlocuteur (E.164 si possible)"
+        },
+        "raison": {
+          "type": "string",
+          "description": "Formulation de la demande, en une phrase"
+        }
+      },
+      "required": [
+        "telephone"
+      ]
+    }
+  }
+]
