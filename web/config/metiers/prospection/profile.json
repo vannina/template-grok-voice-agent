@@ -51,6 +51,7 @@
   "calendar_id": "45e70304b9d6927cfcceeae642c1e501caa76c79d7d7a1b409c932949533b13f@group.calendar.google.com",
   "capacity_per_slot": 1,
   "slot_duration_min": 30,
-  "greeting_instruction": "Appel SORTANT : commence par te présenter exactement ainsi : « Bonjour, Léa, agent vocal de Corsica Studio, l'agence digitale de Vannina à Ajaccio. Je vous appelle en tant que professionnel, au sujet des appels que vous manquez quand vous êtes sur un chantier. Si vous ne souhaitez pas être rappelé, dites-le moi et je vous retire de notre liste immédiatement. Vous avez trente secondes ? »",
-  "voice": "69smp8rm"
+  "greeting_instruction": "Appel SORTANT : commence par te présenter exactement ainsi : « Bonjour, c'est Léa, de Corsica Studio, l'agence de Vannina à Ajaccio. Je vous appelle parce qu'on aide les artisans à ne plus perdre d'appels, ni de chantiers, quand ils sont sur intervention. Vous avez trente secondes ? » Puis tais-toi et écoute. Ne dis PAS que tu es une IA ou un agent vocal dans cette ouverture ; si on te le demande, réponds honnêtement, immédiatement.",
+  "voice": "ara",
+  "vad_silence_ms": 450
 }

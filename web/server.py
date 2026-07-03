@@ -1653,6 +1653,31 @@ async def twilio_stream(ws: WebSocket) -> None:
         await ws.close(code=1011, reason="XAI_API_KEY not configured")
         return
 
+    # --- Handshake xAI lancé EN PARALLÈLE de la pré-lecture Twilio ---------
+    # (recette Léa : silence au décroché, sortant compris.) L'URL et la clé
+    # ne dépendent ni du métier ni du `start` Twilio : on ouvre la session
+    # xAI dès l'accept du WS, pendant qu'on attend le `start`. Le handshake
+    # TLS+WS xAI sort ainsi du chemin critique avant le premier mot. Côté
+    # outbound, le contexte prospect vient de la mémoire process
+    # (_outbound_ctx_get) : AUCUN I/O bloquant avant le response.create.
+    xai_url = f"{XAI_REALTIME_WS}?model={MODEL}"
+    xai_headers = {"Authorization": f"Bearer {XAI_API_KEY}"}
+
+    async def _xai_connect():
+        return await websockets.connect(
+            xai_url, additional_headers=xai_headers, max_size=None)
+
+    xai_connect_task = asyncio.create_task(_xai_connect())
+
+    async def _xai_abort() -> None:
+        """Annule (ou ferme) le handshake xAI si l'appel meurt avant `start`."""
+        xai_connect_task.cancel()
+        try:
+            conn = await xai_connect_task
+            await conn.close()
+        except Exception:  # noqa: BLE001 — annulé ou handshake raté : rien à fermer
+            pass
+
     metier = _resolve_metier(ws.headers.get("host"))
     ctx = _metier_ctx(metier)
     config = _load_config(metier)
@@ -1681,11 +1706,13 @@ async def twilio_stream(ws: WebSocket) -> None:
                 start_evt = evt
             elif kind == "stop":
                 print("[twilio] stop reçu avant start — fermeture")
+                await _xai_abort()
                 await ws.close()
                 return
             # `connected` (et tout autre événement pré-start) : ignoré.
     except WebSocketDisconnect:
         print("[twilio] client disconnected avant start")
+        await _xai_abort()
         return
 
     stream_sid = start_evt["start"]["streamSid"]
@@ -1756,11 +1783,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                 return {}
         identify_task = asyncio.create_task(_identify_caller_bg(caller_from))
 
-    xai_url = f"{XAI_REALTIME_WS}?model={MODEL}"
-    headers = {"Authorization": f"Bearer {XAI_API_KEY}"}
-
     try:
-        async with websockets.connect(xai_url, additional_headers=headers, max_size=None) as xai:
+        # Le handshake xAI a couru pendant la pré-lecture du `start` Twilio
+        # (et la résolution métier/entité) : on ne fait que le récupérer ici.
+        async with await xai_connect_task as xai:
 
             # --- Instructions + session.update + greeting -------------------
             # Envoyés dès l'ouverture de la session xAI : le `start` Twilio a
@@ -1843,13 +1869,26 @@ async def twilio_stream(ws: WebSocket) -> None:
             transcription = {"model": "whisper-1"}
             if whisper_lang != "auto":
                 transcription["language"] = whisper_lang
+            # VAD par métier (profile.vad_silence_ms) : durée de silence (ms)
+            # avant que le serveur considère le tour de parole terminé.
+            # Absent ou invalide → {"type": "server_vad"} nu, strictement le
+            # comportement historique (rétro-compatible). Prospection : valeur
+            # plus réactive pour réduire la latence entre les tours.
+            turn_detection: dict = {"type": "server_vad"}
+            vad_ms = ctx["profile"].get("vad_silence_ms")
+            if vad_ms is not None:
+                try:
+                    turn_detection["silence_duration_ms"] = int(vad_ms)
+                    print(f"[twilio] vad silence_duration_ms={turn_detection['silence_duration_ms']} (profil {metier!r})")
+                except (TypeError, ValueError):
+                    print(f"[twilio] WARNING vad_silence_ms invalide ignoré : {vad_ms!r}")
             await xai.send(json.dumps({
                 "type": "session.update",
                 "session": {
                     "voice": ctx["profile"].get("voice") or VOICE,
                     "instructions": instructions,
                     "tools": config["tools"],
-                    "turn_detection": {"type": "server_vad"},
+                    "turn_detection": turn_detection,
                     "input_audio_transcription": transcription,
                     "audio": {
                         "input":  {"format": {"type": "audio/pcmu"}},
