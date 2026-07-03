@@ -122,3 +122,13 @@ swap du contenu FAIT par MCP (pages sources intactes). Reste : renommage des pat
 par Vannina (limite MCP), menu+SEO+schema (agent en cours), OG images, validation
 visuelle puis publication. Buglog CS-framer : duplicateNode ne supporte pas les Pages.
 Standard en production (renvois Free actifs), monitoring logs 1h sans anomalie signalee.
+
+## 2026-07-03 15:20 CEST — D.3 outbound + Lea COMMITE (local, PAS deploye)
+Commit du jour : POST /outbound/call (X-Outbound-Token, horaires 9-12/14-18 lun-ven
+Europe/Paris, refus opposition), /twilio/voice-out (Stream metier=prospection + contexte
+prospect), tool marquer_opposition, metier prospection/ (Lea SDR, tools/business/profile
+completes a la main apres coupure limite session de l'agent). Smoke 22/22.
+En cours (agent) : tables Airtable Prospection + WF-OUT n8n (INACTIFS, 3 appels/15min
+pilote) + WF retour. Prochain : deploiement outbound sur standard-voice + OUTBOUND_TOKEN
+(env+coffre) + recette Lea sur le 06 de Vannina AVANT tout vrai prospect.
+Pages Framer : Settings title/meta/OG toujours a saisir par Vannina (limite MCP).

@@ -65,11 +65,11 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [ ] (V) Fournir une base de devis test pour démo
 
 ## Sprint 6 — L1 : Agent de prospection SDR IA (B2B) *(gros build, croissance)*
-- [ ] (C) Brique **Twilio outbound** + endpoint d'appel sortant dans l'app
+- [x] (C) Brique Twilio outbound : POST /outbound/call (token, horaires 9-12/14-18, contrôle opposition) + /twilio/voice-out + contexte prospect injecté — **fait 2026-07-03** (agent coupé par la limite de session, complété à la main, smoke 22/22)
 - [ ] (C) WF-OUT n8n (liste Airtable + horaires ouvrés + déclencheur)
 - [ ] (C) Sourcing/enrichissement (Apify/MCP) + WF-SCORING (Claude)
-- [ ] (C) Métier `prospection` : persona SDR (propose services CS, pédagogie, objections)
-- [ ] (C) Tools dont `book_appointment` (RDV Vannina) + `marquer_opposition` (opt-out immédiat)
+- [x] (C) Métier `prospection` : Léa, SDR pédagogue (présentation conforme + opt-out immédiat, pitch dépannage, RDV 30 min agenda CS) — **fait 2026-07-03**
+- [x] (C) Tools : book_reservation (RDV Vannina) + marquer_opposition (Airtable Oppositions) + qualify_lead — **fait 2026-07-03**
 - [ ] (C) Séquence email B2B 4 touches (réutilise WF-06a) en pré-chauffe
 - [ ] (C) Conformité B2B opt-out (mentions, opposition, secteurs exclus) — checklist légale
 - [ ] (V+C) Test campagne pilote + KPIs (réponse, RDV, coût/lead)
