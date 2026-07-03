@@ -39,7 +39,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) Post-traitement → n8n (Airtable + Telegram) — **fait 2026-07-02 (A.4)** : WF-Standard-Reception `Dif4bdlL818IcUY7` (webhook `standard-fin-appel` → Appels + upsert Contacts + Telegram) et WF-Standard-Digest `afWCvDC016CrlNZU` (cron 21h, digest si ≥1 appel), **créés INACTIFS**, credentials existants auto-assignés ; activation + `STANDARD_WEBHOOK_URL` dans le `.env` = A.5. Resend confirmation RDV : reste à faire (⚠️ pas d'email collecté au téléphone → à remplacer par SMS Twilio de confirmation, à arbitrer)
 - [x] (C) Déploiement VPS : service dédié `standard-voice` + Traefik + `.env` (STANDARD_*, ENABLE_CALLBACK_TOOL=1, TRANSFER_ENABLED=0) — 2026-07-02, IVR public testé 200
 - [ ] (V+C) **Recette EN COURS** : appel test Vannina au 04 12 13 60 16 (IVR→agent→RDV→Telegram)
-- [ ] (V) Activer le renvoi conditionnel Free 06 → **04 12 13 60 16** (APRÈS recette)
+- [x] (V) Renvois Free ACTIFS 06 → 04 12 13 60 16 (2026-07-03) — standard EN PRODUCTION ; re-vérification finale par Vannina à venir
 
 ## Sprint 3 — L3 : « Secrétaire générale » CS sur le site
 - [ ] (C) Config agent « secrétaire générale CS » (même cerveau que L2 côté Studio)

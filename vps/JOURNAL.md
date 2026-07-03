@@ -109,3 +109,8 @@ Commit 50b6381 : voix IVR Polly.Lea-Neural (x3 Say), latence 1re parole reduite
 (pre-fetch caller 300ms non bloquant + handshake xAI parallele au start Twilio),
 personas CS/CD chaleureux et proactifs (suggestion services par profession/projet).
 Test : TwiML Polly OK. Feu vert donne a Vannina pour le renvoi Free -> 0412136016.
+
+## 2026-07-03 10:20 CEST — RENVOIS FREE ACTIFS : standard EN PRODUCTION
+Vannina a active les renvois conditionnels 06 51 00 30 49 -> 04 12 13 60 16.
+Tout appel manque tombe sur l'assistante bi-marque. Coffre re-chiffre (1b1ff23).
+Re-verification finale par Vannina a venir. TRANSFER_ENABLED reste 0.
