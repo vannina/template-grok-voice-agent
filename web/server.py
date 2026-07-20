@@ -2326,6 +2326,17 @@ async def twilio_stream(ws: WebSocket) -> None:
 
             async def xai_to_twilio() -> None:
                 nonlocal pending_end_call, pending_transfer
+                # --- Barge-in (correctif GLOBAL, tout chemin téléphone) ----
+                # Quand l'interlocuteur parle pendant que l'agent parle, il
+                # faut DEUX actions : (1) response.cancel côté xAI pour
+                # stopper la génération, et (2) l'événement `clear` sur le
+                # Media Stream Twilio pour vider l'audio déjà bufferisé —
+                # sans lui, la voix continue plusieurs secondes après
+                # l'interruption. response_active suit le cycle
+                # response.created → response.done ; audio_since_clear évite
+                # un `clear` inutile quand rien n'a été envoyé à Twilio.
+                response_active = False
+                audio_since_clear = False
                 async for raw in xai:
                     evt = json.loads(raw)
                     t = evt.get("type", "")
@@ -2340,6 +2351,40 @@ async def twilio_stream(ws: WebSocket) -> None:
                             wd["nudged"] = False
                         elif t == "response.done":
                             wd["last_agent_done"] = time.monotonic()
+                    # Barge-in : le VAD serveur xAI signale que l'interlocuteur
+                    # se met à parler. Si l'agent est en train de parler, on
+                    # coupe des DEUX côtés (cancel xAI + clear Twilio).
+                    # Exceptions (comportement historique conservé) : message
+                    # répondeur outbound (l'annonce de la messagerie EST de la
+                    # parole, elle ne doit pas couper notre message) et au
+                    # revoir final déjà armé (pending_end_call).
+                    if t == "response.created":
+                        response_active = True
+                    elif t in ("response.done", "response.cancelled",
+                               "response.audio.interrupted",
+                               "response.output_audio.interrupted"):
+                        # response.cancel se conclut par un response.done
+                        # (status cancelled) ; certains serveurs émettent en
+                        # plus un événement *.cancelled / *.interrupted — tous
+                        # referment le cycle sans erreur, même si la réponse
+                        # était déjà terminée. (Un éventuel `error` "no active
+                        # response" renvoyé par xAI est logué plus bas, sans
+                        # crash.)
+                        response_active = False
+                    elif (t == "input_audio_buffer.speech_started"
+                          and (response_active or audio_since_clear)
+                          and not pending_end_call
+                          and not (direction == "out" and wd["vm_played"])):
+                        if response_active:
+                            await xai.send(json.dumps(
+                                {"type": "response.cancel"}))
+                        if stream_sid and audio_since_clear:
+                            await ws.send_text(json.dumps({
+                                "event": "clear",
+                                "streamSid": stream_sid,
+                            }))
+                            audio_since_clear = False
+                        print("[barge-in] cancel+clear")
                     # Log every non-audio event so we can see MCP calls,
                     # transcripts, errors, etc. Audio deltas are excluded
                     # because there are dozens per second.
@@ -2393,6 +2438,11 @@ async def twilio_stream(ws: WebSocket) -> None:
                             print(f"[xai] {t}: {json.dumps(evt)[:600]}")
                     if t in ("response.audio.delta", "response.output_audio.delta"):
                         if stream_sid:
+                            # De l'audio agent part vers Twilio : un barge-in
+                            # devra le purger (`clear`). Défensif : un delta
+                            # implique aussi qu'une réponse est en cours.
+                            response_active = True
+                            audio_since_clear = True
                             await ws.send_text(json.dumps({
                                 "event": "media",
                                 "streamSid": stream_sid,

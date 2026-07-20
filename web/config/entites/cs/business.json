@@ -43,6 +43,7 @@
       {
         "nom": "Standard / Secrétariat IA",
         "pour_qui": "Artisans, dépannage, professions libérales, petites structures qui perdent des appels",
+        "principe": "Relais sur non-réponse, pas un remplacement : le client reste maître de sa ligne et décroche quand il veut, l'assistante n'intervient que quand il ne décroche pas (ou hors horaires). Si le client répond, elle ne bouge pas.",
         "mise_en_place_ht": "600 à 1 200 €",
         "abonnement_mensuel_ht": "130 à 220 € par mois"
       },
