@@ -107,6 +107,6 @@ dans les docs liés + la mémoire (`strategie-agents-ia-cs`).
 - [x] (C) Léa : ancrage métier coiffeur (mains dans la couleur, complément Planity) + recette non-régression — **fait 2026-07-20**
 - [x] (C) Copy page Framer : CS-framer-website/01-framer-site/pages-agents-vocaux/PAGE-COIFFEUR-COPY.md (slug /agent-vocal-coiffeur) — **fait 2026-07-20**
 - [ ] (C) Image OG og-agent-vocal-coiffeur.png (gabarit #24, générateur existant)
-- [ ] (V) Question : source du nom « Cecchi » (pub ? prospect ?) pour finir l'identification
+- [x] (V) « Cecchi » = erreur du correcteur (résolu 2026-07-20) : pas d'acteur de ce nom, benchmark = Fresha + Tala
 - [ ] (V+C) Duplication de la page dans Framer (guidée, comme les 3 précédentes) + menu + publication
 - [ ] (C) Sourcing salons de coiffure France (hors Corse) + cross-suppression + pilote Léa coiffeurs

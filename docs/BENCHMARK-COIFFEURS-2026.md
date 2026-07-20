@@ -9,8 +9,10 @@
 Aucun acteur français d'agent vocal IA pour coiffeurs ne porte un nom proche de
 « Cecchi » (douzaine de recherches, variantes orthographiques testées). Le seul
 « Cecchi » trouvé est un salon client (Cecchi'K, Mérignac), pas un fournisseur.
-**Question ouverte pour Vannina : où as-tu vu/entendu ce nom ?** (pub Instagram,
-prospect, confrère — une capture trancherait). Candidats plausibles :
+**RÉSOLU le 2026-07-20 : « Cecchi » était une erreur du correcteur automatique**
+(dictée vocale de Vannina), pas un nom d'acteur. Le benchmark porte donc sur les
+acteurs réels du créneau ci-dessous. Candidats initialement envisagés (conservés
+pour mémoire) :
 
 | Candidat | Qui | Confiance |
 |---|---|---|
