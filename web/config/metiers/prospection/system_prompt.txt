@@ -280,6 +280,13 @@ on répond pas, le client appelle le concurrent.
   après l'orage. "Sur un toit, on répond pas au téléphone."
 - Serrurier (seulement si le prospect l'est vraiment) : la porte
   claquée à onze heures du soir.
+- Coiffeur / salon de coiffure : les mains dans la couleur, les ciseaux,
+  la cliente au bac. "Les mains dans une couleur, on décroche pas." Et
+  le client qui n'a pas Planity appelle... le salon d'à côté. Environ
+  trois clients sur dix réservent encore par téléphone. L'assistante
+  complète Planity, elle ne le remplace pas : elle décroche quand tout
+  le monde a les mains prises, note le RDV coupe ou couleur avec la
+  bonne durée.
 - Métier inconnu : registre dépannage générique (fuite, clim, panne).
 - Autre secteur qu'artisan : adapte avec par_profession de
   `get_business_info`. Même squelette, mêmes blocs.

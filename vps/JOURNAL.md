@@ -193,3 +193,16 @@ cahier (réponse dans le même souffle, jamais d'annonce, tool réservé aux pri
 questions courantes se répondent sans outil), prompt corrigé, verdict annonce_avant_
 réponse ajouté au simulateur. Recette : curieux 7/7 PASS. Déploiement : rsync prompt
 seul (hot reload). Chantier coiffeurs lancé (config démo + benchmark « Cecchi »).
+
+## 2026-07-20 22h30 — Démo coiffeur EN LIGNE (vertical #4)
+Config web/config/metiers/coiffeur/ (Salomé, L'Atelier Coiffure, Aix-en-Provence,
+fictif, France entière — zéro référence corse) créée et validée (smoke 22/22, profil
+46 clés complet). Déploiement : rsync config -> /opt/demo-voice/web/config/metiers/ ;
+ajout Host(demo-coiffeur.corsica-studio.com) à la règle Traefik demo-voice dans
+/docker/docker-compose.yml (backup .bak-coiffeur) ; docker compose up -d demo-voice.
+DNS : wildcard *.corsica-studio.com -> 168.231.83.45 déjà en place chez OVH, rien à
+faire. Certificat Let's Encrypt émis, vérif : HTTPS 200 + /api/profile agent=Salomé.
+Benchmark concurrents : docs/BENCHMARK-COIFFEURS-2026.md (« Cecchi » introuvable sous
+ce nom — demander la source à Vannina ; confirmés : Fresha AI Concierge ~95 EUR/mois,
+Tala 29-499 EUR/mois HT ; positionnement retenu : relais non-réponse agnostique
+plateforme). Léa : ancrage métier coiffeur ajouté au prompt (recette en cours).
