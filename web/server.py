@@ -218,9 +218,80 @@ _OUTBOUND_VOICEMAIL_INSTRUCTION = (
     "AUCUNE question, n'attends AUCUNE réponse."
 )
 # Watchdog d'inactivité (chemin outbound uniquement, secondes).
+# v8 : au téléphone, 20 s de silence est une éternité — relance à 7 s après la
+# fin de la dernière réplique de Léa (couvre aussi le cas « Léa pose une
+# question et personne ne répond »), clôture polie 8 s plus tard. Env :
+# WD_RELANCE_S / WD_CLOSE_S.
 _WD_NO_SPEECH_S = 6.0    # aucun son humain depuis le début → répondeur raté par l'AMD
-_WD_IDLE_NUDGE_S = 20.0  # silence après la dernière réplique → une relance
-_WD_IDLE_CLOSE_S = 10.0  # silence après la relance → clôture polie + end_call
+try:
+    _WD_IDLE_NUDGE_S = float(os.environ.get("WD_RELANCE_S", "7"))
+except ValueError:
+    _WD_IDLE_NUDGE_S = 7.0
+try:
+    _WD_IDLE_CLOSE_S = float(os.environ.get("WD_CLOSE_S", "8"))
+except ValueError:
+    _WD_IDLE_CLOSE_S = 8.0
+
+# Barge-in avec seuil (v8) : le VAD xAI émet un speech_started au moindre
+# « Allô ? » de l'interlocuteur — souvent une simple réaction au silence, pas
+# une vraie interruption. Couper (cancel+clear) une réponse qui vient à peine
+# de démarrer produit des fragments inaudibles → l'appelant redit « Allô ? »
+# → boucle. On n'autorise donc le cancel+clear QUE si l'agent a déjà streamé
+# au moins BARGE_IN_MIN_MS d'audio de la réponse EN COURS (µ-law 8 kHz :
+# 8 octets = 1 ms). En dessous, le speech_started est ignoré et la phrase se
+# termine. Compteur remis à zéro à chaque response.created.
+try:
+    BARGE_IN_MIN_MS = float(os.environ.get("BARGE_IN_MIN_MS", "900"))
+except ValueError:
+    BARGE_IN_MIN_MS = 900.0
+
+
+def _ulaw_b64_ms(payload: str) -> float:
+    """Durée (ms) d'un delta audio µ-law 8 kHz encodé base64.
+
+    8000 échantillons/s × 1 octet = 8 octets par ms. La taille décodée se
+    déduit de la longueur base64 sans décoder (pas de CPU sur le chemin
+    chaud : des dizaines de deltas par seconde)."""
+    if not payload:
+        return 0.0
+    pad = 2 if payload.endswith("==") else (1 if payload.endswith("=") else 0)
+    nbytes = (len(payload) * 3) // 4 - pad
+    return nbytes / 8.0
+
+
+class _BargeInGate:
+    """Compteur d'audio agent réellement envoyé à Twilio pour la réponse EN
+    COURS (v8). ready() dit si un speech_started peut déclencher le
+    cancel+clear ; reset à chaque response.created."""
+
+    def __init__(self, min_ms: float | None = None) -> None:
+        self.min_ms = BARGE_IN_MIN_MS if min_ms is None else min_ms
+        self.audio_ms = 0.0
+
+    def on_response_created(self) -> None:
+        self.audio_ms = 0.0
+
+    def on_audio_delta_b64(self, payload: str) -> None:
+        self.audio_ms += _ulaw_b64_ms(payload)
+
+    def ready(self) -> bool:
+        return self.audio_ms >= self.min_ms
+
+
+def _wd_idle_action(wd: dict, now: float) -> str:
+    """Décision d'inactivité du watchdog outbound (pure, testable) :
+    "" (rien), "nudge" (relance) ou "close" (clôture + end_call)."""
+    if not wd["user_spoke"]:
+        return ""
+    last = max(wd["last_user_speech"], wd["last_agent_done"])
+    if not last:
+        return ""
+    idle = now - last
+    if not wd["nudged"] and idle > _WD_IDLE_NUDGE_S:
+        return "nudge"
+    if wd["nudged"] and idle > _WD_IDLE_CLOSE_S:
+        return "close"
+    return ""
 
 # Table Airtable des prospects de la campagne (base STANDARD_AIRTABLE_BASE_ID) :
 # lookup au rappel entrant (/twilio/voice-prospection) + écriture du tool
@@ -237,7 +308,11 @@ _OUTBOUND_SMS_BODY = (
 )
 # Table Airtable du registre d'opposition (base STANDARD_AIRTABLE_BASE_ID).
 # Schéma attendu : telephone (texte, clé), date (date), source (texte).
-OPPOSITIONS_TABLE = os.environ.get("OPPOSITIONS_TABLE", "Oppositions").strip()
+# v8 : défaut corrigé « Prospection — Oppositions » (nom réel de la table
+# créée par le WF) — l'ancien défaut « Oppositions » provoquait un HTTP 403
+# Airtable en prod. L'env OPPOSITIONS_TABLE prime toujours.
+OPPOSITIONS_TABLE = os.environ.get(
+    "OPPOSITIONS_TABLE", "Prospection — Oppositions").strip()
 
 # Contexte prospect en mémoire process (rid → fiche), TTL 2 h : posé par
 # /outbound/call, lu par le WS /twilio/stream pour personnaliser l'appel.
@@ -2357,8 +2432,11 @@ async def twilio_stream(ws: WebSocket) -> None:
                 1) aucun son de l'interlocuteur dans les 6 premières secondes
                    et l'AMD n'a pas conclu human → répondeur raté par l'AMD :
                    message court + raccrochage armé ;
-                2) 20 s de silence après la dernière réplique → UNE relance ;
-                3) 10 s de silence après la relance → clôture polie + end_call.
+                2) 7 s de silence après la dernière réplique (WD_RELANCE_S) →
+                   UNE relance courte (« Vous m'entendez ? » / reformulation) —
+                   couvre aussi le cas où Léa pose une question sans réponse ;
+                3) 8 s de silence après la relance (WD_CLOSE_S) → clôture
+                   polie + end_call.
                 Le raccrochage passe par pending_end_call → response.done →
                 _twilio_hangup (mécanique existante). TimeLimit reste le
                 filet ultime côté Twilio."""
@@ -2407,11 +2485,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 }))
                                 return
                             continue
-                        last = max(wd["last_user_speech"], wd["last_agent_done"])
-                        if not last:
-                            continue
-                        idle = now - last
-                        if not wd["nudged"] and idle > _WD_IDLE_NUDGE_S:
+                        idle = now - max(wd["last_user_speech"],
+                                         wd["last_agent_done"])
+                        action = _wd_idle_action(wd, now)
+                        if action == "nudge":
                             wd["nudged"] = True
                             wd["last_agent_done"] = now  # fenêtre de clôture
                             print(f"[outbound] watchdog : {idle:.0f} s de "
@@ -2419,12 +2496,15 @@ async def twilio_stream(ws: WebSocket) -> None:
                             await xai.send(json.dumps({
                                 "type": "response.create",
                                 "response": {"instructions":
-                                             "Silence prolongé : demande "
-                                             "simplement, en UNE phrase courte : "
-                                             "« Vous êtes toujours là ? » "
+                                             "Pas de réponse : relance en UNE "
+                                             "phrase très courte. Si tu venais "
+                                             "de poser une question, reformule-"
+                                             "la en plus court (« Je vous "
+                                             "explique ? ») ; sinon demande "
+                                             "« Vous m'entendez ? ». "
                                              "Rien d'autre."},
                             }))
-                        elif wd["nudged"] and idle > _WD_IDLE_CLOSE_S:
+                        elif action == "close":
                             pending_end_call = True
                             print("[outbound] watchdog : silence après relance "
                                   "→ clôture polie + raccrochage armé")
@@ -2472,8 +2552,12 @@ async def twilio_stream(ws: WebSocket) -> None:
                 # l'interruption. response_active suit le cycle
                 # response.created → response.done ; audio_since_clear évite
                 # un `clear` inutile quand rien n'a été envoyé à Twilio.
+                # v8 : seuil anti-boucle « allô » — barge_gate ne laisse passer
+                # le cancel+clear que si >= BARGE_IN_MIN_MS d'audio de la
+                # réponse EN COURS a déjà été streamé vers Twilio.
                 response_active = False
                 audio_since_clear = False
+                barge_gate = _BargeInGate()
                 async for raw in xai:
                     evt = json.loads(raw)
                     t = evt.get("type", "")
@@ -2498,6 +2582,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                     if t == "response.created":
                         response_active = True
                         wd["response_active"] = True   # miroir AMD async (v5)
+                        barge_gate.on_response_created()  # v8 : nouveau cycle
                     elif t in ("response.done", "response.cancelled",
                                "response.audio.interrupted",
                                "response.output_audio.interrupted"):
@@ -2514,16 +2599,27 @@ async def twilio_stream(ws: WebSocket) -> None:
                           and (response_active or audio_since_clear)
                           and not pending_end_call
                           and not (direction == "out" and wd["vm_played"])):
-                        if response_active:
-                            await xai.send(json.dumps(
-                                {"type": "response.cancel"}))
-                        if stream_sid and audio_since_clear:
-                            await ws.send_text(json.dumps({
-                                "event": "clear",
-                                "streamSid": stream_sid,
-                            }))
-                            audio_since_clear = False
-                        print("[barge-in] cancel+clear")
+                        # v8 : réponse à peine démarrée (< BARGE_IN_MIN_MS
+                        # streamées) → ce speech_started est une réaction au
+                        # silence (« Allô ? »), pas une interruption : on
+                        # laisse la phrase se finir. Sans ce seuil, chaque
+                        # « Allô ? » coupait la réponse naissante → fragments
+                        # → nouvel « Allô ? » → boucle.
+                        if not barge_gate.ready():
+                            print(f"[barge-in] ignoré : "
+                                  f"{barge_gate.audio_ms:.0f} ms < "
+                                  f"{BARGE_IN_MIN_MS:.0f} ms streamées")
+                        else:
+                            if response_active:
+                                await xai.send(json.dumps(
+                                    {"type": "response.cancel"}))
+                            if stream_sid and audio_since_clear:
+                                await ws.send_text(json.dumps({
+                                    "event": "clear",
+                                    "streamSid": stream_sid,
+                                }))
+                                audio_since_clear = False
+                            print("[barge-in] cancel+clear")
                     # Log every non-audio event so we can see MCP calls,
                     # transcripts, errors, etc. Audio deltas are excluded
                     # because there are dozens per second.
@@ -2583,6 +2679,9 @@ async def twilio_stream(ws: WebSocket) -> None:
                             response_active = True
                             wd["response_active"] = True  # miroir AMD async
                             audio_since_clear = True
+                            # v8 : cumule les ms réellement parties vers
+                            # Twilio pour le seuil de barge-in.
+                            barge_gate.on_audio_delta_b64(evt["delta"])
                             await ws.send_text(json.dumps({
                                 "event": "media",
                                 "streamSid": stream_sid,
