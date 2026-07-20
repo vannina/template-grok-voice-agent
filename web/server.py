@@ -167,11 +167,20 @@ OUTBOUND_METIER = os.environ.get("OUTBOUND_METIER", "prospection").strip().lower
 # Host public embarqué dans l'Url Twilio (fallback : Host de la requête n8n).
 OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
 # Filler TwiML optionnel au décroché (TTFB) : si non vide, /twilio/voice-out
-# insère un <Say> Polly AVANT le <Connect> — la personne entend « Bonjour ! »
-# immédiatement pendant que la session xAI s'ouvre. RISQUE assumé : la voix
-# Polly (Lea-Neural) est DIFFÉRENTE de la voix xAI de Léa ; le raccord peut
-# s'entendre. C'est pourquoi c'est DÉSACTIVÉ par défaut (env vide) — n'activer
-# qu'après test en réel (ex. OUTBOUND_OPENER="Bonjour !").
+# insère un verbe TwiML AVANT le <Connect> — la personne entend « Allô,
+# bonjour ! » immédiatement pendant que la session xAI s'ouvre (TTFB de
+# génération ~2 s mesuré en v5). Deux formes :
+#   - URL (commence par http) → <Play>URL</Play> : fichier audio pré-généré
+#     avec la VRAIE voix xAI « ara » de Léa (aucun raccord audible). Fichier
+#     dans le repo : web/static/opener-prospection.mp3, servi par l'app à la
+#     racine (web/static est monté sur "/", pas sur "/static").
+#     Activation prod (ligne à mettre dans le .env du VPS) :
+#     OUTBOUND_OPENER="https://standard.corsica-studio.com/opener-prospection.mp3"
+#   - texte → <Say> Polly Lea-Neural (fallback) : voix DIFFÉRENTE de la voix
+#     xAI, raccord audible. Ex. OUTBOUND_OPENER="Allô, bonjour !".
+# DÉSACTIVÉ par défaut (env vide) : TwiML strictement identique à avant.
+# Cohérence prompt : greeting_instruction (profile.json prospection) part du
+# principe que l'opener a DÉJÀ dit bonjour — activer les deux ensemble.
 OUTBOUND_OPENER = os.environ.get("OUTBOUND_OPENER", "").strip()
 # Détection répondeur Twilio (AMD), en mode ASYNCHRONE depuis v5.
 # "DetectMessageEnd" = Twilio analyse le décroché et livre AnsweredBy
@@ -1843,10 +1852,17 @@ async def twilio_voice_out(request: Request) -> Response:
           + (" opener=ON" if OUTBOUND_OPENER else ""))
     ws_url = f"wss://{host}/twilio/stream"
     # Filler optionnel (env OUTBOUND_OPENER, vide = désactivé, TwiML identique
-    # à avant) : un <Say> Polly immédiat au décroché pendant l'ouverture de la
-    # session xAI. Voir le commentaire sur OUTBOUND_OPENER (risque 2 voix).
-    opener = (f'<Say language="fr-FR" voice="Polly.Lea-Neural">'
-              f'{_xml_text(OUTBOUND_OPENER)}</Say>') if OUTBOUND_OPENER else ""
+    # à avant) : audio immédiat au décroché pendant l'ouverture de la session
+    # xAI. URL (http...) → <Play> du fichier pré-généré voix ara (raccord
+    # invisible) ; texte → <Say> Polly (fallback, voix différente). Voir le
+    # commentaire sur OUTBOUND_OPENER.
+    if not OUTBOUND_OPENER:
+        opener = ""
+    elif OUTBOUND_OPENER.lower().startswith("http"):
+        opener = f'<Play>{_xml_text(OUTBOUND_OPENER)}</Play>'
+    else:
+        opener = (f'<Say language="fr-FR" voice="Polly.Lea-Neural">'
+                  f'{_xml_text(OUTBOUND_OPENER)}</Say>')
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Response>'
