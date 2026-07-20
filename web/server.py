@@ -215,15 +215,16 @@ _OUTBOUND_VOICEMAIL_INSTRUCTION = (
     "AUCUNE question, n'attends AUCUNE réponse."
 )
 # Watchdog d'inactivité (chemin outbound uniquement, secondes).
-# v8 : au téléphone, 20 s de silence est une éternité — relance à 7 s après la
-# fin de la dernière réplique de Léa (couvre aussi le cas « Léa pose une
-# question et personne ne répond »), clôture polie 8 s plus tard. Env :
-# WD_RELANCE_S / WD_CLOSE_S.
+# v10 : au téléphone, même 4 s de silence est long — enchaînement proactif à
+# 4 s après la fin de la dernière réplique de Léa (couvre aussi le cas « Léa
+# pose une question et personne ne répond ») : elle déroule ELLE-MÊME la suite
+# de son script (pas de « vous m'entendez ? »), clôture polie 8 s plus tard.
+# Env : WD_RELANCE_S / WD_CLOSE_S.
 _WD_NO_SPEECH_S = 6.0    # aucun son humain depuis le début → répondeur raté par l'AMD
 try:
-    _WD_IDLE_NUDGE_S = float(os.environ.get("WD_RELANCE_S", "7"))
+    _WD_IDLE_NUDGE_S = float(os.environ.get("WD_RELANCE_S", "4"))
 except ValueError:
-    _WD_IDLE_NUDGE_S = 7.0
+    _WD_IDLE_NUDGE_S = 4.0
 try:
     _WD_IDLE_CLOSE_S = float(os.environ.get("WD_CLOSE_S", "8"))
 except ValueError:
@@ -559,14 +560,19 @@ ROOT = Path(__file__).parent
 STATIC_DIR = ROOT / "static"
 CONFIG_DIR = ROOT / "config"
 
-# --- Opener canned SERVEUR « Oui, bonjour ! » (v9, chemin outbound) ----------
+# --- Opener canned SERVEUR (v10 : hook complet, chemin outbound) -------------
 # v9 remplace le <Play> TwiML au décroché (OUTBOUND_OPENER, qui parlait AVANT
 # le « allô » de l'appelé — comportement non humain) par un flow de décroché
 # humain : le pont WS ATTEND que l'appelé parle (speech_started xAI, ou 4 s de
-# silence en fallback), puis injecte CE fichier audio pré-enregistré (« Oui,
-# bonjour ! », voix xAI ara, µ-law 8 kHz mono, ≤ 0,8 s) DIRECTEMENT dans le
-# Media Stream Twilio (frames `media` de 20 ms base64), et envoie ENSUITE le
-# response.create — le modèle génère le Bloc 1 pendant que le canned joue.
+# silence en fallback), puis injecte CE fichier audio pré-enregistré
+# DIRECTEMENT dans le Media Stream Twilio (frames `media` de 20 ms base64), et
+# envoie ENSUITE le response.create — le modèle génère le Bloc 1 pendant que
+# le canned joue.
+# v10 : le canned devient le hook COMPLET « Oui bonjour, c'est Léa, de Corsica
+# Studio ! » (voix xAI ara, µ-law 8 kHz mono, ~2,0 s). Sa durée comble le TTFB
+# du modèle : quand il finit, la réponse générée est prête — plus de blanc ni
+# de re-salutation. Le prompt (Bloc 1 + greeting_instruction) interdit de
+# re-saluer : Léa enchaîne comme la suite de la même phrase.
 # Chargé au boot (aucune dépendance réseau). Fichier absent → fallback v8
 # (response.create immédiat au start), jamais d'erreur.
 _OPENER_ULAW_PATH = STATIC_DIR / "opener-oui-bonjour.ulaw"
@@ -2175,7 +2181,7 @@ async def twilio_stream(ws: WebSocket) -> None:
     #   (pré-armé si l'AMD a répondu human : la personne a déjà dit « allô »
     #   PENDANT l'analyse AMD, avant l'ouverture du Media Stream) ;
     # - last_user_speech / last_agent_done : horodatages pour le silence ;
-    # - nudged : une relance « vous êtes toujours là ? » déjà envoyée ;
+    # - nudged : un enchaînement proactif (suite du script) déjà envoyé ;
     # - vm_played : message répondeur déjà déclenché (AMD ou watchdog).
     wd = {"user_spoke": out_answered_by == "human",
           "last_user_speech": 0.0, "last_agent_done": 0.0,
@@ -2450,8 +2456,9 @@ async def twilio_stream(ws: WebSocket) -> None:
             # PAS de response.create au start (la session xAI est chaude via
             # session.update, on se tait). Au premier signal de parole de
             # l'appelé (input_audio_buffer.speech_started), on injecte le
-            # canned « Oui, bonjour ! » (µ-law pré-chargé, ~200 ms après son
-            # allô) PUIS le response.create : le modèle génère le Bloc 1
+            # canned hook complet « Oui bonjour, c'est Léa, de Corsica
+            # Studio ! » (µ-law pré-chargé, ~200 ms après son allô, ~2 s de
+            # jeu) PUIS le response.create : le modèle génère le Bloc 1
             # pendant que le canned joue. Décroché silencieux → filet 4 s
             # (_OPENER_FALLBACK_S). Chemins entrant / démos / rappel /
             # répondeur AMD / fichier canned absent : INCHANGÉS (v8).
@@ -2460,7 +2467,8 @@ async def twilio_stream(ws: WebSocket) -> None:
             wd["opener_done"] = False
 
             async def _play_opener_then_create(reason: str) -> None:
-                """Injecte le « Oui, bonjour ! » canned dans le Media Stream
+                """Injecte le hook canned (« Oui bonjour, c'est Léa, de
+                Corsica Studio ! ») dans le Media Stream
                 Twilio (frames `media` de 20 ms, µ-law 8 kHz base64) PUIS
                 envoie le response.create. Idempotent : flag posé avant le
                 premier await (event loop unique → pas de double envoi) ;
@@ -2470,7 +2478,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                 wd["opener_done"] = True
                 frames = _opener_frames_b64()
                 t_ms = (time.monotonic() - t_start) * 1000
-                print(f"[outbound] opener canned « Oui, bonjour ! » ({reason}) "
+                print(f"[outbound] opener canned hook complet ({reason}) "
                       f"à t_start+{t_ms:.0f} ms — {len(_OPENER_ULAW) / 8:.0f} ms "
                       f"d'audio en {len(frames)} frames de 20 ms")
                 if stream_sid:
@@ -2532,10 +2540,12 @@ async def twilio_stream(ws: WebSocket) -> None:
                 1) aucun son de l'interlocuteur dans les 6 premières secondes
                    et l'AMD n'a pas conclu human → répondeur raté par l'AMD :
                    message court + raccrochage armé ;
-                2) 7 s de silence après la dernière réplique (WD_RELANCE_S) →
-                   UNE relance courte (« Vous m'entendez ? » / reformulation) —
-                   couvre aussi le cas où Léa pose une question sans réponse ;
-                3) 8 s de silence après la relance (WD_CLOSE_S) → clôture
+                2) 4 s de silence après la dernière réplique (WD_RELANCE_S) →
+                   enchaînement PROACTIF : Léa déroule elle-même la suite
+                   logique de son script (jamais « vous m'entendez ? »), une
+                   seule fois par silence — couvre aussi le cas où Léa pose
+                   une question sans réponse ;
+                3) 8 s de silence après l'enchaînement (WD_CLOSE_S) → clôture
                    polie + end_call.
                 Le raccrochage passe par pending_end_call → response.done →
                 _twilio_hangup (mécanique existante). TimeLimit reste le
@@ -2592,17 +2602,23 @@ async def twilio_stream(ws: WebSocket) -> None:
                             wd["nudged"] = True
                             wd["last_agent_done"] = now  # fenêtre de clôture
                             print(f"[outbound] watchdog : {idle:.0f} s de "
-                                  "silence → relance")
+                                  "silence → enchaînement proactif")
                             await xai.send(json.dumps({
                                 "type": "response.create",
                                 "response": {"instructions":
-                                             "Pas de réponse : relance en UNE "
-                                             "phrase très courte. Si tu venais "
-                                             "de poser une question, reformule-"
-                                             "la en plus court (« Je vous "
-                                             "explique ? ») ; sinon demande "
-                                             "« Vous m'entendez ? ». "
-                                             "Rien d'autre."},
+                                             "Pas de réponse. Ce n'est PAS "
+                                             "une panne : ne demande JAMAIS "
+                                             "« vous m'entendez ? ». ENCHAÎNE "
+                                             "toi-même la suite logique de "
+                                             "ton script, comme si la "
+                                             "personne écoutait : après "
+                                             "l'accroche → le pitch ; après "
+                                             "le pitch → la solution ; après "
+                                             "la solution → le closing "
+                                             "(BLOC 4, marche suivante si la "
+                                             "précédente est restée sans "
+                                             "réponse). UNE ou deux phrases "
+                                             "courtes, puis rends la main."},
                             }))
                         elif action == "close":
                             pending_end_call = True
@@ -2670,8 +2686,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                             wd["user_spoke"] = True
                             wd["last_user_speech"] = time.monotonic()
                             wd["nudged"] = False
-                            # v9 : le « allô » de l'appelé — canned « Oui,
-                            # bonjour ! » + response.create (une seule fois,
+                            # v9/v10 : le « allô » de l'appelé — canned hook
+                            # complet + response.create (une seule fois,
                             # idempotent via wd["opener_done"]).
                             if out_canned and not wd["opener_done"]:
                                 await _play_opener_then_create("allô détecté")
