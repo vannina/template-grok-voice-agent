@@ -2,25 +2,25 @@
 [prospect] Allô ?
 [léa]      C'est bien Rossi Plomberie ?
 [prospect] Oui, c'est nous.
-[léa]      Justement. Les clients qui appellent pendant que vous êtes sur un chantier, les mains dans une fuite... j'ai une solution pour ne plus les perdre.
+[léa]      Justement. Les clients qui appellent pendant que vous êtes sur une intervention, on les perd. J'ai une solution pour ne plus les laisser filer.
 [prospect] Et ça marche comment votre truc ?
-[léa]      Une assistante décroche quand vous pouvez pas. Elle se présente comme votre assistante, note le besoin du client et peut même caler un rendez-vous dans votre agenda. On se cale quinze minutes avec Vannina ? Plutôt mardi matin, ou jeudi ?
+[léa]      Une assistante décroche quand vous pouvez pas. Elle note les coordonnées du client, ou prend le rendez-vous directement dans votre agenda. On se cale quinze minutes ? Plutôt mardi matin, ou jeudi ?
 [prospect] Attendez, avant de parler rendez-vous... expliquez-moi. Elle fait quoi concrètement quand un client appelle ?
-[léa]      Elle prend le relais seulement quand vous décrochez pas. Si vous décrochez vous-même, elle ne bouge pas du tout. C'est plutôt les urgences qui vous échappent ?
+[léa]      Elle prend le relais seulement quand vous décrochez pas. Si vous décrochez, elle bouge pas. Elle se présente comme votre assistante, note le besoin du client et ses coordonnées, et vous reçoit tout par SMS. C'est plutôt les urgences qui vous échappent ?
 [prospect] Et si le client veut un dépannage en urgence, elle fait quoi ?
-[léa]      Elle note le besoin et les coordonnées du client. Elle peut même essayer de caler le rendez-vous directement dans votre agenda. Vous recevez tout par SMS, et c'est vous qui décidez ensuite. C'est plutôt les urgences qui vous échappent le plus ?
+[léa]      Elle note l'urgence et les coordonnées, puis vous envoie tout par SMS pour que vous rappeliez le plus vite possible. C'est plutôt les urgences qui vous échappent ?
 [prospect] D'accord. Et niveau installation, je dois changer de numéro ?
-[léa]      Non, rien à installer, ça se branche sur votre numéro actuel. En quelques jours, c'est prêt. Si vous voulez tester par vous-même, appelez le zéro quatre, douze, treize, soixante, vingt : vous parlez à une assistante comme moi, vous jugez sur pièce. Et si vous voulez, Vannina peut vous rappeler, vous me dites.
+[léa]      Rien à installer, ça se branche sur votre numéro actuel. Vous avez d'autres questions sur le fonctionnement ?
 [prospect] OK. Bon, je vais y réfléchir.
     [tool] end_call({}) -> {"status": "ok"}
-[léa]      Je vous laisse y réfléchir tranquille. Si un jour le téléphone déborde, pensez à nous. Bonne journée, au revoir !
+[léa]      Je vous laisse y réfléchir tranquille. Testez la démo au zéro quatre, douze, treize, soixante, vingt. Si un jour le téléphone déborde, pensez à nous. Bonne journée, au revoir !
     [sim] appel raccroché — répliques restantes non jouées : ["C'est ça, merci, au revoir."]
 
 --- Verdicts ---
   PASS  no_meta: aucune méta détectée
   PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
   PASS  no_regreet: pas de re-salutation
-  PASS  no_rdv_loop: propositions de RDV = 2 (max 2) : ['Une assistante décroche quand vous pouvez pas. Elle se prése', 'Elle note le besoin et les coordonnées du client. Elle peut ']
+  PASS  no_rdv_loop: propositions de RDV = 1 (max 2) : ['Une assistante décroche quand vous pouvez pas. Elle note les']
   PASS  mode_info: infos concrètes=['coordonnees', 'note', 'sms', 'agenda', 'numero actuel', 'rien a installer', 'se branche', 'relais', 'decroche', 'urgence'] demande_permission=False annonce_avant_réponse=False
   PASS  disposition: démo_donnée=True à_disposition=True
   PASS  single_response: max réponses en vol = 1

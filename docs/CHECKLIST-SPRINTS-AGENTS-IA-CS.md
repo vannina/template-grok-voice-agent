@@ -100,3 +100,13 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 Je coche au fil de l'eau. Les blocages (V) sont en tête de chaque sprint : tant qu'ils ne
 sont pas levés, le build de ce sprint attend. Aucun élément n'est perdu : tout vit ici +
 dans les docs liés + la mémoire (`strategie-agents-ia-cs`).
+
+## Sprint 9 — Vertical coiffeurs (France entière, hors Corse) *(lancé 2026-07-20 sur demande Vannina)*
+- [x] (C) Démo coiffeur EN LIGNE : demo-coiffeur.corsica-studio.com (Salomé, L'Atelier Coiffure, Aix) — config 4 fichiers, smoke 22/22, Traefik + wildcard DNS OK — **fait 2026-07-20**
+- [x] (C) Benchmark concurrents : docs/BENCHMARK-COIFFEURS-2026.md (Fresha ~95 €/mois, Tala 29-499 €/mois HT ; « Cecchi » introuvable) — **fait 2026-07-20**
+- [x] (C) Léa : ancrage métier coiffeur (mains dans la couleur, complément Planity) + recette non-régression — **fait 2026-07-20**
+- [x] (C) Copy page Framer : CS-framer-website/01-framer-site/pages-agents-vocaux/PAGE-COIFFEUR-COPY.md (slug /agent-vocal-coiffeur) — **fait 2026-07-20**
+- [ ] (C) Image OG og-agent-vocal-coiffeur.png (gabarit #24, générateur existant)
+- [ ] (V) Question : source du nom « Cecchi » (pub ? prospect ?) pour finir l'identification
+- [ ] (V+C) Duplication de la page dans Framer (guidée, comme les 3 précédentes) + menu + publication
+- [ ] (C) Sourcing salons de coiffure France (hors Corse) + cross-suppression + pilote Léa coiffeurs
