@@ -7,24 +7,34 @@ pont Twilio outbound (web/server.py) :
 
     _load_config("prospection")           → system_prompt + runtime rules
   + _outbound_prospect_block(fiche, tel)  → contexte [Appel SORTANT]
-  + greeting_instruction du profil        → response.create du 1er tour
-    (+ « Tu appelles : <nom>, <entreprise>. » comme le fait le serveur)
+  + _outbound_greeting(fiche)             → response.create du 1er tour
+    (v12 : instruction déterministe du serveur, JAMAIS le texte du canned)
+
+v12 — flux MANUEL aligné sur le pont : turn_detection.create_response=false
+dans le session.update, chaque réponse est créée EXPLICITEMENT par le
+simulateur (comme le pont : fin de tour → response.create ; silence →
+instruction watchdog _OUTBOUND_NUDGE_INSTRUCTION ; clôture →
+_OUTBOUND_CLOSE_INSTRUCTION). Le simulateur compte les response.created /
+response.done et VÉRIFIE qu'il n'y a jamais deux réponses en vol
+(verdict single_response sur tous les scénarios).
 
 Les répliques du prospect sont injectées via conversation.item.create
-(input_text) + response.create ; les tool calls du modèle sont stubbés
+(input_text) + response.create ; SILENCE (None) = pas d'item, relance
+watchdog ; CLOSE = clôture watchdog. Les tool calls du modèle sont stubbés
 localement (agenda toujours libre, Airtable simulée). Le texte de Léa est
 lu depuis les events response.output_text.* / response.*audio_transcript.*
 selon la modalité que l'API accepte.
 
 Usage :
-    ./.venv/bin/python tools/simulate_call.py                # les 6 scénarios
+    ./.venv/bin/python tools/simulate_call.py                # les 7 scénarios
     ./.venv/bin/python tools/simulate_call.py -s meta -s coop
     ./.venv/bin/python tools/simulate_call.py --outdir /tmp/transcripts
 
 Sort un transcript lisible par scénario dans --outdir + des VERDICTS
 automatiques (pas de méta, 1re réplique conforme, pas de re-bonjour,
-escalier de closing, opposition → outil + raccrochage). Exit code 0 si
-tous les verdicts passent, 1 sinon. Nécessite XAI_API_KEY dans .env.
+escalier de closing, opposition → outil + raccrochage, progression sur
+silence, jamais deux réponses superposées). Exit code 0 si tous les
+verdicts passent, 1 sinon. Nécessite XAI_API_KEY dans .env.
 """
 from __future__ import annotations
 
@@ -62,7 +72,13 @@ PROSPECT_TEL = "+33612345678"
 # ---------------------------------------------------------------------------
 # Scénarios : répliques du prospect, dans l'ordre. La 1re est le décroché
 # (en prod : « allô » → opener canned → response.create greeting).
+# SILENCE (None) = le prospect ne dit rien : le simulateur rejoue la relance
+# du watchdog (response.create + _OUTBOUND_NUDGE_INSTRUCTION, comme le pont
+# après 4 s de silence). CLOSE = clôture watchdog (_OUTBOUND_CLOSE_INSTRUCTION).
 # ---------------------------------------------------------------------------
+SILENCE = None
+CLOSE = "<CLOSE>"
+
 SCENARIOS: dict[str, dict] = {
     "coop": {
         "titre": "(a) Coopératif : allô → oui → intérêt → accepte mardi",
@@ -133,6 +149,17 @@ SCENARIOS: dict[str, dict] = {
         ],
         "checks": ["no_meta", "first_reply", "no_regreet", "opposition"],
     },
+    "silencieux": {
+        "titre": "(g) Silencieux : plus un mot après le décroché — Léa déroule seule",
+        "user": [
+            "Allô ?",
+            SILENCE,   # watchdog → pitch
+            SILENCE,   # watchdog → solution
+            SILENCE,   # watchdog → closing
+            CLOSE,     # watchdog close → clôture polie + end_call
+        ],
+        "checks": ["no_meta", "first_reply", "no_regreet", "progression_silence"],
+    },
 }
 
 
@@ -141,18 +168,13 @@ SCENARIOS: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 def build_instructions() -> tuple[str, str, dict]:
     """(instructions, greeting, config) exactement comme /twilio/stream
-    direction=out : _load_config + _outbound_prospect_block + greeting du
-    profil suffixé « Tu appelles : ... »."""
+    direction=out : _load_config + _outbound_prospect_block +
+    _outbound_greeting (v12 : le serveur impose la 1re réplique, instruction
+    déterministe qui ne cite jamais le canned)."""
     config = srv._load_config(METIER)
     instructions = config["instructions"] + srv._outbound_prospect_block(
         PROSPECT, PROSPECT_TEL)
-    prof = srv._load_profile(METIER)
-    greeting = prof.get(
-        "greeting_instruction", srv._PROFILE_DEFAULTS["greeting_instruction"])
-    who = ", ".join(x for x in (str(PROSPECT.get("nom") or "").strip(),
-                                str(PROSPECT.get("entreprise") or "").strip()) if x)
-    if who:
-        greeting += f" Tu appelles : {who}."
+    greeting = srv._outbound_greeting(PROSPECT)
     return instructions, greeting, config
 
 
@@ -206,6 +228,12 @@ async def _collect_response(ws, state: dict, transcript: list[str]) -> str:
             # erreur bloquante sur le response courant : on rend la main
             if not spoken and not pending_calls:
                 return ""
+        elif t == "response.created":
+            # v12 : vérif « jamais deux réponses en vol » (verdict
+            # single_response) — même garde que le pont outbound.
+            state["in_flight"] = state.get("in_flight", 0) + 1
+            state["max_in_flight"] = max(state.get("max_in_flight", 0),
+                                         state["in_flight"])
         elif t in ("response.output_text.done", "response.text.done",
                    "response.audio_transcript.done",
                    "response.output_audio_transcript.done"):
@@ -220,6 +248,7 @@ async def _collect_response(ws, state: dict, transcript: list[str]) -> str:
             pending_calls.append({"call_id": ev.get("call_id"),
                                   "name": ev.get("name"), "args": args})
         elif t == "response.done":
+            state["in_flight"] = max(0, state.get("in_flight", 0) - 1)
             if pending_calls:
                 for call in pending_calls:
                     result = stub_tool(call["name"], call["args"], state)
@@ -243,7 +272,8 @@ async def _collect_response(ws, state: dict, transcript: list[str]) -> str:
 async def run_scenario(key: str, sc: dict, outdir: Path) -> dict:
     instructions, greeting, config = build_instructions()
     state = {"tools": [], "errors": [], "ended": False,
-             "booked": None, "rappel": None, "opposition": None}
+             "booked": None, "rappel": None, "opposition": None,
+             "in_flight": 0, "max_in_flight": 0}
     transcript: list[str] = [f"=== Scénario {key} — {sc['titre']} ==="]
     lea_turns: list[str] = []
 
@@ -256,6 +286,9 @@ async def run_scenario(key: str, sc: dict, outdir: Path) -> dict:
             "voice": prof.get("voice") or srv.VOICE,
             "instructions": instructions,
             "tools": config["tools"],
+            # v12 : même réglage que le pont outbound — pas de réponse auto,
+            # le simulateur crée chaque réponse explicitement.
+            "turn_detection": {"type": "server_vad", "create_response": False},
             # Modalité texte demandée ; si l'API la refuse, elle répond en
             # audio et on lit les transcripts (mêmes events *.done).
             "modalities": ["text"],
@@ -286,17 +319,34 @@ async def run_scenario(key: str, sc: dict, outdir: Path) -> dict:
             if state["ended"]:
                 transcript.append(f"    [sim] appel raccroché — répliques restantes non jouées : {sc['user'][i:]}")
                 break
-            transcript.append(f"[prospect] {user_msg}")
-            await ws.send(json.dumps({
-                "type": "conversation.item.create",
-                "item": {"type": "message", "role": "user",
-                         "content": [{"type": "input_text", "text": user_msg}]},
-            }))
+            # v12 : flux MANUEL comme le pont — chaque réponse est créée
+            # explicitement, jamais pendant qu'une autre est en vol
+            # (_collect_response draine jusqu'au response.done avant de
+            # rendre la main).
             create: dict = {"type": "response.create"}
-            if i == 0:
-                # 1er tour = exactement le response.create du pont après
-                # l'opener canned : les instructions du greeting.
-                create["response"] = {"instructions": greeting}
+            if user_msg is SILENCE:
+                # Prospect muet : le pont relance via le watchdog (4 s) —
+                # même instruction, response.create sans item utilisateur.
+                transcript.append("[prospect] (silence — relance watchdog)")
+                create["response"] = {
+                    "instructions": srv._OUTBOUND_NUDGE_INSTRUCTION}
+            elif user_msg == CLOSE:
+                # Silence après relance : clôture polie + end_call (watchdog
+                # close ; en prod le hangup force 8 s coupe quoi qu'il arrive).
+                transcript.append("[prospect] (silence — clôture watchdog)")
+                create["response"] = {
+                    "instructions": srv._OUTBOUND_CLOSE_INSTRUCTION}
+            else:
+                transcript.append(f"[prospect] {user_msg}")
+                await ws.send(json.dumps({
+                    "type": "conversation.item.create",
+                    "item": {"type": "message", "role": "user",
+                             "content": [{"type": "input_text", "text": user_msg}]},
+                }))
+                if i == 0:
+                    # 1er tour = exactement le response.create du pont après
+                    # l'opener canned : l'instruction déterministe du serveur.
+                    create["response"] = {"instructions": greeting}
             await ws.send(json.dumps(create))
             reply = await _collect_response(ws, state, transcript)
             transcript.append(f"[léa]      {reply}")
@@ -400,6 +450,31 @@ def evaluate(sc: dict, lea: list[str], state: dict) -> dict:
         v["opposition"] = (tool_ok and end_ok and confirm,
                            f"marquer_opposition={tool_ok} end_call={end_ok} "
                            f"confirmation_orale={confirm}")
+
+    if "progression_silence" in checks:
+        # prospect muet : les relances watchdog doivent faire AVANCER le
+        # script (pitch → solution → closing), puis la clôture raccroche.
+        mids = [t for t in lea[1:-1] if t]
+        last = _norm(lea[-1]) if lea and lea[-1] else ""
+        mid_txt = _norm(" || ".join(mids))
+        pitch = any(k in mid_txt for k in ("perd", "client", "appel", "solution"))
+        solution = any(k in mid_txt for k in ("assistante", "decroche", "agenda",
+                                              "rendez-vous", "note", "coordonnees"))
+        closing = any(k in mid_txt for k in ("rappel", "demo", "testez", "jugez",
+                                             "quinze minutes", "rendez-vous"))
+        distinct = len(set(mids)) == len(mids)  # jamais deux fois la même relance
+        bye = any(k in last for k in ("au revoir", "bonne journee", "je vous laisse"))
+        ok = pitch and solution and closing and distinct and (bye or state["ended"])
+        v["progression_silence"] = (
+            ok, f"pitch={pitch} solution={solution} closing={closing} "
+                f"relances_distinctes={distinct} clôture(bye={bye}, "
+                f"end_call={state['ended']})")
+
+    # v12 : garde structurelle vérifiée sur TOUS les scénarios — jamais deux
+    # réponses en vol (miroir de la garde response_active du pont).
+    v["single_response"] = (
+        state.get("max_in_flight", 0) <= 1,
+        f"max réponses en vol = {state.get('max_in_flight', 0)}")
 
     return v
 

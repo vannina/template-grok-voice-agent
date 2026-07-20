@@ -214,6 +214,39 @@ _OUTBOUND_VOICEMAIL_INSTRUCTION = (
     "vingt. Bonne journée ! » Puis appelle end_call immédiatement. Ne pose "
     "AUCUNE question, n'attends AUCUNE réponse."
 )
+# --- v12 : tours de parole MANUELS (chemin outbound uniquement) --------------
+# Le session.update outbound passe turn_detection.create_response=false (champ
+# accepté par l'API realtime xAI — vérifié : session.updated l'échoe tel quel).
+# Le VAD serveur continue de segmenter la parole (commit du buffer +
+# transcription Whisper) mais ne crée PLUS de réponse automatiquement : c'est
+# le pont qui pilote chaque response.create — fin de tour du prospect
+# (conversation.item.input_audio_transcription.completed), relances du
+# watchdog, follow-up après function_call_output. Garde stricte : JAMAIS deux
+# réponses en vol (un tour arrivé pendant une réponse est noté et déclenché au
+# response.done). Les chemins entrant / standard / démos gardent l'auto-réponse.
+# Instructions du watchdog (partagées avec tools/simulate_call.py, qui rejoue
+# le même flux manuel en mode texte).
+_OUTBOUND_NUDGE_INSTRUCTION = (
+    "Pas de réponse. Ce n'est PAS une panne : ne demande JAMAIS "
+    "« vous m'entendez ? ». ENCHAÎNE toi-même la suite logique de ton script, "
+    "comme si la personne écoutait : après l'accroche → le pitch ; après le "
+    "pitch → la solution ; après la solution → le closing (BLOC 4, marche "
+    "suivante si la précédente est restée sans réponse). UNE ou deux phrases "
+    "courtes, puis rends la main."
+)
+_OUTBOUND_CLOSE_INSTRUCTION = (
+    "L'interlocuteur ne répond plus : dis UNE phrase de clôture polie "
+    "(« Je vous laisse, bonne journée, au revoir ! ») puis appelle end_call "
+    "immédiatement."
+)
+# --- v12 : raccrochage GARANTI (chemin outbound uniquement) ------------------
+# Dès que la clôture est DÉCIDÉE (end_call, opposition, watchdog close, au
+# revoir entendu dans le transcript, répondeur), un timer serveur dur part :
+# hangup REST Twilio (Status=completed) QUOI QU'IL ARRIVE — même si le modèle
+# n'émet jamais end_call, même si le response.done traîne. Le TimeLimit Twilio
+# (OUTBOUND_TIME_LIMIT) reste le filet ultime.
+_FORCED_HANGUP_S = 8.0
+_FORCED_HANGUP_VM_S = 20.0   # clôture répondeur : message 12 s + marge
 # Watchdog d'inactivité (chemin outbound uniquement, secondes).
 # v10 : au téléphone, même 4 s de silence est long — enchaînement proactif à
 # 4 s après la fin de la dernière réplique de Léa (couvre aussi le cas « Léa
@@ -1806,6 +1839,23 @@ def _xml_text(v: str) -> str:
             .replace("<", "&lt;").replace(">", "&gt;"))[:200]
 
 
+def _outbound_greeting(prospect: dict | None) -> str:
+    """Instruction du response.create de l'opener (v12) : DÉTERMINISTE et
+    sans JAMAIS citer le texte du canned (« Oui bonjour… ») — l'ancienne
+    instruction v9/v10 le citait entre guillemets et le modèle le répétait
+    (double bonjour entendu sur appels réels). Une seule réplique imposée,
+    interpolée depuis la fiche prospect ; sans fiche : formulation générique.
+    Le greeting_instruction du profil n'est plus utilisé sur ce chemin : le
+    serveur a la main sur la première réplique sortante."""
+    entreprise = str((prospect or {}).get("entreprise") or "").strip()
+    cible = entreprise or "l'entreprise"
+    # La consigne AVANT la citation, la citation en DERNIER : le modèle a
+    # tendance à réciter tout ce qui suit « Dis exactement ».
+    return ("Rien avant (pas de « allô », pas de « bonjour », pas de "
+            "présentation), rien après, pas un mot de plus. Dis exactement : "
+            f"« C'est bien {cible} ? »")
+
+
 def _outbound_prospect_block(prospect: dict, to: str) -> str:
     """Bloc [Appel SORTANT] injecté dans les instructions avant response.create
     (même mécanique que l'accueil personnalisé du standard). Donne à Léa le
@@ -2392,6 +2442,13 @@ async def twilio_stream(ws: WebSocket) -> None:
                     print(f"[twilio] vad silence_duration_ms={turn_detection['silence_duration_ms']} (profil {metier!r})")
                 except (TypeError, ValueError):
                     print(f"[twilio] WARNING vad_silence_ms invalide ignoré : {vad_ms!r}")
+            if direction == "out":
+                # v12 : tours MANUELS — le VAD continue de segmenter la parole
+                # (commit + transcription) mais ne crée plus de réponse auto ;
+                # le pont pilote chaque response.create (voir
+                # _OUTBOUND_NUDGE_INSTRUCTION). Entrant/standard/démos : inchangés.
+                turn_detection["create_response"] = False
+                print("[outbound] turn_detection.create_response=false (tours manuels v12)")
             await xai.send(json.dumps({
                 "type": "session.update",
                 "session": {
@@ -2412,11 +2469,12 @@ async def twilio_stream(ws: WebSocket) -> None:
             greeting = ctx["profile"].get(
                 "greeting_instruction", _PROFILE_DEFAULTS["greeting_instruction"])
             if direction == "out":
+                # v12 : le SERVEUR impose la première réplique sortante —
+                # instruction déterministe qui ne cite JAMAIS le canned
+                # (source du double bonjour). Le greeting_instruction du
+                # profil est ignoré sur ce chemin.
                 prospect = _outbound_ctx_get(out_rid) or _outbound_ctx_get(call_sid or "")
-                who = ", ".join(x for x in (str(prospect.get("nom") or "").strip(),
-                                            str(prospect.get("entreprise") or "").strip()) if x)
-                if who:
-                    greeting += f" Tu appelles : {who}."
+                greeting = _outbound_greeting(prospect)
             if out_is_machine:
                 # AMD : répondeur confirmé → le « greeting » devient le message
                 # répondeur de 12 s, et le raccrochage est armé TOUT DE SUITE
@@ -2466,6 +2524,67 @@ async def twilio_stream(ws: WebSocket) -> None:
                           and bool(_OPENER_ULAW))
             wd["opener_done"] = False
 
+            # --- v12 : pilotage MANUEL des tours (outbound uniquement) ------
+            # create_response=false dans le session.update : plus AUCUNE
+            # réponse auto du VAD. Le pont crée chaque réponse via
+            # _outbound_response_create — garde stricte : jamais deux réponses
+            # en vol. turn : état du cycle (awaiting = response.create envoyés
+            # pas encore response.created ; pending = tour arrivé pendant une
+            # réponse, déclenché au response.done ; skip_transcript = la
+            # transcription du « allô » qui a déclenché l'opener appartient au
+            # tour de l'opener, ne pas re-créer de réponse dessus).
+            manual_turns = direction == "out"
+            turn = {"awaiting": 0, "pending": False,
+                    "pending_instructions": None, "skip_transcript": False}
+
+            async def _outbound_response_create(instructions: str | None = None) -> bool:
+                """response.create explicite (chemin sortant, v12). Si une
+                réponse est déjà en vol (active ou demandée), le tour est NOTÉ
+                (turn["pending"]) et déclenché au response.done — jamais deux
+                réponses superposées. Retourne True si le create est parti."""
+                if wd["response_active"] or turn["awaiting"] > 0:
+                    turn["pending"] = True
+                    if instructions:
+                        turn["pending_instructions"] = instructions
+                    print("[outbound] tour noté (réponse déjà en vol) → "
+                          "response.create différé au response.done")
+                    return False
+                turn["awaiting"] += 1
+                msg: dict = {"type": "response.create"}
+                if instructions:
+                    msg["response"] = {"instructions": instructions}
+                await xai.send(json.dumps(msg))
+                return True
+
+            # --- v12 : raccrochage GARANTI (outbound uniquement) ------------
+            hangup_force_task: asyncio.Task | None = None
+
+            def _arm_forced_hangup(reason: str, delay: float | None = None) -> None:
+                """Timer serveur DUR : la clôture est décidée → hangup REST
+                Twilio dans `delay` s (défaut _FORCED_HANGUP_S) QUOI QU'IL
+                ARRIVE — même sans end_call, même si le modèle traîne.
+                Idempotent, no-op hors outbound. TimeLimit = filet ultime."""
+                nonlocal hangup_force_task
+                if direction != "out" or hangup_force_task is not None:
+                    return
+
+                async def _force() -> None:
+                    d = _FORCED_HANGUP_S if delay is None else delay
+                    try:
+                        await asyncio.sleep(d)
+                        print(f"[outbound] hangup force ({reason}) : "
+                              f"{d:.0f} s après la clôture, coupure REST")
+                        await _twilio_hangup(call_sid or "")
+                    except asyncio.CancelledError:
+                        pass
+                hangup_force_task = asyncio.create_task(_force())
+
+            if pending_end_call:
+                # Répondeur AMD confirmé au start : le message voicemail part
+                # tout de suite — filet dur derrière (le response.done peut ne
+                # jamais venir).
+                _arm_forced_hangup("répondeur AMD au start", _FORCED_HANGUP_VM_S)
+
             async def _play_opener_then_create(reason: str) -> None:
                 """Injecte le hook canned (« Oui bonjour, c'est Léa, de
                 Corsica Studio ! ») dans le Media Stream
@@ -2488,10 +2607,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                             "streamSid": stream_sid,
                             "media": {"payload": payload},
                         }))
-                await xai.send(json.dumps({
-                    "type": "response.create",
-                    "response": {"instructions": greeting},
-                }))
+                # v12 : via le pilote manuel (garde jamais-deux-en-vol).
+                await _outbound_response_create(greeting)
                 print(f"[outbound] t_start→t_first_response_create = "
                       f"{(time.monotonic() - t_start) * 1000:.0f} ms "
                       f"(opener v9 : {reason} ; ws_accept→start = "
@@ -2500,11 +2617,15 @@ async def twilio_stream(ws: WebSocket) -> None:
             if not out_canned:
                 # Comportement v8 conservé : greeting immédiat (Twilio ne
                 # parle pas en premier sur l'entrant ; répondeur AMD =
-                # message voicemail ; canned absent = fallback).
-                await xai.send(json.dumps({
-                    "type": "response.create",
-                    "response": {"instructions": greeting},
-                }))
+                # message voicemail ; canned absent = fallback). v12 : le
+                # sortant passe par le pilote manuel (jamais deux en vol).
+                if manual_turns:
+                    await _outbound_response_create(greeting)
+                else:
+                    await xai.send(json.dumps({
+                        "type": "response.create",
+                        "response": {"instructions": greeting},
+                    }))
                 # Métrique TTFB décroché (outbound) : tout entre le `start`
                 # Twilio et ce response.create est en mémoire process.
                 if direction == "out":
@@ -2572,6 +2693,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                             pending_end_call = True
                             print("[outbound] AMD async : répondeur confirmé "
                                   "→ message 12 s + raccrochage armé")
+                            _arm_forced_hangup("répondeur AMD async",
+                                               _FORCED_HANGUP_VM_S)
                             await xai.send(json.dumps({
                                 "type": "conversation.item.create",
                                 "item": {"type": "message", "role": "system",
@@ -2579,7 +2702,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                                              "type": "input_text",
                                              "text": _OUTBOUND_VOICEMAIL_INSTRUCTION}]},
                             }))
-                            await xai.send(json.dumps({"type": "response.create"}))
+                            await _outbound_response_create()
                             return
                         if not wd["user_spoke"]:
                             if not wd["vm_played"] and now - t0 > _WD_NO_SPEECH_S:
@@ -2588,11 +2711,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 print(f"[outbound] watchdog : aucun son humain "
                                       f"en {_WD_NO_SPEECH_S:.0f} s → message "
                                       "répondeur + raccrochage armé")
-                                await xai.send(json.dumps({
-                                    "type": "response.create",
-                                    "response": {"instructions":
-                                                 _OUTBOUND_VOICEMAIL_INSTRUCTION},
-                                }))
+                                _arm_forced_hangup("répondeur watchdog",
+                                                   _FORCED_HANGUP_VM_S)
+                                await _outbound_response_create(
+                                    _OUTBOUND_VOICEMAIL_INSTRUCTION)
                                 return
                             continue
                         idle = now - max(wd["last_user_speech"],
@@ -2603,36 +2725,15 @@ async def twilio_stream(ws: WebSocket) -> None:
                             wd["last_agent_done"] = now  # fenêtre de clôture
                             print(f"[outbound] watchdog : {idle:.0f} s de "
                                   "silence → enchaînement proactif")
-                            await xai.send(json.dumps({
-                                "type": "response.create",
-                                "response": {"instructions":
-                                             "Pas de réponse. Ce n'est PAS "
-                                             "une panne : ne demande JAMAIS "
-                                             "« vous m'entendez ? ». ENCHAÎNE "
-                                             "toi-même la suite logique de "
-                                             "ton script, comme si la "
-                                             "personne écoutait : après "
-                                             "l'accroche → le pitch ; après "
-                                             "le pitch → la solution ; après "
-                                             "la solution → le closing "
-                                             "(BLOC 4, marche suivante si la "
-                                             "précédente est restée sans "
-                                             "réponse). UNE ou deux phrases "
-                                             "courtes, puis rends la main."},
-                            }))
+                            await _outbound_response_create(
+                                _OUTBOUND_NUDGE_INSTRUCTION)
                         elif action == "close":
                             pending_end_call = True
                             print("[outbound] watchdog : silence après relance "
                                   "→ clôture polie + raccrochage armé")
-                            await xai.send(json.dumps({
-                                "type": "response.create",
-                                "response": {"instructions":
-                                             "L'interlocuteur ne répond plus : "
-                                             "dis UNE phrase de clôture polie "
-                                             "(« Je vous laisse, bonne journée, "
-                                             "au revoir ! ») puis appelle "
-                                             "end_call immédiatement."},
-                            }))
+                            _arm_forced_hangup("watchdog close")
+                            await _outbound_response_create(
+                                _OUTBOUND_CLOSE_INSTRUCTION)
                             return
                 except asyncio.CancelledError:
                     pass
@@ -2690,7 +2791,19 @@ async def twilio_stream(ws: WebSocket) -> None:
                             # complet + response.create (une seule fois,
                             # idempotent via wd["opener_done"]).
                             if out_canned and not wd["opener_done"]:
+                                if t == "input_audio_buffer.speech_started":
+                                    # La transcription de CE « allô » arrivera
+                                    # après l'opener : elle appartient au tour
+                                    # de l'opener — pas de réponse en plus.
+                                    turn["skip_transcript"] = True
                                 await _play_opener_then_create("allô détecté")
+                            elif t == "conversation.item.input_audio_transcription.completed":
+                                # v12 tours manuels : fin du tour du prospect →
+                                # response.create explicite (jamais deux en vol).
+                                if turn["skip_transcript"]:
+                                    turn["skip_transcript"] = False
+                                elif not wd["vm_played"] and not pending_end_call:
+                                    await _outbound_response_create()
                         elif t == "response.done":
                             wd["last_agent_done"] = time.monotonic()
                     # Barge-in : le VAD serveur xAI signale que l'interlocuteur
@@ -2704,6 +2817,17 @@ async def twilio_stream(ws: WebSocket) -> None:
                         response_active = True
                         wd["response_active"] = True   # miroir AMD async (v5)
                         barge_gate.on_response_created()  # v8 : nouveau cycle
+                        if manual_turns:
+                            if turn["awaiting"] > 0:
+                                turn["awaiting"] -= 1
+                            else:
+                                # v12 : réponse AUTO non sollicitée (défense si
+                                # le serveur ignorait create_response=false) —
+                                # on l'annule : le pont seul crée les réponses.
+                                print("[outbound] response.created non "
+                                      "sollicité → response.cancel")
+                                await xai.send(json.dumps(
+                                    {"type": "response.cancel"}))
                     elif t in ("response.done", "response.cancelled",
                                "response.audio.interrupted",
                                "response.output_audio.interrupted"):
@@ -2716,6 +2840,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                         # crash.)
                         response_active = False
                         wd["response_active"] = False  # miroir AMD async (v5)
+                        if manual_turns:
+                            turn["awaiting"] = 0  # cycle refermé quoi qu'il arrive
                     elif (t == "input_audio_buffer.speech_started"
                           and (response_active or audio_since_clear)
                           and not pending_end_call
@@ -2780,6 +2906,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 if not pending_end_call and any(g in low for g in GOODBYES):
                                     print("[twilio] auto-hangup armed (goodbye in transcript)")
                                     pending_end_call = True
+                                    # v12 : raccrochage garanti (no-op hors out)
+                                    _arm_forced_hangup("goodbye transcript")
                                 if _is_standard_ctx(ctx):
                                     ctx.setdefault("transcript", []).append(f"agent : {transcript}")
                         elif t == "conversation.item.input_audio_transcription.completed":
@@ -2790,6 +2918,11 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     ctx.setdefault("transcript", []).append(f"appelant : {transcript}")
                         elif t == "error" or "error" in t.lower():
                             print(f"[xai] ERROR ({t}): {json.dumps(evt)[:600]}")
+                            if manual_turns and turn["awaiting"] > 0:
+                                # v12 : un response.create rejeté n'aura jamais
+                                # de response.created — ne pas bloquer les
+                                # tours suivants.
+                                turn["awaiting"] = 0
                         elif "mcp" in t.lower() or "tool" in t.lower() or "fail" in t.lower():
                             print(f"[xai] {t}: {json.dumps(evt)[:600]}")
                     if t in ("response.audio.delta", "response.output_audio.delta"):
@@ -2822,6 +2955,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                             ctx.setdefault("tools_called", []).append(name)
                         if name == "end_call":
                             pending_end_call = True
+                            # v12 : raccrochage garanti (no-op hors outbound)
+                            _arm_forced_hangup("end_call")
                         if name == "transfer_to_human" and result.get("status") == "transfert":
                             pending_transfer = True
                         # Résultat d'appel sortant → SMS post-appel (finally).
@@ -2841,7 +2976,13 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 "output": json.dumps(result),
                             },
                         }))
-                        await xai.send(json.dumps({"type": "response.create"}))
+                        if manual_turns:
+                            # v12 : le follow-up passe par le pilote — la
+                            # réponse porteuse du function_call est souvent
+                            # encore en vol : différé à SON response.done.
+                            await _outbound_response_create()
+                        else:
+                            await xai.send(json.dumps({"type": "response.create"}))
                     elif t == "response.done":
                         if pending_transfer:
                             # L'agent a annoncé la mise en relation : on redirige
@@ -2855,6 +2996,21 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 ctx.get("public_host") or "",
                                 _ctx_entite(ctx).lower())
                             return
+                        if manual_turns and turn["pending"]:
+                            # v12 : un tour (prospect, watchdog ou follow-up
+                            # d'outil) est arrivé PENDANT la réponse — on le
+                            # déclenche maintenant, jamais deux en vol. Si la
+                            # clôture est armée SANS instruction en attente,
+                            # le tour est abandonné : on raccroche.
+                            instr = turn["pending_instructions"]
+                            turn["pending"] = False
+                            turn["pending_instructions"] = None
+                            if instr or not pending_end_call:
+                                await _outbound_response_create(instr)
+                                # la clôture éventuelle attendra le
+                                # response.done de CE tour (hangup force en
+                                # filet dur derrière).
+                                continue
                         if pending_end_call:
                             print("[tool] end_call → hanging up")
                             # Small grace period so Twilio finishes playing the
@@ -2884,6 +3040,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                 wd_task.cancel()
             if opener_task is not None:
                 opener_task.cancel()
+            if hangup_force_task is not None:
+                # v12 : pont refermé — le raccrochage forcé n'a plus d'objet
+                # (l'appel est déjà coupé ou en train de l'être).
+                hangup_force_task.cancel()
 
     except Exception as e:
         print(f"[twilio/stream] error: {e!r}")
