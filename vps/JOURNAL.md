@@ -206,3 +206,58 @@ Benchmark concurrents : docs/BENCHMARK-COIFFEURS-2026.md (« Cecchi » introuvab
 ce nom — demander la source à Vannina ; confirmés : Fresha AI Concierge ~95 EUR/mois,
 Tala 29-499 EUR/mois HT ; positionnement retenu : relais non-réponse agnostique
 plateforme). Léa : ancrage métier coiffeur ajouté au prompt (recette en cours).
+
+## 2026-07-20 22h50 CEST — Mission #31 Ops : monitoring VPS agents vocaux EN PLACE
+Objectif : plus jamais de crash silencieux de demo-voice / standard-voice.
+1) WF-Monitor n8n CRÉÉ + ACTIF (ID C90fMNDFNjG1PONZ) : webhook POST
+/webhook/monitor-alerte -> Telegram Vannina (credential Telegram existant de
+l'instance, même chat_id 8518781262 que WF-13/WF-06b, AUCUN nouveau bot).
+Testé : POST prod « [test] monitoring en place » -> réponse OK + exécution 3224
+success (message Telegram parti).
+2) /opt/monitoring/check.sh (cron */5 min) : conteneurs running + HTTPS 200 sur
+demo. et standard.corsica-studio.com + seuil 5 lignes error/traceback/failed
+sur 5 min de logs (exclusions bénignes). Anti-spam : fichiers d'état
+/opt/monitoring/state, 1 alerte/h max par problème, message 🟢 au rétablissement.
+Fallback si n8n injoignable : Telegram direct (token sourcé du .env standard,
+jamais affiché). Testé à la main : sain, 0 alerte ; chemin webhook OK ; fallback
+direct ok:true. Premier passage cron vérifié dans syslog.
+3) FIX au passage : /opt/{demo,standard}-voice/data chown 1000:1000 (les
+conteneurs tournent en uid 1000 « app » ; standard-voice loggait
+« [usage] write failed: Permission denied » -> usage.jsonl du standard jamais
+écrit, et celui de la démo root-owned donc appends KO depuis le 22/06).
+Le tracking usage se remplit à nouveau à partir de maintenant.
+4) /opt/monitoring/couts.sh (cron 21h50 UTC = 23h50 Paris été) : append dans
+/opt/monitoring/couts.csv (date,app,sessions,minutes) — sessions/jour par app
+depuis data/usage.jsonl (event=start) + appels/minutes Twilio du jour via l'API
+(curl -u $TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN
+https://api.twilio.com/2010-04-01/Accounts/$SID/Calls.json?StartTime=YYYY-MM-DD,
+somme des duration ; credentials sourcés du .env standard, jamais affichés).
+Testé en réel : ligne « 2026-07-20,twilio,13,14 » (13 appels, 14 min ce jour).
+5) /opt/monitoring/backup-hebdo.sh (cron dimanche 02h30 UTC) :
+/root/backups/config-vps-DATE.tar.gz (chmod 600, dossier 700) avec les .env
+demo+standard, /opt/monitoring (hors logs/state) et /docker/docker-compose.yml,
+rétention 8 semaines. Testé : archive créée, contenu vérifié par tar tzf,
+aucun contenu de .env affiché. Complète backup.sh quotidien existant (14 j +
+off-site Drive chiffré) qui ne couvrait PAS le .env de standard-voice.
+6) Recette hebdo Léa : /opt/monitoring/recette-hebdo.sh (cron lundi 05h30 UTC
+= 07h30 Paris été). Pas de venv sur l'hôte -> docker cp de
+tools/simulate_call.py dans le conteneur standard-voice (python3+websockets+
+dotenv+XAI_API_KEY dans l'image) puis docker exec, scénarios coop + curieux,
+verdict POSTé « [recette hebdo] Léa PASS/FAIL » sur monitor-alerte, transcripts
+dans /opt/standard-voice/data/recette/. simulate_call.py du VPS remis à niveau
+(rsync commit d087dae : ajoute le scénario curieux, v12 -> v14.1). UNE exécution
+réelle AVANT le cron : PASS (coop 5/5 verdicts, curieux 7/7).
+7) Snapshot Hostinger : créé via MCP (VM 1575715, snapshot 20/07 20:41 UTC)
+MAIS constat : chez Hostinger le snapshot EXPIRE EN 24 H et il n'y a qu'un seul
+slot (toute création écrase le précédent) -> inutilisable comme point hebdo, pas
+de cron. La couverture réelle : backups automatiques Hostinger (4 points, dernier
+20/07 14:12 UTC, restauration ~45 min, MCP VPS_getBackupsV1/VPS_restoreBackupV1)
++ backup.sh quotidien local + off-site Drive + archive config hebdo (5).
+Procédure avant intervention risquée : MCP hostinger VPS_createSnapshotV1
+(virtualMachineId 1575715) — ATTENTION, écrase le snapshot existant.
+Crontab root posée (VPS en UTC) :
+  */5 * * * *  check.sh · 50 21 * * * couts.sh · 30 2 * * 0 backup-hebdo.sh ·
+  30 5 * * 1  recette-hebdo.sh
+Scripts versionnés dans le repo : vps/monitoring/ (aucun secret dedans).
+TODO mineur : sessions=0 ce 20/07 dans couts.csv (normal, usage.jsonl standard
+inexistant avant le fix perms) ; ajuster le seuil logs (5/5 min) si faux positifs.
