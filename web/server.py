@@ -18,6 +18,7 @@ Run:
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import time
@@ -166,21 +167,17 @@ OUTBOUND_FROM_NUMBER = os.environ.get("OUTBOUND_FROM_NUMBER", "+33412136043").st
 OUTBOUND_METIER = os.environ.get("OUTBOUND_METIER", "prospection").strip().lower()
 # Host public embarqué dans l'Url Twilio (fallback : Host de la requête n8n).
 OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
-# Filler TwiML optionnel au décroché (TTFB) : si non vide, /twilio/voice-out
-# insère un verbe TwiML AVANT le <Connect> — la personne entend « Allô,
-# bonjour ! » immédiatement pendant que la session xAI s'ouvre (TTFB de
-# génération ~2 s mesuré en v5). Deux formes :
-#   - URL (commence par http) → <Play>URL</Play> : fichier audio pré-généré
-#     avec la VRAIE voix xAI « ara » de Léa (aucun raccord audible). Fichier
-#     dans le repo : web/static/opener-prospection.mp3, servi par l'app à la
-#     racine (web/static est monté sur "/", pas sur "/static").
-#     Activation prod (ligne à mettre dans le .env du VPS) :
-#     OUTBOUND_OPENER="https://standard.corsica-studio.com/opener-prospection.mp3"
-#   - texte → <Say> Polly Lea-Neural (fallback) : voix DIFFÉRENTE de la voix
-#     xAI, raccord audible. Ex. OUTBOUND_OPENER="Allô, bonjour !".
-# DÉSACTIVÉ par défaut (env vide) : TwiML strictement identique à avant.
-# Cohérence prompt : greeting_instruction (profile.json prospection) part du
-# principe que l'opener a DÉJÀ dit bonjour — activer les deux ensemble.
+# Filler TwiML au décroché — DÉPRÉCIÉ depuis v9, ne plus utiliser par défaut.
+# v8 : si non vide, /twilio/voice-out insérait un <Play>/<Say> AVANT le
+# <Connect> → Léa parlait AU DÉCROCHÉ, AVANT le « allô » de l'appelé. Verdict
+# terrain : non humain (un humain ATTEND le « allô » puis répond instantané).
+# v9 : le décroché humain est géré par le pont WS (canned serveur « Oui,
+# bonjour ! » injecté à input_audio_buffer.speech_started — voir
+# _OPENER_ULAW plus bas). Le mécanisme <Play>/<Say> reste en code pour
+# rétro-compat, mais AU DÉPLOIEMENT v9 il faut VIDER la variable dans le
+# .env du VPS (OUTBOUND_OPENER="" ou ligne supprimée), sinon les deux
+# openers se cumulent (le <Play> part au décroché + le canned après le allô).
+# Formes historiques : URL (http...) → <Play> ; texte → <Say> Polly.
 OUTBOUND_OPENER = os.environ.get("OUTBOUND_OPENER", "").strip()
 # Détection répondeur Twilio (AMD), en mode ASYNCHRONE depuis v5.
 # "DetectMessageEnd" = Twilio analyse le décroché et livre AnsweredBy
@@ -561,6 +558,42 @@ def _twilio_rest_auth() -> tuple[str, str] | None:
 ROOT = Path(__file__).parent
 STATIC_DIR = ROOT / "static"
 CONFIG_DIR = ROOT / "config"
+
+# --- Opener canned SERVEUR « Oui, bonjour ! » (v9, chemin outbound) ----------
+# v9 remplace le <Play> TwiML au décroché (OUTBOUND_OPENER, qui parlait AVANT
+# le « allô » de l'appelé — comportement non humain) par un flow de décroché
+# humain : le pont WS ATTEND que l'appelé parle (speech_started xAI, ou 4 s de
+# silence en fallback), puis injecte CE fichier audio pré-enregistré (« Oui,
+# bonjour ! », voix xAI ara, µ-law 8 kHz mono, ≤ 0,8 s) DIRECTEMENT dans le
+# Media Stream Twilio (frames `media` de 20 ms base64), et envoie ENSUITE le
+# response.create — le modèle génère le Bloc 1 pendant que le canned joue.
+# Chargé au boot (aucune dépendance réseau). Fichier absent → fallback v8
+# (response.create immédiat au start), jamais d'erreur.
+_OPENER_ULAW_PATH = STATIC_DIR / "opener-oui-bonjour.ulaw"
+try:
+    _OPENER_ULAW: bytes = _OPENER_ULAW_PATH.read_bytes()
+except OSError:
+    _OPENER_ULAW = b""
+if _OPENER_ULAW:
+    print(f"[outbound] opener canned chargé : {_OPENER_ULAW_PATH.name} "
+          f"({len(_OPENER_ULAW)} octets = {len(_OPENER_ULAW) / 8000:.2f} s)")
+else:
+    print(f"[outbound] WARNING opener canned absent ({_OPENER_ULAW_PATH}) "
+          "→ fallback response.create immédiat au décroché (comportement v8)")
+_OPENER_FRAME_BYTES = 160        # 20 ms à 8 kHz µ-law (8 octets = 1 ms)
+# Décroché silencieux : si l'appelé n'a rien dit N s après le `start`, on joue
+# le canned + response.create quand même (on ne reste pas muets). Le filet
+# répondeur du watchdog (_WD_NO_SPEECH_S = 6 s) reste inchangé derrière.
+_OPENER_FALLBACK_S = 4.0
+
+
+def _opener_frames_b64(data: bytes | None = None) -> list[str]:
+    """Découpe l'audio µ-law du canned en frames de 20 ms (160 octets),
+    chacune encodée base64 — le format exact des events `media` Twilio.
+    Dernière frame partielle conservée (Twilio l'accepte)."""
+    raw = _OPENER_ULAW if data is None else data
+    return [base64.b64encode(raw[i:i + _OPENER_FRAME_BYTES]).decode("ascii")
+            for i in range(0, len(raw), _OPENER_FRAME_BYTES)]
 
 RESTAURANT_HOURS = {
     "monday":    "closed",
@@ -2411,20 +2444,87 @@ async def twilio_stream(ws: WebSocket) -> None:
                         "prospection. Ne dis PAS que tu es une IA dans cette "
                         "ouverture ; si on te le demande, réponds honnêtement, "
                         "immédiatement.")
-            await xai.send(json.dumps({
-                "type": "response.create",
-                "response": {"instructions": greeting},
-            }))
-            # Métrique TTFB décroché (outbound) : sur ce chemin, tout entre le
-            # `start` Twilio et ce response.create est en mémoire process
-            # (aucun I/O hors handshake xAI, déjà parallélisé). Le restant du
-            # délai perçu = TTFB de génération xAI, réduit par le greeting en
-            # deux temps (première phrase ultra-courte).
-            if direction == "out":
-                now_m = time.monotonic()
+            # --- v9 : flow de décroché HUMAIN (sortant normal uniquement) ---
+            # Un humain qui appelle ATTEND le « allô » de l'appelé, puis
+            # répond instantanément. Donc sur le chemin outbound normal :
+            # PAS de response.create au start (la session xAI est chaude via
+            # session.update, on se tait). Au premier signal de parole de
+            # l'appelé (input_audio_buffer.speech_started), on injecte le
+            # canned « Oui, bonjour ! » (µ-law pré-chargé, ~200 ms après son
+            # allô) PUIS le response.create : le modèle génère le Bloc 1
+            # pendant que le canned joue. Décroché silencieux → filet 4 s
+            # (_OPENER_FALLBACK_S). Chemins entrant / démos / rappel /
+            # répondeur AMD / fichier canned absent : INCHANGÉS (v8).
+            out_canned = (direction == "out" and not out_is_machine
+                          and bool(_OPENER_ULAW))
+            wd["opener_done"] = False
+
+            async def _play_opener_then_create(reason: str) -> None:
+                """Injecte le « Oui, bonjour ! » canned dans le Media Stream
+                Twilio (frames `media` de 20 ms, µ-law 8 kHz base64) PUIS
+                envoie le response.create. Idempotent : flag posé avant le
+                premier await (event loop unique → pas de double envoi) ;
+                no-op si le mode répondeur a pris la main entre-temps."""
+                if wd["opener_done"] or wd["vm_played"] or pending_end_call:
+                    return
+                wd["opener_done"] = True
+                frames = _opener_frames_b64()
+                t_ms = (time.monotonic() - t_start) * 1000
+                print(f"[outbound] opener canned « Oui, bonjour ! » ({reason}) "
+                      f"à t_start+{t_ms:.0f} ms — {len(_OPENER_ULAW) / 8:.0f} ms "
+                      f"d'audio en {len(frames)} frames de 20 ms")
+                if stream_sid:
+                    for payload in frames:
+                        await ws.send_text(json.dumps({
+                            "event": "media",
+                            "streamSid": stream_sid,
+                            "media": {"payload": payload},
+                        }))
+                await xai.send(json.dumps({
+                    "type": "response.create",
+                    "response": {"instructions": greeting},
+                }))
                 print(f"[outbound] t_start→t_first_response_create = "
-                      f"{(now_m - t_start) * 1000:.0f} ms "
-                      f"(ws_accept→start = {(t_start - t_ws_accept) * 1000:.0f} ms)")
+                      f"{(time.monotonic() - t_start) * 1000:.0f} ms "
+                      f"(opener v9 : {reason} ; ws_accept→start = "
+                      f"{(t_start - t_ws_accept) * 1000:.0f} ms)")
+
+            if not out_canned:
+                # Comportement v8 conservé : greeting immédiat (Twilio ne
+                # parle pas en premier sur l'entrant ; répondeur AMD =
+                # message voicemail ; canned absent = fallback).
+                await xai.send(json.dumps({
+                    "type": "response.create",
+                    "response": {"instructions": greeting},
+                }))
+                # Métrique TTFB décroché (outbound) : tout entre le `start`
+                # Twilio et ce response.create est en mémoire process.
+                if direction == "out":
+                    now_m = time.monotonic()
+                    print(f"[outbound] t_start→t_first_response_create = "
+                          f"{(now_m - t_start) * 1000:.0f} ms "
+                          f"(ws_accept→start = {(t_start - t_ws_accept) * 1000:.0f} ms)")
+            elif wd["user_spoke"]:
+                # AMD async a conclu human AVANT l'ouverture du Media Stream :
+                # le « allô » a déjà eu lieu pendant l'analyse AMD — on ne le
+                # réattend pas, opener immédiat.
+                await _play_opener_then_create("AMD human pré-armé")
+            # sinon : silence. On attend le « allô » (speech_started, géré
+            # dans xai_to_twilio) ; filet décroché silencieux dans
+            # opener_fallback (4 s).
+
+            async def opener_fallback() -> None:
+                """Décroché silencieux (v9) : personne n'a parlé
+                _OPENER_FALLBACK_S s après le start → canned + response.create
+                quand même (on ne reste pas muets). Idempotent via
+                _play_opener_then_create ; le filet répondeur du watchdog
+                (6 s sans voix) reste actif derrière."""
+                try:
+                    await asyncio.sleep(_OPENER_FALLBACK_S)
+                    await _play_opener_then_create(
+                        f"décroché silencieux {_OPENER_FALLBACK_S:.0f} s")
+                except asyncio.CancelledError:
+                    pass
 
             async def outbound_watchdog() -> None:
                 """Watchdog d'inactivité (chemin SORTANT uniquement) —
@@ -2570,6 +2670,11 @@ async def twilio_stream(ws: WebSocket) -> None:
                             wd["user_spoke"] = True
                             wd["last_user_speech"] = time.monotonic()
                             wd["nudged"] = False
+                            # v9 : le « allô » de l'appelé — canned « Oui,
+                            # bonjour ! » + response.create (une seule fois,
+                            # idempotent via wd["opener_done"]).
+                            if out_canned and not wd["opener_done"]:
+                                await _play_opener_then_create("allô détecté")
                         elif t == "response.done":
                             wd["last_agent_done"] = time.monotonic()
                     # Barge-in : le VAD serveur xAI signale que l'interlocuteur
@@ -2750,6 +2855,9 @@ async def twilio_stream(ws: WebSocket) -> None:
             # clôture) ne doit PAS couper le pont pendant que l'audio joue.
             wd_task = (asyncio.create_task(outbound_watchdog())
                        if direction == "out" else None)
+            # v9 : filet décroché silencieux (no-op dès que l'opener a joué).
+            opener_task = (asyncio.create_task(opener_fallback())
+                           if out_canned and not wd["opener_done"] else None)
             done, pending = await asyncio.wait(
                 [twilio_task, xai_task],
                 return_when=asyncio.FIRST_COMPLETED,
@@ -2758,6 +2866,8 @@ async def twilio_stream(ws: WebSocket) -> None:
                 t.cancel()
             if wd_task is not None:
                 wd_task.cancel()
+            if opener_task is not None:
+                opener_task.cancel()
 
     except Exception as e:
         print(f"[twilio/stream] error: {e!r}")
