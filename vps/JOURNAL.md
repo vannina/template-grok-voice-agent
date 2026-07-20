@@ -132,3 +132,17 @@ En cours (agent) : tables Airtable Prospection + WF-OUT n8n (INACTIFS, 3 appels/
 pilote) + WF retour. Prochain : deploiement outbound sur standard-voice + OUTBOUND_TOKEN
 (env+coffre) + recette Lea sur le 06 de Vannina AVANT tout vrai prospect.
 Pages Framer : Settings title/meta/OG toujours a saisir par Vannina (limite MCP).
+
+## 2026-07-05 ~13h CEST — Point contexte (recette Lea en cours d'iteration)
+PAGES FRAMER : CLOS. 3 pages en ligne (title/meta/OG persos verifies), menu+footer+schema,
+H1 depannage "sur une clim" publie (module V2_Template_AgentVocal verifie dans le bundle).
+LEA : v5 DEPLOYEE (AMD async, script squelette, barge-in global, 12 mots). Mesure : serveur
+351 ms ; delai restant = TTFB generation xAI (~2 s) -> v6 EN COURS (interrompue limite session,
+reset 15h) : opener audio instantane voix ara ("Allo, bonjour !" via <Play>) + pitch commercial
+direct langage artisan ("Les clients qui vous appellent pendant que vous etes occupe, j'ai une
+solution pour ne plus les perdre"). Verdicts Vannina v3-v5 integres (pas d'hypothetique, pas de
+secretariat, prospection assertive). OUTBOUND_HOURS temporairement 8-22 pour tests internes
+(REMETTRE 9-12,14-18 avant pilote). Personnalisation confirmee 3 niveaux (metier/ville/identite).
+RESTE : relancer v6 a 15h -> deploy -> appel test -> si OK : token credential n8n + verif
+credentials UI + sourcing artisans (classes par metier) + cross-suppression + activation WF
+(go Vannina) + page /qui-vous-appelle a integrer + transfert + SMS confirmations.
