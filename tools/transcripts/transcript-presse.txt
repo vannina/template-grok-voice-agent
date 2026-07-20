@@ -1,0 +1,19 @@
+=== Scénario presse — (c) Pressé : « j'ai pas le temps » ===
+[prospect] Allô oui ?
+[léa]      C'est bien Rossi Plomberie ?
+[prospect] J'ai pas le temps là.
+[léa]      Justement. C'est exactement le problème qu'on règle. On se cale quinze minutes ? Plutôt mardi matin, ou jeudi ?
+[prospect] Non vraiment, je suis sur un chantier.
+[léa]      Pas de souci. Vannina peut vous rappeler quand ça vous arrange : plutôt en fin de journée ?
+[prospect] Bon... rappelez-moi plutôt demain en fin de journée.
+    [tool] programmer_rappel({"date_souhaitee": "2026-07-21", "creneau": "après-midi"}) -> {"status": "ok", "date_rappel": "2026-07-21", "creneau": "après-midi"}
+    [tool] end_call({}) -> {"status": "ok"}
+[léa]      C'est noté, on vous rappelle demain en fin de journée. Merci pour votre temps, très bonne journée, au revoir ! {status: ok}
+    [sim] appel raccroché — répliques restantes non jouées : ["C'est ça, au revoir."]
+
+--- Verdicts ---
+  PASS  no_meta: aucune méta détectée
+  PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
+  PASS  no_regreet: pas de re-salutation
+  PASS  rappel_ou_fin: programmer_rappel={'date_souhaitee': '2026-07-21', 'creneau': 'après-midi'} ended=True
+  PASS  single_response: max réponses en vol = 1

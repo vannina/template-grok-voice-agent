@@ -149,6 +149,22 @@ SCENARIOS: dict[str, dict] = {
         ],
         "checks": ["no_meta", "first_reply", "no_regreet", "opposition"],
     },
+    "curieux": {
+        "titre": "(h) Curieux : demande des infos — réponses réelles, pas de boucle RDV",
+        "user": [
+            "Allô ?",
+            "Oui, c'est nous.",
+            "Et ça marche comment votre truc ?",
+            "Attendez, avant de parler rendez-vous... expliquez-moi. "
+            "Elle fait quoi concrètement quand un client appelle ?",
+            "Et si le client veut un dépannage en urgence, elle fait quoi ?",
+            "D'accord. Et niveau installation, je dois changer de numéro ?",
+            "OK. Bon, je vais y réfléchir.",
+            "C'est ça, merci, au revoir.",
+        ],
+        "checks": ["no_meta", "first_reply", "no_regreet", "mode_info",
+                   "no_rdv_loop", "disposition"],
+    },
     "silencieux": {
         "titre": "(g) Silencieux : plus un mot après le décroché — Léa déroule seule",
         "user": [
@@ -450,6 +466,38 @@ def evaluate(sc: dict, lea: list[str], state: dict) -> dict:
         v["opposition"] = (tool_ok and end_ok and confirm,
                            f"marquer_opposition={tool_ok} end_call={end_ok} "
                            f"confirmation_orale={confirm}")
+
+    if "no_rdv_loop" in checks:
+        # v14 (cahier 6.10) : jamais plus de 2 propositions de RDV par appel.
+        props = [t for t in lea
+                 if re.search(r"quinze minutes|rendez.?vous", _norm(t))
+                 and re.search(r"\?|mardi|jeudi|creneau|je vous bloque|on se cale",
+                               _norm(t))]
+        v["no_rdv_loop"] = (len(props) <= 2,
+                            f"propositions de RDV = {len(props)} (max 2) : "
+                            f"{[p[:60] for p in props]}")
+
+    if "mode_info" in checks:
+        # v14 (cahier 6.9/6.11) : aux demandes d'infos, des réponses CONCRÈTES
+        # et proactives — jamais de demande de permission pour expliquer.
+        marks = [k for k in ("coordonnees", "note", "sms", "agenda",
+                             "numero actuel", "rien a installer", "se branche",
+                             "relais", "decroche", "urgence")
+                 if k in all_txt]
+        permission = re.search(
+            r"(voulez[- ]vous|vous voulez|souhaitez[- ]vous) que je (vous )?"
+            r"(explique|detaille|presente)|je peux vous (expliquer|en dire plus)",
+            all_txt)
+        v["mode_info"] = (len(marks) >= 3 and not permission,
+                          f"infos concrètes={marks} "
+                          f"demande_permission={bool(permission)}")
+
+    if "disposition" in checks:
+        # v14 (cahier 6.10) : clôture service — à disposition + démo à essayer.
+        demo = "douze" in all_txt and "treize" in all_txt
+        dispo = "disposition" in all_txt or "testez" in all_txt or demo
+        v["disposition"] = (dispo,
+                            f"démo_donnée={demo} à_disposition={dispo}")
 
     if "progression_silence" in checks:
         # prospect muet : les relances watchdog doivent faire AVANCER le

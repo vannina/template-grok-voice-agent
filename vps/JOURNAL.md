@@ -171,3 +171,16 @@ coupé (drain calculé + filet 8 s armé APRÈS le drain), fenêtre de politesse
 l'au revoir (parole -> reprise ; "au revoir" seul -> raccrochage 2 s), hangup REST garanti.
 RAPPEL : OUTBOUND_HOURS=8-22 (tests) à remettre 9-12,14-18 avant pilote.
 Suite : appel de validation Vannina (+33651003049).
+
+## 2026-07-20 21h20 — Léa v14 : mode information (retours Vannina recette v13)
+Retours : boucle « je vous propose un rendez-vous » quand le client demande des infos ;
+elle attendait une validation avant d'expliquer. Méthode appliquée : exigences 6.9/6.10/6.11
+ajoutées au CAHIER-DES-CHARGES (v2) -> prompt corrigé (mode information : réponses réelles
+2 phrases max, plafond 2 propositions de RDV, explication proactive sans demande de
+permission, clôture service « à disposition » + numéro démo + rappel optionnel) ->
+scénario simulateur « curieux » + 3 verdicts (mode_info, no_rdv_loop, disposition).
+Recette : curieux 7/7 PASS + non-régression 6/6 PASS (coop, refus, opposition, presse,
+robot, meta). Déployé par rsync du prompt seul (bind mount, hot reload, pas de rebuild).
+Aussi : OUTBOUND_HOURS avait sauté du .env au rebuild v13 (refus hors_horaires 20h53) ->
+ré-ajouté à 8-22 (tests), conteneur recréé 21h0x. À REMETTRE 9-12,14-18 avant pilote.
+Backlog : vertical coiffeurs HORS Corse (tâche #20) + prospection France entière actée.

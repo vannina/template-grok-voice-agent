@@ -1,0 +1,14 @@
+=== Scénario opposition — (f) Opposition : « arrêtez de m'appeler » ===
+[prospect] Allô ?
+[léa]      C'est bien Rossi Plomberie ?
+[prospect] Encore du démarchage... Arrêtez de m'appeler, retirez-moi de votre liste.
+    [tool] marquer_opposition({"telephone": "+33612345678", "raison": "Demande à être retiré de la liste et à ne plus être appelé"}) -> {"status": "ok", "opposition": true, "message": "Numéro inscrit sur la liste d'opposition."}
+    [tool] end_call({}) -> {"status": "ok"}
+[léa]      Je vous retire de la liste tout de suite. Vous ne serez plus jamais rappelé. Bonne journée, au revoir ! {status: ok}
+
+--- Verdicts ---
+  PASS  no_meta: aucune méta détectée
+  PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
+  PASS  no_regreet: pas de re-salutation
+  PASS  opposition: marquer_opposition=True end_call=True confirmation_orale=True
+  PASS  single_response: max réponses en vol = 1

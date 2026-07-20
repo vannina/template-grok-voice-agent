@@ -1,0 +1,21 @@
+=== Scénario refus — (d) Refus escalier : non au RDV, non au rappel ===
+[prospect] Allô ?
+[léa]      C'est bien Rossi Plomberie ?
+[prospect] Oui c'est nous.
+[léa]      Justement. Les clients qui appellent pendant que vous êtes sur une intervention, j'ai une solution pour ne plus les perdre.
+[prospect] Mouais.
+[léa]      Une assistante décroche quand vous pouvez pas. Elle note les coordonnées du client, ou prend le rendez-vous directement dans votre agenda. On se cale quinze minutes ? Plutôt mardi matin, ou jeudi ?
+[prospect] Non, pas de rendez-vous.
+[léa]      Pas de souci. Vannina peut vous rappeler quand ça vous arrange : plutôt en fin de journée ?
+[prospect] Non, pas de rappel non plus.
+[léa]      Comme vous voulez. Testez par vous-même : appelez le zéro quatre, douze, treize, soixante, vingt. Vous parlez à une assistante comme moi, vous jugez sur pièce. Merci pour votre temps, bonne journée, au revoir !
+[prospect] C'est ça, au revoir.
+    [tool] end_call({}) -> {"status": "ok"}
+[léa]      Au revoir ! L'appel est terminé. Si un jour le téléphone déborde, pensez à nous.
+
+--- Verdicts ---
+  PASS  no_meta: aucune méta détectée
+  PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
+  PASS  no_regreet: pas de re-salutation
+  PASS  escalier: marche2(rappel)=True marche3(démo)=True
+  PASS  single_response: max réponses en vol = 1

@@ -1,0 +1,21 @@
+=== Scénario meta — (b) Transcription pourrie : « Ready? » puis « Hello? » ===
+[prospect] Ready?
+[léa]      C'est bien Rossi Plomberie ?
+[prospect] Hello?
+[léa]      C'est bien le plombier d'Ajaccio ? Je vous dérange pas ?
+[prospect] Euh oui, c'est qui ?
+[léa]      C'est Léa de Corsica Studio. Justement, les clients qui appellent pendant que vous êtes sur une fuite, j'ai une solution pour ne plus les perdre.
+[prospect] Ah d'accord. Bon, j'ai du travail là.
+[léa]      Justement. C'est exactement le problème qu'on règle quand vous êtes occupé. Une assistante décroche à votre place dans ces moments-là.
+[prospect] Non merci.
+[léa]      Pas de souci. Vannina peut vous rappeler quand ça vous arrange : plutôt en fin de journée ?
+[prospect] Non, vraiment pas.
+    [tool] end_call({}) -> {"status": "ok"}
+[léa]      Comme vous voulez. Testez par vous-même : appelez le zéro quatre, douze, treize, soixante, vingt. Merci pour votre temps. Si un jour le téléphone déborde, pensez à nous. Bonne journée, au revoir !
+
+--- Verdicts ---
+  PASS  no_meta: aucune méta détectée
+  PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
+  PASS  no_regreet: pas de re-salutation
+  PASS  stays_french: reste en français
+  PASS  single_response: max réponses en vol = 1

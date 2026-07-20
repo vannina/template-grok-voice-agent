@@ -1,0 +1,25 @@
+=== Scénario coop — (a) Coopératif : allô → oui → intérêt → accepte mardi ===
+[prospect] Allô ?
+[léa]      C'est bien Rossi Plomberie ?
+[prospect] Oui oui, c'est bien nous.
+[léa]      Justement. Les clients qui appellent pendant que vous êtes sur une intervention, les mains dans une fuite... j'ai une solution pour ne plus les perdre.
+[prospect] Ah ouais ?
+[léa]      Une assistante décroche quand vous pouvez pas. Elle note les coordonnées du client, ou prend le rendez-vous directement dans votre agenda. On se cale quinze minutes ? Plutôt mardi matin, ou jeudi ?
+[prospect] Allez, mardi matin pourquoi pas.
+[léa]      Je vous bloque mardi matin avec Vannina. Plutôt neuf heures ou onze heures ? Je regarde si c'est dispo dans l'agenda.
+[prospect] Neuf heures c'est bien.
+    [tool] check_availability({"date": "2026-07-21", "time": "09:00"}) -> {"available": true, "free": 1, "date": "2026-07-21", "time": "09:00"}
+[léa]      Un instant, je regarde l'agenda de Vannina. C'est disponible. Je vous confirme au nom de Jean-Marc Rossi, sur ce numéro ?
+[prospect] Rossi. Jean-Marc Rossi.
+    [tool] book_reservation({"name": "Jean-Marc Rossi", "phone": "+33612345678", "date": "2026-07-21", "time": "09:00"}) -> {"status": "confirmed", "summary": "RDV découverte Corsica Studio", "name": "Jean-Marc Rossi", "phone": "+33612345678", "date": "2026-07-21", "time": "09:00"}
+[léa]      C'est noté. C'est calé : mardi neuf heures, Vannina vous appelle sur ce numéro. C'est bien ça ? Merci pour votre temps, Vannina vous appelle mardi neuf heures. Très bonne journée, au revoir !
+[prospect] Oui, ce numéro-là c'est bon.
+    [tool] end_call({}) -> {"status": "ok"}
+[léa]      Mardi neuf heures, Vannina vous appelle sur ce numéro. Très bonne journée, au revoir !
+
+--- Verdicts ---
+  PASS  no_meta: aucune méta détectée
+  PASS  first_reply: 1re réplique : "C'est bien Rossi Plomberie ?"
+  PASS  no_regreet: pas de re-salutation
+  PASS  booked: book_reservation : {'name': 'Jean-Marc Rossi', 'phone': '+33612345678', 'date': '2026-07-21', 'time': '09:00'}
+  PASS  single_response: max réponses en vol = 1
