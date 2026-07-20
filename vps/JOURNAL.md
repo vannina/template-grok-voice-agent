@@ -146,3 +146,16 @@ secretariat, prospection assertive). OUTBOUND_HOURS temporairement 8-22 pour tes
 RESTE : relancer v6 a 15h -> deploy -> appel test -> si OK : token credential n8n + verif
 credentials UI + sourcing artisans (classes par metier) + cross-suppression + activation WF
 (go Vannina) + page /qui-vous-appelle a integrer + transfert + SMS confirmations.
+
+## 2026-07-05 soir — Recette Lea v7/v8 (contexte sauvegarde)
+v6 DEPLOYEE : opener "Allo, bonjour !" voix ara reelle (web/static/opener-prospection.mp3,
+1,05s, <Play> avant Connect, OUTBOUND_OPENER dans .env standard). v7 hot-deploy : pitch
+court ("Vingt secondes ?"), solution concrete mots Vannina ("Elle note les coordonnees du
+client, ou prend le rendez-vous directement dans votre agenda"), closing demonstration.
+TEST-PILOTE-8 : diagnostic logs = barge-in TROP agressif (chaque "Allo ?" annulait la
+reponse en vol -> fragments+silences) + relance watchdog 20s trop lente + bug table
+"Oppositions" (403, vraie table = "Prospection — Oppositions").
+v8 EN COURS (agent) : barge-in seuil 900ms (BARGE_IN_MIN_MS), relances 7s/8s
+(WD_RELANCE_S/WD_CLOSE_S), defaut table oppositions corrige. Apres v8 : deploy rebuild
+standard-voice -> appel test -> si OK sourcing artisans par metier + pilote.
+RAPPEL : OUTBOUND_HOURS=8-22 (tests) a remettre 9-12,14-18 avant pilote.
