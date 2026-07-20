@@ -261,3 +261,10 @@ Crontab root posée (VPS en UTC) :
 Scripts versionnés dans le repo : vps/monitoring/ (aucun secret dedans).
 TODO mineur : sessions=0 ce 20/07 dans couts.csv (normal, usage.jsonl standard
 inexistant avant le fix perms) ; ajuster le seuil logs (5/5 min) si faux positifs.
+
+## 2026-07-21 00h25 — Horaires légaux de prospection REMIS (fin des tests)
+Recette Léa terminée (v14.1 validée par Vannina) : OUTBOUND_HOURS remis de 8-22 (tests)
+à 9-12,14-18 sur /opt/standard-voice/.env, conteneur recréé, Up sain. Plus AUCUN appel
+sortant ne peut partir hors plages ouvrées lun-ven. Le garde-fou du pilote est en place.
+Reste pour #21 : credential n8n X-Outbound-Token (UI, action Vannina ou vérif MCP),
+activation WF-OUT + WF-OUT-Retour sur GO explicite de Vannina uniquement.
