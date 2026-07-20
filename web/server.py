@@ -235,33 +235,45 @@ _OUTBOUND_NUDGE_INSTRUCTION = (
     "courtes, puis rends la main."
 )
 _OUTBOUND_CLOSE_INSTRUCTION = (
-    "L'interlocuteur ne répond plus : dis UNE phrase de clôture polie "
-    "(« Je vous laisse, bonne journée, au revoir ! ») puis appelle end_call "
-    "immédiatement."
+    "L'interlocuteur ne répond plus. Conclus poliment en UNE phrase : "
+    "propose d'écouter la démo au zéro quatre, douze, treize, soixante, "
+    "vingt si c'est pertinent, puis dis clairement au revoir et souhaite "
+    "une bonne journée."
 )
-# --- v12 : raccrochage GARANTI (chemin outbound uniquement) ------------------
-# Dès que la clôture est DÉCIDÉE (end_call, opposition, watchdog close, au
-# revoir entendu dans le transcript, répondeur), un timer serveur dur part :
-# hangup REST Twilio (Status=completed) QUOI QU'IL ARRIVE — même si le modèle
-# n'émet jamais end_call, même si le response.done traîne. Le TimeLimit Twilio
-# (OUTBOUND_TIME_LIMIT) reste le filet ultime.
+# --- v13 : clôture avec au revoir GARANTI et non coupé (outbound) ------------
+# Toute fin d'appel conversationnelle (plafond de silences, fin d'escalier,
+# end_call, opposition, RDV confirmé, au revoir entendu dans le transcript)
+# suit la MÊME séquence : response.done de l'au revoir → DRAIN de l'audio déjà
+# streamé vers Twilio (durée streamée − temps de lecture écoulé + marge) →
+# armement du filet dur 8 s (JAMAIS avant : il ne peut plus couper l'au revoir
+# en cours de lecture) → fenêtre de politesse 3 s (le prospect qui parle
+# annule la clôture ; un simple « au revoir » la laisse aller au bout) →
+# hangup REST Twilio. Répondeur (vm_played) : drain + 1 s, pas de fenêtre, et
+# le filet 20 s reste armé dès la décision (l'annonce d'un répondeur ne doit
+# jamais annuler quoi que ce soit). Le TimeLimit Twilio (OUTBOUND_TIME_LIMIT)
+# reste le filet ultime si le response.done de l'au revoir n'arrive jamais.
 _FORCED_HANGUP_S = 8.0
 _FORCED_HANGUP_VM_S = 20.0   # clôture répondeur : message 12 s + marge
+_DRAIN_MARGIN_S = 0.6        # marge après la durée d'audio restante calculée
+_POLITE_WINDOW_S = 3.0       # fenêtre de politesse après la fin de l'audio
+_GOODBYE_ACK_HANGUP_S = 2.0  # « au revoir » du prospect pendant la fenêtre
 # Watchdog d'inactivité (chemin outbound uniquement, secondes).
-# v10 : au téléphone, même 4 s de silence est long — enchaînement proactif à
-# 4 s après la fin de la dernière réplique de Léa (couvre aussi le cas « Léa
-# pose une question et personne ne répond ») : elle déroule ELLE-MÊME la suite
-# de son script (pas de « vous m'entendez ? »), clôture polie 8 s plus tard.
-# Env : WD_RELANCE_S / WD_CLOSE_S.
+# v13 : enchaînement proactif VIF à 2.5 s de silence (4 s + ~2 s de génération
+# = latence ressentie trop longue au réel), PLAFONNÉ à _WD_NUDGE_MAX
+# enchaînements consécutifs sans la moindre parole du prospect (compteur remis
+# à zéro dès speech_started / transcript). Le silence suivant (« 3e silence »)
+# déclenche la séquence de clôture v13 — jamais un 3e monologue.
+# Env : WD_RELANCE_S / WD_CLOSE_S (défaut : même seuil que la relance).
 _WD_NO_SPEECH_S = 6.0    # aucun son humain depuis le début → répondeur raté par l'AMD
 try:
-    _WD_IDLE_NUDGE_S = float(os.environ.get("WD_RELANCE_S", "4"))
+    _WD_IDLE_NUDGE_S = float(os.environ.get("WD_RELANCE_S", "2.5"))
 except ValueError:
-    _WD_IDLE_NUDGE_S = 4.0
+    _WD_IDLE_NUDGE_S = 3.0
+_WD_NUDGE_MAX = 2        # v13 : plafond d'enchaînements consécutifs sans parole
 try:
-    _WD_IDLE_CLOSE_S = float(os.environ.get("WD_CLOSE_S", "8"))
+    _WD_IDLE_CLOSE_S = float(os.environ.get("WD_CLOSE_S", str(_WD_IDLE_NUDGE_S)))
 except ValueError:
-    _WD_IDLE_CLOSE_S = 8.0
+    _WD_IDLE_CLOSE_S = _WD_IDLE_NUDGE_S
 
 # Barge-in avec seuil (v8) : le VAD xAI émet un speech_started au moindre
 # « Allô ? » de l'interlocuteur — souvent une simple réaction au silence, pas
@@ -311,18 +323,63 @@ class _BargeInGate:
 
 def _wd_idle_action(wd: dict, now: float) -> str:
     """Décision d'inactivité du watchdog outbound (pure, testable) :
-    "" (rien), "nudge" (relance) ou "close" (clôture + end_call)."""
+    "" (rien), "nudge" (enchaînement, plafonné à _WD_NUDGE_MAX consécutifs
+    sans parole du prospect) ou "close" (séquence de clôture v13 : au revoir
+    garanti, jamais un 3e monologue)."""
     if not wd["user_spoke"]:
         return ""
     last = max(wd["last_user_speech"], wd["last_agent_done"])
     if not last:
         return ""
     idle = now - last
-    if not wd["nudged"] and idle > _WD_IDLE_NUDGE_S:
+    if wd["nudge_count"] < _WD_NUDGE_MAX and idle > _WD_IDLE_NUDGE_S:
         return "nudge"
-    if wd["nudged"] and idle > _WD_IDLE_CLOSE_S:
+    if wd["nudge_count"] >= _WD_NUDGE_MAX and idle > _WD_IDLE_CLOSE_S:
         return "close"
     return ""
+
+
+def _drain_seconds(streamed_ms: float, t_first_delta: float, now: float,
+                   margin_s: float = _DRAIN_MARGIN_S) -> float:
+    """v13 (pure, testable) : temps de lecture RESTANT côté Twilio au
+    response.done de l'au revoir — durée d'audio streamée moins temps écoulé
+    depuis le premier delta de la réponse, plus une marge. Twilio bufferise
+    les frames et les joue en temps réel : couper avant ce délai tronque
+    l'au revoir."""
+    streamed_s = max(0.0, streamed_ms) / 1000.0
+    played_s = (now - t_first_delta) if t_first_delta > 0 else 0.0
+    return max(0.0, streamed_s - played_s) + margin_s
+
+
+def _caller_goodbye_only(text: str) -> bool:
+    """v13 (pure, testable) : vrai si la réplique du prospect pendant la
+    fenêtre de politesse n'est QU'une formule de congé (« au revoir »,
+    « merci, bonne journée »…) → la clôture va au bout (raccrochage court),
+    pas de relance. Toute vraie question / objection rend False → la clôture
+    est annulée et la conversation reprend."""
+    low = (text or "").strip().lower()
+    if not low or len(low) > 45:
+        return False
+    if "?" in low or "attend" in low:
+        return False
+    return any(g in low for g in (
+        "au revoir", "aurevoir", "bonne journée", "bonne soirée",
+        "à bientôt", "salut", "bye", "merci"))
+
+
+async def _polite_close_sequence(drain_s: float, vm: bool, arm_net, hangup,
+                                 window_s: float = _POLITE_WINDOW_S) -> None:
+    """v13 (asyncio pur, testable) : fin de clôture APRÈS le response.done de
+    l'au revoir — (b) drain de l'audio streamé vers Twilio, (filet) hangup
+    forcé armé SEULEMENT maintenant (il ne peut plus couper l'au revoir),
+    (c) fenêtre de politesse (le prospect peut encore parler : la boucle xAI
+    annule alors cette tâche), (d) hangup REST. Répondeur : 1 s, pas de
+    fenêtre. arm_net() est sync, hangup() est une coroutine."""
+    if drain_s > 0:
+        await asyncio.sleep(drain_s)
+    arm_net()
+    await asyncio.sleep(1.0 if vm else window_s)
+    await hangup()
 
 # Table Airtable des prospects de la campagne (base STANDARD_AIRTABLE_BASE_ID) :
 # lookup au rappel entrant (/twilio/voice-prospection) + écriture du tool
@@ -2231,11 +2288,13 @@ async def twilio_stream(ws: WebSocket) -> None:
     #   (pré-armé si l'AMD a répondu human : la personne a déjà dit « allô »
     #   PENDANT l'analyse AMD, avant l'ouverture du Media Stream) ;
     # - last_user_speech / last_agent_done : horodatages pour le silence ;
-    # - nudged : un enchaînement proactif (suite du script) déjà envoyé ;
+    # - nudge_count : enchaînements proactifs consécutifs sans parole du
+    #   prospect (v13 : plafonné à _WD_NUDGE_MAX, remis à zéro dès
+    #   speech_started / transcript) ;
     # - vm_played : message répondeur déjà déclenché (AMD ou watchdog).
     wd = {"user_spoke": out_answered_by == "human",
           "last_user_speech": 0.0, "last_agent_done": 0.0,
-          "nudged": False, "vm_played": out_is_machine,
+          "nudge_count": 0, "vm_played": out_is_machine,
           # AMD asynchrone (v5) : levé par POST /twilio/amd-status si
           # machine_end_* / fax arrive PENDANT l'appel ; consommé par le
           # watchdog (bascule répondeur). response_active = miroir du cycle
@@ -2536,6 +2595,12 @@ async def twilio_stream(ws: WebSocket) -> None:
             manual_turns = direction == "out"
             turn = {"awaiting": 0, "pending": False,
                     "pending_instructions": None, "skip_transcript": False}
+            # v13 : état de la séquence de clôture (outbound uniquement).
+            # task = tâche drain → filet → fenêtre de politesse → hangup ;
+            # await_transcript = la clôture vient d'être annulée par un
+            # speech_started : le transcript qui suit décide (simple
+            # « au revoir » → raccrochage court ; sinon → on répond).
+            closing: dict = {"task": None, "await_transcript": False}
 
             async def _outbound_response_create(instructions: str | None = None) -> bool:
                 """response.create explicite (chemin sortant, v12). Si une
@@ -2560,10 +2625,14 @@ async def twilio_stream(ws: WebSocket) -> None:
             hangup_force_task: asyncio.Task | None = None
 
             def _arm_forced_hangup(reason: str, delay: float | None = None) -> None:
-                """Timer serveur DUR : la clôture est décidée → hangup REST
-                Twilio dans `delay` s (défaut _FORCED_HANGUP_S) QUOI QU'IL
-                ARRIVE — même sans end_call, même si le modèle traîne.
-                Idempotent, no-op hors outbound. TimeLimit = filet ultime."""
+                """Timer serveur DUR : hangup REST Twilio dans `delay` s
+                (défaut _FORCED_HANGUP_S) QUOI QU'IL ARRIVE — même sans
+                end_call, même si le modèle traîne. Idempotent, no-op hors
+                outbound. v13 : pour les clôtures conversationnelles il n'est
+                armé qu'APRÈS le drain de l'au revoir (_polite_close_sequence)
+                — il ne peut plus couper l'au revoir en cours de lecture.
+                Seul le chemin répondeur l'arme dès la décision (20 s).
+                TimeLimit = filet ultime."""
                 nonlocal hangup_force_task
                 if direction != "out" or hangup_force_task is not None:
                     return
@@ -2578,6 +2647,52 @@ async def twilio_stream(ws: WebSocket) -> None:
                     except asyncio.CancelledError:
                         pass
                 hangup_force_task = asyncio.create_task(_force())
+
+            def _cancel_forced_hangup() -> None:
+                """v13 : clôture annulée (fenêtre de politesse) → le filet
+                dur n'a plus d'objet ; il pourra être ré-armé à la clôture
+                suivante."""
+                nonlocal hangup_force_task
+                if hangup_force_task is not None:
+                    hangup_force_task.cancel()
+                    hangup_force_task = None
+
+            def _cancel_closing(reason: str) -> None:
+                """v13 : le prospect PARLE pendant la clôture (au revoir en
+                cours de lecture ou fenêtre de politesse 3 s) → on annule
+                tout (tâche de fin, filet dur, pending_end_call) et on
+                ré-autorise UN cycle d'enchaînement avant la prochaine
+                clôture. Jamais appelé sur le chemin répondeur."""
+                nonlocal pending_end_call
+                pending_end_call = False
+                task = closing["task"]
+                if task is not None and not task.done():
+                    task.cancel()
+                closing["task"] = None
+                _cancel_forced_hangup()
+                wd["nudge_count"] = _WD_NUDGE_MAX - 1  # re-autorise 1 cycle
+                print(f"[outbound] clôture annulée ({reason}) — "
+                      "retour au flux normal")
+
+            def _launch_polite_close(drain_s: float) -> None:
+                """v13 : lance la fin de clôture (drain → filet → fenêtre de
+                politesse → hangup REST) en tâche de fond — la boucle xAI
+                continue de tourner pour pouvoir l'annuler si le prospect
+                parle. Idempotente tant que la tâche courante vit."""
+                if closing["task"] is not None and not closing["task"].done():
+                    return
+
+                async def _run() -> None:
+                    try:
+                        await _polite_close_sequence(
+                            drain_s, wd["vm_played"],
+                            lambda: _arm_forced_hangup("filet post-drain"),
+                            lambda: _twilio_hangup(call_sid or ""))
+                        print("[outbound] clôture : au revoir joué + fenêtre "
+                              f"de politesse écoulée → hangup REST")
+                    except asyncio.CancelledError:
+                        pass
+                closing["task"] = asyncio.create_task(_run())
 
             if pending_end_call:
                 # Répondeur AMD confirmé au start : le message voicemail part
@@ -2661,24 +2776,29 @@ async def twilio_stream(ws: WebSocket) -> None:
                 1) aucun son de l'interlocuteur dans les 6 premières secondes
                    et l'AMD n'a pas conclu human → répondeur raté par l'AMD :
                    message court + raccrochage armé ;
-                2) 4 s de silence après la dernière réplique (WD_RELANCE_S) →
-                   enchaînement PROACTIF : Léa déroule elle-même la suite
-                   logique de son script (jamais « vous m'entendez ? »), une
-                   seule fois par silence — couvre aussi le cas où Léa pose
-                   une question sans réponse ;
-                3) 8 s de silence après l'enchaînement (WD_CLOSE_S) → clôture
-                   polie + end_call.
-                Le raccrochage passe par pending_end_call → response.done →
-                _twilio_hangup (mécanique existante). TimeLimit reste le
-                filet ultime côté Twilio."""
+                2) 2.5 s de silence après la dernière réplique (WD_RELANCE_S)
+                   → enchaînement PROACTIF : Léa déroule elle-même la suite
+                   logique de son script (jamais « vous m'entendez ? ») —
+                   couvre aussi le cas où Léa pose une question sans réponse.
+                   v13 : PLAFONNÉ à _WD_NUDGE_MAX enchaînements consécutifs
+                   sans parole du prospect (compteur remis à zéro dès
+                   speech_started / transcript) ;
+                3) silence suivant (« 3e silence », WD_CLOSE_S) → séquence de
+                   clôture v13 : au revoir explicite → response.done → drain
+                   → filet → fenêtre de politesse → hangup REST. La fenêtre
+                   peut ANNULER la clôture (pending_end_call repasse à
+                   False) : on ne rend plus la main après un close, on se
+                   remet à surveiller. TimeLimit reste le filet ultime."""
                 nonlocal pending_end_call
                 t0 = time.monotonic()
                 try:
-                    while not pending_end_call:
+                    while True:
                         await asyncio.sleep(1.0)
                         now = time.monotonic()
                         if pending_end_call:
-                            return
+                            if wd["vm_played"]:
+                                return  # répondeur : clôture jamais annulable
+                            continue    # clôture en cours — annulable (v13)
                         # AMD ASYNCHRONE (v5) : verdict répondeur arrivé
                         # PENDANT l'appel (POST /twilio/amd-status → flag
                         # wd["amd_machine"]). On attend que la réponse en
@@ -2721,20 +2841,24 @@ async def twilio_stream(ws: WebSocket) -> None:
                                          wd["last_agent_done"])
                         action = _wd_idle_action(wd, now)
                         if action == "nudge":
-                            wd["nudged"] = True
-                            wd["last_agent_done"] = now  # fenêtre de clôture
-                            print(f"[outbound] watchdog : {idle:.0f} s de "
-                                  "silence → enchaînement proactif")
+                            wd["nudge_count"] += 1
+                            wd["last_agent_done"] = now  # fenêtre suivante
+                            print(f"[outbound] watchdog : {idle:.1f} s de "
+                                  "silence → enchaînement proactif "
+                                  f"{wd['nudge_count']}/{_WD_NUDGE_MAX}")
                             await _outbound_response_create(
                                 _OUTBOUND_NUDGE_INSTRUCTION)
                         elif action == "close":
                             pending_end_call = True
-                            print("[outbound] watchdog : silence après relance "
-                                  "→ clôture polie + raccrochage armé")
-                            _arm_forced_hangup("watchdog close")
+                            print(f"[outbound] watchdog : silence après "
+                                  f"{wd['nudge_count']} enchaînements → "
+                                  "séquence de clôture (au revoir garanti)")
+                            # v13 : PAS de filet ici — il ne s'arme qu'APRÈS
+                            # le drain de l'au revoir (jamais coupé) ; et PAS
+                            # de return — la fenêtre de politesse peut
+                            # annuler la clôture.
                             await _outbound_response_create(
                                 _OUTBOUND_CLOSE_INSTRUCTION)
-                            return
                 except asyncio.CancelledError:
                     pass
 
@@ -2775,18 +2899,34 @@ async def twilio_stream(ws: WebSocket) -> None:
                 response_active = False
                 audio_since_clear = False
                 barge_gate = _BargeInGate()
+                # v13 : instant du PREMIER delta audio de la réponse en cours
+                # (reset à response.created) — sert au calcul du drain de
+                # l'au revoir (_drain_seconds) au response.done de clôture.
+                resp_t0 = {"t": 0.0}
                 async for raw in xai:
                     evt = json.loads(raw)
                     t = evt.get("type", "")
                     # Watchdog outbound : trace la parole entrante (VAD +
                     # transcript) et la fin des répliques de Léa. Un son de
-                    # l'interlocuteur ré-arme la relance (nudged=False).
+                    # l'interlocuteur remet le plafond d'enchaînements à zéro
+                    # (nudge_count=0, v13).
                     if direction == "out":
                         if t in ("input_audio_buffer.speech_started",
                                  "conversation.item.input_audio_transcription.completed"):
                             wd["user_spoke"] = True
                             wd["last_user_speech"] = time.monotonic()
-                            wd["nudged"] = False
+                            wd["nudge_count"] = 0
+                            # v13 : le prospect PARLE pendant une clôture en
+                            # cours (au revoir en lecture, drain ou fenêtre de
+                            # politesse 3 s) → clôture annulée, le transcript
+                            # qui suit décide de la suite. JAMAIS pour un
+                            # répondeur (son annonce EST de la parole).
+                            if (t == "input_audio_buffer.speech_started"
+                                    and pending_end_call
+                                    and not wd["vm_played"]):
+                                _cancel_closing("parole pendant la fenêtre "
+                                                "de politesse")
+                                closing["await_transcript"] = True
                             # v9/v10 : le « allô » de l'appelé — canned hook
                             # complet + response.create (une seule fois,
                             # idempotent via wd["opener_done"]).
@@ -2798,11 +2938,38 @@ async def twilio_stream(ws: WebSocket) -> None:
                                     turn["skip_transcript"] = True
                                 await _play_opener_then_create("allô détecté")
                             elif t == "conversation.item.input_audio_transcription.completed":
-                                # v12 tours manuels : fin du tour du prospect →
-                                # response.create explicite (jamais deux en vol).
-                                if turn["skip_transcript"]:
+                                tr_low = (evt.get("transcript") or "").strip().lower()
+                                if closing["await_transcript"]:
+                                    # v13 : clôture annulée au speech_started —
+                                    # le transcript tranche. Simple « au
+                                    # revoir » → on laisse partir (coupure
+                                    # courte, pas de relance) ; sinon → retour
+                                    # au flux normal, on répond.
+                                    closing["await_transcript"] = False
+                                    if _caller_goodbye_only(tr_low):
+                                        pending_end_call = True
+                                        print("[outbound] fenêtre de politesse :"
+                                              " simple au revoir du prospect → "
+                                              "raccrochage court")
+                                        _arm_forced_hangup(
+                                            "au revoir du prospect",
+                                            _GOODBYE_ACK_HANGUP_S)
+                                    else:
+                                        await _outbound_response_create()
+                                elif pending_end_call and not wd["vm_played"]:
+                                    # Transcript arrivé pendant la clôture sans
+                                    # speech_started préalable (parole engagée
+                                    # avant la décision de clôture).
+                                    if not _caller_goodbye_only(tr_low):
+                                        _cancel_closing("réponse du prospect "
+                                                        "pendant la clôture")
+                                        await _outbound_response_create()
+                                elif turn["skip_transcript"]:
                                     turn["skip_transcript"] = False
                                 elif not wd["vm_played"] and not pending_end_call:
+                                    # v12 tours manuels : fin du tour du
+                                    # prospect → response.create explicite
+                                    # (jamais deux en vol).
                                     await _outbound_response_create()
                         elif t == "response.done":
                             wd["last_agent_done"] = time.monotonic()
@@ -2817,6 +2984,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                         response_active = True
                         wd["response_active"] = True   # miroir AMD async (v5)
                         barge_gate.on_response_created()  # v8 : nouveau cycle
+                        resp_t0["t"] = 0.0             # v13 : drain par réponse
                         if manual_turns:
                             if turn["awaiting"] > 0:
                                 turn["awaiting"] -= 1
@@ -2906,8 +3074,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 if not pending_end_call and any(g in low for g in GOODBYES):
                                     print("[twilio] auto-hangup armed (goodbye in transcript)")
                                     pending_end_call = True
-                                    # v12 : raccrochage garanti (no-op hors out)
-                                    _arm_forced_hangup("goodbye transcript")
+                                    # v13 : plus de filet ici — il ne s'arme
+                                    # qu'APRÈS le drain de l'au revoir
+                                    # (_polite_close_sequence), pour ne
+                                    # jamais le couper en cours de lecture.
                                 if _is_standard_ctx(ctx):
                                     ctx.setdefault("transcript", []).append(f"agent : {transcript}")
                         elif t == "conversation.item.input_audio_transcription.completed":
@@ -2936,6 +3106,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                             # v8 : cumule les ms réellement parties vers
                             # Twilio pour le seuil de barge-in.
                             barge_gate.on_audio_delta_b64(evt["delta"])
+                            # v13 : premier delta de la réponse = début de
+                            # lecture côté Twilio (calcul du drain).
+                            if not resp_t0["t"]:
+                                resp_t0["t"] = time.monotonic()
                             await ws.send_text(json.dumps({
                                 "event": "media",
                                 "streamSid": stream_sid,
@@ -2955,8 +3129,9 @@ async def twilio_stream(ws: WebSocket) -> None:
                             ctx.setdefault("tools_called", []).append(name)
                         if name == "end_call":
                             pending_end_call = True
-                            # v12 : raccrochage garanti (no-op hors outbound)
-                            _arm_forced_hangup("end_call")
+                            # v13 : le filet dur ne s'arme qu'APRÈS le drain
+                            # de l'au revoir (_polite_close_sequence) — plus
+                            # jamais pendant qu'il se joue.
                         if name == "transfer_to_human" and result.get("status") == "transfert":
                             pending_transfer = True
                         # Résultat d'appel sortant → SMS post-appel (finally).
@@ -3012,12 +3187,34 @@ async def twilio_stream(ws: WebSocket) -> None:
                                 # filet dur derrière).
                                 continue
                         if pending_end_call:
-                            print("[tool] end_call → hanging up")
-                            # Small grace period so Twilio finishes playing the
-                            # buffered "au revoir" before we drop the call.
-                            await asyncio.sleep(1.0)
-                            await _twilio_hangup(call_sid or "")
-                            return
+                            if direction == "out":
+                                # v13 : séquence de clôture non coupée —
+                                # response.done de l'au revoir reçu, on lance
+                                # drain (durée streamée − temps de lecture
+                                # écoulé + marge) → filet 8 s (armé SEULEMENT
+                                # après le drain) → fenêtre de politesse 3 s
+                                # (annulable par la parole du prospect) →
+                                # hangup REST. Répondeur : drain + 1 s, pas de
+                                # fenêtre. On NE sort PAS de la boucle : les
+                                # événements xAI (speech_started) doivent
+                                # pouvoir annuler la clôture.
+                                drain_s = _drain_seconds(
+                                    barge_gate.audio_ms, resp_t0["t"],
+                                    time.monotonic())
+                                print(f"[outbound] clôture : response.done — "
+                                      f"drain {drain_s:.1f} s "
+                                      f"(streamé {barge_gate.audio_ms / 1000:.1f} s), "
+                                      f"puis filet {_FORCED_HANGUP_S:.0f} s + "
+                                      f"fenêtre {_POLITE_WINDOW_S:.0f} s")
+                                _launch_polite_close(drain_s)
+                            else:
+                                print("[tool] end_call → hanging up")
+                                # Small grace period so Twilio finishes playing
+                                # the buffered "au revoir" before we drop the
+                                # call (chemin ENTRANT inchangé).
+                                await asyncio.sleep(1.0)
+                                await _twilio_hangup(call_sid or "")
+                                return
                     elif t == "error":
                         print(f"[xai] error: {evt}")
 
@@ -3044,6 +3241,9 @@ async def twilio_stream(ws: WebSocket) -> None:
                 # v12 : pont refermé — le raccrochage forcé n'a plus d'objet
                 # (l'appel est déjà coupé ou en train de l'être).
                 hangup_force_task.cancel()
+            if closing["task"] is not None and not closing["task"].done():
+                # v13 : idem pour la séquence de clôture en cours.
+                closing["task"].cancel()
 
     except Exception as e:
         print(f"[twilio/stream] error: {e!r}")
