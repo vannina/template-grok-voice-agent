@@ -70,6 +70,8 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [ ] (C) Sourcing/enrichissement (Apify/MCP) + WF-SCORING (Claude)
 - [x] (C) Métier `prospection` : Léa, SDR pédagogue (présentation conforme + opt-out immédiat, pitch dépannage, RDV 30 min agenda CS) — **fait 2026-07-03**
 - [x] (C) Tools : book_reservation (RDV Vannina) + marquer_opposition (Airtable Oppositions) + qualify_lead — **fait 2026-07-03**
+- [x] (C) Cahier des charges conversationnel NORMATIF (`docs/CAHIER-DES-CHARGES-CONVERSATION.md`, 9 sections) — **fait 2026-07-06**
+- [ ] (C) **Léa v13** (enchaînement 2,5 s plafonné à 2, au revoir non coupé + fenêtre politesse 3 s) : commit 9c24992, mocks 24/24, smoke 22/22 — recette simulateur EN COURS puis déploiement VPS + appel de validation Vannina
 - [ ] (C) Séquence email B2B 4 touches (réutilise WF-06a) en pré-chauffe
 - [ ] (C) Conformité B2B opt-out (mentions, opposition, secteurs exclus) — checklist légale
 - [ ] (V+C) Test campagne pilote + KPIs (réponse, RDV, coût/lead)

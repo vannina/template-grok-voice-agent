@@ -159,3 +159,15 @@ v8 EN COURS (agent) : barge-in seuil 900ms (BARGE_IN_MIN_MS), relances 7s/8s
 (WD_RELANCE_S/WD_CLOSE_S), defaut table oppositions corrige. Apres v8 : deploy rebuild
 standard-voice -> appel test -> si OK sourcing artisans par metier + pilote.
 RAPPEL : OUTBOUND_HOURS=8-22 (tests) a remettre 9-12,14-18 avant pilote.
+
+## 2026-07-20 17h40 — Déploiement Léa v13 (standard-voice)
+Recette AVANT déploiement (nouvelle méthode : spec = CAHIER-DES-CHARGES-CONVERSATION.md) :
+smoke 22/22, mocks 24/24, simulateur 6/7 PASS (coop/meta/presse/refus/robot/opposition ;
+"silencieux" = limite harnais xAI idle-timeout, logique silences couverte par les mocks).
+Déployé : rsync web/server.py (commit 9c24992) -> /opt/standard-voice ; cd /docker &&
+docker compose up -d --build standard-voice. Démarrage sain (opener chargé, uvicorn up).
+v13 = enchaînement silences 2,5 s plafonné à 2 (3e silence -> clôture), au revoir jamais
+coupé (drain calculé + filet 8 s armé APRÈS le drain), fenêtre de politesse 3 s après
+l'au revoir (parole -> reprise ; "au revoir" seul -> raccrochage 2 s), hangup REST garanti.
+RAPPEL : OUTBOUND_HOURS=8-22 (tests) à remettre 9-12,14-18 avant pilote.
+Suite : appel de validation Vannina (+33651003049).
