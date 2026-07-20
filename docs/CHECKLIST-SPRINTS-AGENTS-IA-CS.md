@@ -106,7 +106,11 @@ dans les docs liés + la mémoire (`strategie-agents-ia-cs`).
 - [x] (C) Benchmark concurrents : docs/BENCHMARK-COIFFEURS-2026.md (Fresha ~95 €/mois, Tala 29-499 €/mois HT ; « Cecchi » introuvable) — **fait 2026-07-20**
 - [x] (C) Léa : ancrage métier coiffeur (mains dans la couleur, complément Planity) + recette non-régression — **fait 2026-07-20**
 - [x] (C) Copy page Framer : CS-framer-website/01-framer-site/pages-agents-vocaux/PAGE-COIFFEUR-COPY.md (slug /agent-vocal-coiffeur) — **fait 2026-07-20**
-- [ ] (C) Image OG og-agent-vocal-coiffeur.png (gabarit #24, générateur existant)
+- [x] (C) Image OG og-agent-vocal-coiffeur.png (gabarit #24, générateur og-image/generate_agents_vocaux_og.py, Salomé) + gabarit HTML sauvegardé dans CS-framer-website/01-framer-site/pages-agents-vocaux/og/ — **fait 2026-07-20**
 - [x] (V) « Cecchi » = erreur du correcteur (résolu 2026-07-20) : pas d'acteur de ce nom, benchmark = Fresha + Tala
-- [ ] (V+C) Duplication de la page dans Framer (guidée, comme les 3 précédentes) + menu + publication
+- [x] (V) Page dupliquée depuis /agent-vocal-depannage + path /agent-vocal-coiffeur + title + description — **fait 2026-07-20**
+- [ ] (V) Uploader og-agent-vocal-coiffeur.png dans les réglages de la page Framer (Social Image)
+- [ ] (C) Injection du contenu dans la page (MCP Framer : variante coiffeur du template, H1, sections, pricing, FAQ, schema) + vérification
+- [ ] (C) Menu/navbar + footer : ajouter la page coiffeur au dropdown offres + maillage
+- [ ] (V) Validation visuelle (desktop + mobile) puis PUBLICATION
 - [ ] (C) Sourcing salons de coiffure France (hors Corse) + cross-suppression + pilote Léa coiffeurs
