@@ -488,9 +488,15 @@ def evaluate(sc: dict, lea: list[str], state: dict) -> dict:
             r"(voulez[- ]vous|vous voulez|souhaitez[- ]vous) que je (vous )?"
             r"(explique|detaille|presente)|je peux vous (expliquer|en dire plus)",
             all_txt)
-        v["mode_info"] = (len(marks) >= 3 and not permission,
+        # v14.1 (cahier 6.12) : jamais d'annonce avant la réponse.
+        annonce = re.search(
+            r"\bje vais vous (expliquer|donner|detailler|presenter)\b"
+            r"|\bje vous explique\b\s*[.!]?\s*$",
+            all_txt)
+        v["mode_info"] = (len(marks) >= 3 and not permission and not annonce,
                           f"infos concrètes={marks} "
-                          f"demande_permission={bool(permission)}")
+                          f"demande_permission={bool(permission)} "
+                          f"annonce_avant_réponse={bool(annonce)}")
 
     if "disposition" in checks:
         # v14 (cahier 6.10) : clôture service — à disposition + démo à essayer.

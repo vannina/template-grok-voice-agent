@@ -184,3 +184,12 @@ robot, meta). Déployé par rsync du prompt seul (bind mount, hot reload, pas de
 Aussi : OUTBOUND_HOURS avait sauté du .env au rebuild v13 (refus hors_horaires 20h53) ->
 ré-ajouté à 8-22 (tests), conteneur recréé 21h0x. À REMETTRE 9-12,14-18 avant pilote.
 Backlog : vertical coiffeurs HORS Corse (tâche #20) + prospection France entière actée.
+
+## 2026-07-20 21h55 — Léa v14.1 : réponse dans le même souffle (VALIDATION Vannina v14)
+Vannina VALIDE la v14 (« on peut partir comme ça ») avec un dernier point : annonce
+(« je vais vous donner des infos ») + latence avant l'explication. Cause : parole +
+appel get_business_info + 2e réponse = un aller-retour de trop. Fix : exigence 6.12 au
+cahier (réponse dans le même souffle, jamais d'annonce, tool réservé aux prix — les
+questions courantes se répondent sans outil), prompt corrigé, verdict annonce_avant_
+réponse ajouté au simulateur. Recette : curieux 7/7 PASS. Déploiement : rsync prompt
+seul (hot reload). Chantier coiffeurs lancé (config démo + benchmark « Cecchi »).
