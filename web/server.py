@@ -173,12 +173,18 @@ OUTBOUND_PUBLIC_HOST = os.environ.get("OUTBOUND_PUBLIC_HOST", "").strip()
 # s'entendre. C'est pourquoi c'est DÉSACTIVÉ par défaut (env vide) — n'activer
 # qu'après test en réel (ex. OUTBOUND_OPENER="Bonjour !").
 OUTBOUND_OPENER = os.environ.get("OUTBOUND_OPENER", "").strip()
-# Détection répondeur Twilio (AMD). "DetectMessageEnd" = Twilio analyse le
-# décroché et POSTe AnsweredBy au webhook voice-out (human / machine_end_* /
-# fax / unknown) ; pour un répondeur, le webhook part à la FIN de l'annonce,
-# donc Léa parle après le bip. Compromis assumé : l'AMD synchrone ajoute un
-# peu de latence au décroché humain (Twilio attend d'entendre « allô » pour
-# trancher) — mesurable via la métrique t_start→t_first_response_create.
+# Détection répondeur Twilio (AMD), en mode ASYNCHRONE depuis v5.
+# "DetectMessageEnd" = Twilio analyse le décroché et livre AnsweredBy
+# (human / machine_end_* / fax / unknown) ; pour un répondeur, le verdict
+# tombe à la FIN de l'annonce, donc Léa parle après le bip.
+# v5 : calls.create passe AsyncAmd=true + AsyncAmdStatusCallback →
+# l'appel se CONNECTE IMMÉDIATEMENT (le TwiML voice-out est fetché sans
+# attendre l'analyse, l'humain entend Léa tout de suite) et le verdict AMD
+# arrive en async sur POST /twilio/amd-status, qui signale au pont WS actif
+# de basculer en mode répondeur si machine_end_*. Avant v5, l'AMD synchrone
+# retenait la connexion jusqu'à 8 s (MachineDetectionTimeout) avant le fetch
+# du TwiML — cause principale du délai au décroché humain, mesurable via la
+# métrique t_start→t_first_response_create.
 # Vide = AMD désactivé : calls.create sans MachineDetection et TwiML voice-out
 # sans Parameter answered_by (rétro-compat totale).
 OUTBOUND_AMD = os.environ.get("OUTBOUND_AMD", "DetectMessageEnd").strip()
@@ -252,6 +258,38 @@ def _outbound_ctx_get(key: str) -> dict:
         _OUTBOUND_CTX.pop(key, None)
         return {}
     return prospect
+
+
+# --- AMD asynchrone (v5) ----------------------------------------------------
+# Verdicts AMD reçus sur POST /twilio/amd-status (CallSid → AnsweredBy) et
+# ponts WS sortants actifs (CallSid → wd, l'état partagé que la boucle du
+# watchdog consulte chaque seconde). Même philosophie que _OUTBOUND_CTX :
+# mémoire process, un seul worker uvicorn, pas de Redis.
+_AMD_RESULTS: dict[str, tuple[float, str]] = {}
+_OUTBOUND_BRIDGES: dict[str, dict] = {}
+
+
+def _amd_result_put(call_sid: str, answered_by: str) -> None:
+    if not call_sid:
+        return
+    now = datetime.now(TZ).timestamp()
+    for k in [k for k, (ts, _) in _AMD_RESULTS.items() if now - ts > _OUTBOUND_TTL_S]:
+        _AMD_RESULTS.pop(k, None)
+    _AMD_RESULTS[call_sid] = (now, answered_by)
+
+
+def _amd_result_get(call_sid: str) -> str:
+    """Verdict AMD déjà reçu pour ce CallSid ("" si aucun / expiré)."""
+    if not call_sid:
+        return ""
+    item = _AMD_RESULTS.get(call_sid)
+    if not item:
+        return ""
+    ts, answered_by = item
+    if datetime.now(TZ).timestamp() - ts > _OUTBOUND_TTL_S:
+        _AMD_RESULTS.pop(call_sid, None)
+        return ""
+    return answered_by
 
 
 def _parse_hours_spec(spec: str) -> list[tuple[int, int]]:
@@ -1680,7 +1718,8 @@ def _outbound_prospect_block(prospect: dict, to: str) -> str:
     return "\n".join(lines)
 
 
-async def _twilio_call_create(to: str, from_number: str, url: str) -> dict:
+async def _twilio_call_create(to: str, from_number: str, url: str,
+                              amd_callback: str = "") -> dict:
     """POST Twilio REST /Calls.json (appel sortant). Retourne le JSON Twilio
     ou {"error": ...}. Isolé pour être mockable dans les tests."""
     auth = _twilio_rest_auth()
@@ -1696,11 +1735,17 @@ async def _twilio_call_create(to: str, from_number: str, url: str) -> dict:
         "TimeLimit": str(OUTBOUND_TIME_LIMIT),
     }
     if OUTBOUND_AMD:
-        # AMD : Twilio POSTe AnsweredBy= au webhook voice-out. Avec
-        # DetectMessageEnd, machine_end_* arrive APRÈS le bip → le message
-        # répondeur de Léa est enregistré en entier.
+        # AMD ASYNCHRONE (v5) : AsyncAmd=true → Twilio fetch le TwiML dès le
+        # décroché (connexion immédiate, l'humain entend Léa tout de suite)
+        # et POSTe le verdict AnsweredBy plus tard sur amd_callback
+        # (/twilio/amd-status). Avec DetectMessageEnd, machine_end_* arrive
+        # APRÈS le bip → le message répondeur de Léa est enregistré en entier.
         data["MachineDetection"] = OUTBOUND_AMD
         data["MachineDetectionTimeout"] = str(_OUTBOUND_AMD_TIMEOUT_S)
+        data["AsyncAmd"] = "true"
+        if amd_callback:
+            data["AsyncAmdStatusCallback"] = amd_callback
+            data["AsyncAmdStatusCallbackMethod"] = "POST"
     try:
         async with httpx.AsyncClient(timeout=15, auth=auth) as client:
             r = await client.post(api, data=data)
@@ -1762,7 +1807,8 @@ async def outbound_call(request: Request) -> JSONResponse:
                              "message": "host public introuvable (OUTBOUND_PUBLIC_HOST)"},
                             status_code=503)
     url = f"https://{host}/twilio/voice-out" + (f"?rid={quote(rid)}" if rid else "")
-    body = await _twilio_call_create(to, OUTBOUND_FROM_NUMBER, url)
+    body = await _twilio_call_create(to, OUTBOUND_FROM_NUMBER, url,
+                                     amd_callback=f"https://{host}/twilio/amd-status")
     if body.get("error"):
         print(f"[outbound] calls.create échoué : {body['error']}")
         return JSONResponse({"status": "erreur_twilio", "message": body["error"]},
@@ -1815,6 +1861,39 @@ async def twilio_voice_out(request: Request) -> Response:
         '</Response>'
     )
     return Response(content=twiml, media_type="application/xml")
+
+
+@app.post("/twilio/amd-status")
+async def twilio_amd_status(request: Request) -> Response:
+    """Callback AMD ASYNCHRONE (v5) : Twilio POSTe le verdict AnsweredBy
+    (human / machine_end_* / fax / unknown) ici, PENDANT que l'appel est déjà
+    connecté (AsyncAmd=true dans calls.create). Si machine : on lève un flag
+    dans l'état partagé du pont WS actif (wd), consulté chaque seconde par le
+    watchdog outbound, qui bascule alors en mode répondeur (message 12 s puis
+    raccrochage). Si human : on pré-arme user_spoke (désarme le filet 6 s).
+    CallSid inconnu (pont pas encore ouvert, ou déjà fermé) → verdict stocké
+    en mémoire (_AMD_RESULTS, relu à l'ouverture du WS) et no-op, jamais
+    d'erreur : Twilio n'a rien à faire de la réponse."""
+    try:
+        form = await request.form()
+    except Exception:  # noqa: BLE001 — body illisible : no-op
+        form = {}
+    call_sid = str(form.get("CallSid") or "").strip()
+    answered_by = str(form.get("AnsweredBy") or "").strip().lower()
+    print(f"[outbound] amd-status call_sid={call_sid!r} answered_by={answered_by!r}")
+    if not call_sid:
+        return Response(status_code=204)
+    _amd_result_put(call_sid, answered_by)
+    wd = _OUTBOUND_BRIDGES.get(call_sid)
+    if wd is not None:
+        if answered_by == "human":
+            # La personne a dit « allô » pendant l'analyse AMD : le filet
+            # « aucun son humain en 6 s » n'a plus lieu d'être.
+            wd["user_spoke"] = True
+        elif answered_by.startswith("machine") or answered_by == "fax":
+            # Consommé par outbound_watchdog (tick 1 s) : bascule répondeur.
+            wd["amd_machine"] = True
+    return Response(status_code=204)
 
 
 @app.post("/twilio/voice-prospection")
@@ -1953,7 +2032,16 @@ async def twilio_stream(ws: WebSocket) -> None:
     out_rid = (custom.get("rid") or "").strip()
     out_to = (custom.get("to") or "").strip()
     # Résultat AMD relayé par voice-out (vide si AMD désactivé / non conclu).
+    # Rétro-compat AMD synchrone : le Parameter n'existe que si Twilio avait
+    # le verdict AU fetch du TwiML. En AMD asynchrone (v5), il est absent.
     out_answered_by = (custom.get("answered_by") or "").strip().lower()
+    # AMD asynchrone (v5) : le verdict a pu arriver sur /twilio/amd-status
+    # AVANT l'ouverture du Media Stream (rare : répondeur à annonce très
+    # courte). On le fusionne — même traitement que le Parameter sync.
+    if direction == "out" and not out_answered_by and call_sid:
+        out_answered_by = _amd_result_get(call_sid)
+        if out_answered_by:
+            print(f"[outbound] verdict AMD async déjà en mémoire : {out_answered_by!r}")
     # Répondeur confirmé par l'AMD (machine_end_* : le bip est passé) ou fax :
     # message court + raccrochage, pas de conversation.
     out_is_machine = direction == "out" and (
@@ -1968,10 +2056,20 @@ async def twilio_stream(ws: WebSocket) -> None:
     wd = {"user_spoke": out_answered_by == "human",
           "last_user_speech": 0.0, "last_agent_done": 0.0,
           "nudged": False, "vm_played": out_is_machine,
+          # AMD asynchrone (v5) : levé par POST /twilio/amd-status si
+          # machine_end_* / fax arrive PENDANT l'appel ; consommé par le
+          # watchdog (bascule répondeur). response_active = miroir du cycle
+          # response.created→done du pont, pour ne jamais injecter le message
+          # répondeur par-dessus une réponse en cours.
+          "amd_machine": out_is_machine, "response_active": False,
           # Résultat d'appel pour le SMS post-appel (OUTBOUND_SMS=1) :
           # répondeur OU intéressé (qualify_lead) sans RDV (book confirmé),
           # et JAMAIS après une opposition.
           "qualified": False, "booked": False, "opposed": False}
+    # Enregistre le pont actif : /twilio/amd-status pourra signaler le verdict
+    # AMD async à CE wd. Retiré dans le finally de fermeture du WS.
+    if direction == "out" and call_sid:
+        _OUTBOUND_BRIDGES[call_sid] = wd
     if metier_param and not entite_param:
         m2 = _metier_exists(metier_param)
         if m2:
@@ -2256,6 +2354,29 @@ async def twilio_stream(ws: WebSocket) -> None:
                         now = time.monotonic()
                         if pending_end_call:
                             return
+                        # AMD ASYNCHRONE (v5) : verdict répondeur arrivé
+                        # PENDANT l'appel (POST /twilio/amd-status → flag
+                        # wd["amd_machine"]). On attend que la réponse en
+                        # cours (si Léa parlait) se termine — miroir
+                        # wd["response_active"] — puis on injecte
+                        # l'instruction répondeur (item system +
+                        # response.create) et on arme le raccrochage. Le
+                        # barge-in n'y touche pas : vm_played=True.
+                        if (wd["amd_machine"] and not wd["vm_played"]
+                                and not wd["response_active"]):
+                            wd["vm_played"] = True
+                            pending_end_call = True
+                            print("[outbound] AMD async : répondeur confirmé "
+                                  "→ message 12 s + raccrochage armé")
+                            await xai.send(json.dumps({
+                                "type": "conversation.item.create",
+                                "item": {"type": "message", "role": "system",
+                                         "content": [{
+                                             "type": "input_text",
+                                             "text": _OUTBOUND_VOICEMAIL_INSTRUCTION}]},
+                            }))
+                            await xai.send(json.dumps({"type": "response.create"}))
+                            return
                         if not wd["user_spoke"]:
                             if not wd["vm_played"] and now - t0 > _WD_NO_SPEECH_S:
                                 wd["vm_played"] = True
@@ -2360,6 +2481,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                     # revoir final déjà armé (pending_end_call).
                     if t == "response.created":
                         response_active = True
+                        wd["response_active"] = True   # miroir AMD async (v5)
                     elif t in ("response.done", "response.cancelled",
                                "response.audio.interrupted",
                                "response.output_audio.interrupted"):
@@ -2371,6 +2493,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                         # response" renvoyé par xAI est logué plus bas, sans
                         # crash.)
                         response_active = False
+                        wd["response_active"] = False  # miroir AMD async (v5)
                     elif (t == "input_audio_buffer.speech_started"
                           and (response_active or audio_since_clear)
                           and not pending_end_call
@@ -2442,6 +2565,7 @@ async def twilio_stream(ws: WebSocket) -> None:
                             # devra le purger (`clear`). Défensif : un delta
                             # implique aussi qu'une réponse est en cours.
                             response_active = True
+                            wd["response_active"] = True  # miroir AMD async
                             audio_since_clear = True
                             await ws.send_text(json.dumps({
                                 "event": "media",
@@ -2540,6 +2664,10 @@ async def twilio_stream(ws: WebSocket) -> None:
                 await _send_outbound_sms(out_to or caller_from)
         except Exception as e:  # noqa: BLE001
             print(f"[outbound] SMS post-appel (finally) échoué: {e}")
+        # AMD async (v5) : le pont se ferme, /twilio/amd-status ne doit plus
+        # pouvoir le signaler (verdict tardif → no-op via _AMD_RESULTS).
+        if call_sid:
+            _OUTBOUND_BRIDGES.pop(call_sid, None)
         try:
             await ws.close()
         except Exception:

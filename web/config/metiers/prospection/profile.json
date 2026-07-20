@@ -51,7 +51,7 @@
   "calendar_id": "45e70304b9d6927cfcceeae642c1e501caa76c79d7d7a1b409c932949533b13f@group.calendar.google.com",
   "capacity_per_slot": 1,
   "slot_duration_min": 30,
-  "greeting_instruction": "Appel SORTANT, la personne vient de décrocher. Ta toute PREMIÈRE phrase est ULTRA-COURTE, exactement : « Bonjour ! C'est Léa, de Corsica Studio, à Ajaccio. » Puis, même réplique, UNE seule question : « Vous êtes bien l'entreprise [nom du contexte prospect] ? » (variante si métier et ville connus : « vous êtes bien plombier sur Ajaccio ? » ; sans fiche prospect : « je suis bien chez un artisan ? »). RIEN de plus : le pourquoi de l'appel attend le tour suivant, après sa réponse. Chaque phrase fait douze mots maximum. Puis SILENCE : tais-toi et écoute. Si la personne parle, tu t'arrêtes net et tu écoutes. Ne dis PAS que tu es une IA ou un agent vocal dans cette ouverture ; si on te le demande, réponds honnêtement, immédiatement.",
+  "greeting_instruction": "Appel SORTANT, la personne vient de décrocher. Dis UNIQUEMENT le BLOC 1 du script (l'ACCROCHE), trois secondes de parole maximum, exactement : « Bonjour, Léa de Corsica Studio. C'est bien [entreprise du contexte prospect] ? » (métier et ville connus : « C'est bien le plombier d'Ajaccio ? » ; sans fiche : « Je suis bien chez un artisan ? »). RIEN d'autre : pas de pourquoi, pas de pitch, pas de « comment allez-vous ». Puis SILENCE total : tais-toi et attends sa réponse. Si la personne parle, tu t'arrêtes net et tu écoutes. Ne dis PAS que tu es une IA dans cette ouverture ; si on te le demande, réponds honnêtement, immédiatement.",
   "voice": "ara",
   "vad_silence_ms": 450
 }
