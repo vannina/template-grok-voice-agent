@@ -1,0 +1,162 @@
+{
+  "nom": "L'Atelier Coiffure",
+  "tagline": "Le salon du centre ancien d'Aix",
+  "positionnement": "Salon de coiffure mixte et familial au cœur d'Aix-en-Provence. Coupe, couleur, balayage, brushing, barbe et soins. Conseil personnalisé, produits professionnels, ambiance chaleureuse.",
+  "ville": "Aix-en-Provence",
+  "adresse": "14 rue Espariat, 13100 Aix-en-Provence",
+  "situation": "Au cœur du centre ancien, à deux pas de la place des Augustins et du cours Mirabeau. Parkings publics Rotonde et Cardeurs à cinq minutes à pied.",
+  "telephone_affiche": "04 42 27 31 08",
+  "horaires": {
+    "resume": "Ouvert du mardi au samedi. Fermé dimanche et lundi.",
+    "detail": {
+      "mardi_a_vendredi": "9h00 - 18h30",
+      "samedi": "8h30 - 17h00 sans interruption",
+      "dimanche_lundi": "Fermé"
+    },
+    "sans_rdv": "Le samedi matin, coupe homme et barbe possibles sans rendez-vous, selon l'affluence. Toutes les autres prestations sont sur rendez-vous."
+  },
+  "equipe": [
+    {
+      "prenom": "Julien",
+      "role": "Coiffeur homme et barbier : coupes homme, dégradés, taille et rasage de barbe"
+    },
+    {
+      "prenom": "Marion",
+      "role": "Coloriste : coloration, mèches, balayage, ombré, patine"
+    },
+    {
+      "prenom": "Sarah",
+      "role": "Coiffeuse polyvalente : coupes femme, brushing, coiffages, soins profonds"
+    }
+  ],
+  "prestations": [
+    {
+      "nom": "Coupe femme (shampoing, coupe, coiffage)",
+      "duree_minutes": 60,
+      "prix": "42 à 55 € selon la longueur"
+    },
+    {
+      "nom": "Coupe homme",
+      "duree_minutes": 30,
+      "prix": "22 à 28 €"
+    },
+    {
+      "nom": "Coupe enfant (moins de 12 ans)",
+      "duree_minutes": 30,
+      "prix": "16 à 20 €"
+    },
+    {
+      "nom": "Brushing seul",
+      "duree_minutes": 30,
+      "prix": "26 à 38 € selon la longueur"
+    },
+    {
+      "nom": "Coloration (racines ou complète)",
+      "duree_minutes": 120,
+      "prix": "55 à 80 € selon la longueur, coupe non comprise"
+    },
+    {
+      "nom": "Mèches ou balayage",
+      "duree_minutes": 150,
+      "prix": "75 à 130 € selon la longueur et la technique"
+    },
+    {
+      "nom": "Ombré hair",
+      "duree_minutes": 150,
+      "prix": "85 à 140 € selon la longueur"
+    },
+    {
+      "nom": "Patine / gloss",
+      "duree_minutes": 45,
+      "prix": "25 à 40 €"
+    },
+    {
+      "nom": "Taille de barbe",
+      "duree_minutes": 30,
+      "prix": "15 à 22 €"
+    },
+    {
+      "nom": "Forfait coupe homme + barbe",
+      "duree_minutes": 60,
+      "prix": "35 à 45 €"
+    },
+    {
+      "nom": "Soin profond (rituel au bac)",
+      "duree_minutes": 30,
+      "prix": "18 à 30 €"
+    },
+    {
+      "nom": "Coiffage événement (chignon, attache)",
+      "duree_minutes": 60,
+      "prix": "45 à 70 €, sur devis pour les mariages"
+    }
+  ],
+  "produits": {
+    "vente": "Le salon vend les produits professionnels utilisés au bac : shampoings, masques, soins sans rinçage, produits coiffants et huiles.",
+    "marques": ["Kérastase", "Olaplex", "American Crew"],
+    "note": "Les prix des produits varient selon les références : Salomé propose de le noter dans le rendez-vous, l'équipe conseille sur place."
+  },
+  "services": [
+    "Salon mixte : femmes, hommes, enfants",
+    "Diagnostic capillaire offert avant chaque prestation technique",
+    "Coupe homme et barbe sans rendez-vous le samedi matin, selon l'affluence",
+    "Carte de fidélité : la dixième coupe offerte",
+    "Café et thé offerts pendant la prestation",
+    "Wifi et presse à disposition"
+  ],
+  "fidelite": "Carte de fidélité gratuite : un tampon par prestation, la dixième coupe offerte.",
+  "paiement": "Cartes bancaires, espèces, chèques. Cartes cadeaux disponibles.",
+  "annulation": "Annulation ou déplacement sans frais jusqu'à la veille. Prévenir par téléphone suffit : Salomé note la demande et le salon confirme par message.",
+  "questions_frequentes": {
+    "sans_rdv": "Le samedi matin uniquement, pour la coupe homme et la barbe, selon l'affluence. Le reste de la semaine, tout est sur rendez-vous.",
+    "coiffeur_attitre": "Si vous souhaitez un coiffeur ou une coiffeuse en particulier (Julien, Marion ou Sarah), Salomé le note dans le rendez-vous et le salon en tient compte.",
+    "duree": "Salomé annonce la durée de chaque prestation au moment du rendez-vous : 30 minutes pour une coupe homme, environ une heure pour une coupe femme, deux heures et plus pour une couleur ou un balayage.",
+    "enfants": "Les enfants sont les bienvenus, coupe enfant jusqu'à 12 ans.",
+    "mariage": "Pour un mariage ou un événement, le coiffage se fait sur devis : Salomé prend les coordonnées et le salon rappelle.",
+    "parking": "Parkings publics Rotonde et Cardeurs à cinq minutes à pied. Le centre ancien est piéton.",
+    "retard": "En cas de retard de plus de quinze minutes, le salon peut devoir décaler ou raccourcir la prestation : prévenez par téléphone."
+  },
+  "capacite": {
+    "creneaux_minutes": 30,
+    "clients_par_creneau": 1,
+    "note": "Un client par créneau et par coiffeur. Les prestations longues (couleur, balayage) occupent plusieurs créneaux consécutifs."
+  },
+  "showcase": [
+    {
+      "titre": "Coupe & coiffage",
+      "items": [
+        "Coupe femme : 42 à 55 €, environ 1h",
+        "Coupe homme : 22 à 28 €, 30 min",
+        "Coupe enfant (moins de 12 ans) : 16 à 20 €",
+        "Brushing : 26 à 38 € selon la longueur"
+      ]
+    },
+    {
+      "titre": "Couleur",
+      "items": [
+        "Coloration : 55 à 80 €, environ 2h",
+        "Mèches ou balayage : 75 à 130 €, 2h30",
+        "Ombré hair : 85 à 140 €",
+        "Patine / gloss : 25 à 40 €"
+      ]
+    },
+    {
+      "titre": "Barbe & soins",
+      "items": [
+        "Taille de barbe : 15 à 22 €, 30 min",
+        "Forfait coupe homme + barbe : 35 à 45 €",
+        "Soin profond au bac : 18 à 30 €",
+        "Sans rendez-vous le samedi matin (homme et barbe)"
+      ]
+    },
+    {
+      "titre": "La maison",
+      "items": [
+        "Équipe : Julien (homme, barbe), Marion (coloriste), Sarah (femme, soins)",
+        "Produits : Kérastase, Olaplex, American Crew",
+        "Carte de fidélité : la dixième coupe offerte",
+        "Ouvert du mardi au samedi, centre ancien d'Aix"
+      ]
+    }
+  ]
+}
