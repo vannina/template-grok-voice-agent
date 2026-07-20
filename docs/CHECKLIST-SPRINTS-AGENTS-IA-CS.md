@@ -71,7 +71,7 @@ multilingue**, wedge **réveil de devis**, prospection **B2B only**, **pas d'aid
 - [x] (C) Métier `prospection` : Léa, SDR pédagogue (présentation conforme + opt-out immédiat, pitch dépannage, RDV 30 min agenda CS) — **fait 2026-07-03**
 - [x] (C) Tools : book_reservation (RDV Vannina) + marquer_opposition (Airtable Oppositions) + qualify_lead — **fait 2026-07-03**
 - [x] (C) Cahier des charges conversationnel NORMATIF (`docs/CAHIER-DES-CHARGES-CONVERSATION.md`, 9 sections) — **fait 2026-07-06**
-- [ ] (C) **Léa v13** (enchaînement 2,5 s plafonné à 2, au revoir non coupé + fenêtre politesse 3 s) : commit 9c24992, mocks 24/24, smoke 22/22 — recette simulateur EN COURS puis déploiement VPS + appel de validation Vannina
+- [x] (C+V) **Léa v13 → v14.1 VALIDÉE par Vannina le 2026-07-20** : v13 (enchaînement 2,5 s ×2, au revoir + fenêtre 3 s, 9c24992) + v14 (mode information, plafond 2 RDV, cahier 6.9-6.11) + v14.1 (réponse dans le même souffle, 6.12) — simulateur 8 scénarios, déployée. Rappel : OUTBOUND_HOURS=8-22 (tests) à remettre 9-12,14-18 avant pilote
 - [ ] (C) Séquence email B2B 4 touches (réutilise WF-06a) en pré-chauffe
 - [ ] (C) Conformité B2B opt-out (mentions, opposition, secteurs exclus) — checklist légale
 - [ ] (V+C) Test campagne pilote + KPIs (réponse, RDV, coût/lead)
