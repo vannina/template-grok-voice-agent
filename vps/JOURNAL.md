@@ -296,3 +296,15 @@ depuis le 22/06 ; WF-00 "rapport hebdo" tourne en fait quotidien 8h ; descriptio
 des 2 WF-Standard perimees ("Inactif" alors qu'actifs) ; AUCUN canal actif de
 desinscription cold email (webhook unsubscribe = WF-EB-04 inactif, IMAP WF-08-lite
 inactif) a verifier en priorite. WF-OUT / WF-OUT-Retour non touches (pilote 22/07).
+
+## 2026-07-21 23h58 — PILOTE LÉA ACTIVÉ (à la main) + leçon scheduler
+WF-OUT (ScBlNVZaomyft6H9) et WF-OUT-Retour (Kgn4smoLJmeyPDli) PUBLIÉS/ACTIFS à 23h55.
+Aucun appel possible avant demain 9h (cron 9h-17h45 lun-ven + verrou horaires serveur
+9-12,14-18). Premier appel attendu 22/07 entre 9h00 et 9h15, max 3 par quart d'heure,
+résumé Telegram à chaque vague. Tâche 8h45 supprimée (remplacée par l'activation manuelle).
+LEÇON scheduler : la reprise de 21h05 a bien TIRÉ mais sa session s'est figée sur les
+demandes d'autorisation d'outils (une exécution planifiée n'hérite pas des approbations
+de la session principale) → zéro action. Parade : pré-approuver chaque nouvelle tâche
+planifiée via « Run now » supervisé une fois, ou exécuter à la main les étapes critiques.
+Corrections n8n : agent relancé à 23h56 (5 corrections + désinscription RGPD).
+Backfill démos : ANNULÉ par Vannina (archives Telegram suffisantes).
