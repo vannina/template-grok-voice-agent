@@ -276,3 +276,13 @@ vérifiée (H1, opposition 3 gestes, title/desc/OG) après réparation du bug «
 hors breakpoint » (consigné au buglog CS-framer-website). Tunnel conformité pilote
 COMPLET. Coffre : 12 entrées standard-voice ajoutées au clair (re-chiffrement à
 planifier avec Vannina). Specs add-ons #26/#27 en cours (agent). Moteur toujours gelé.
+
+## 2026-07-21 16h45 — GO PILOTE reçu : activation programmée pour le 22/07 8h45
+GO explicite de Vannina (credential n8n rempli par elle). Pré-vol fait : test à blanc
+/outbound/call (token accepté, numéro invalide rejeté, AUCUN appel parti), WF-OUT
+inspecté (cron 9h-17h45 lun-ven, formule sélection jamais 2/jour + max 3 tentatives,
+max 3 par run, credential Header Auth branché, Telegram résumé par run). Tâches
+planifiées : go-pilote-lea-activation (22/07 8h45 : publish WF-OUT ScBlNVZaomyft6H9 +
+WF-OUT-Retour Kgn4smoLJmeyPDli + vérifs serveur) et rapport-pilote-lea-matin (10h30 :
+statuts Airtable + logs + executions + coûts + reco). Rien n'est actif ce soir : le
+premier appel du pilote partira le 22/07 entre 9h00 et 9h15.
