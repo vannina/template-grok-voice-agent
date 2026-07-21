@@ -109,8 +109,8 @@ dans les docs liés + la mémoire (`strategie-agents-ia-cs`).
 - [x] (C) Image OG og-agent-vocal-coiffeur.png (gabarit #24, générateur og-image/generate_agents_vocaux_og.py, Salomé) + gabarit HTML sauvegardé dans CS-framer-website/01-framer-site/pages-agents-vocaux/og/ — **fait 2026-07-20**
 - [x] (V) « Cecchi » = erreur du correcteur (résolu 2026-07-20) : pas d'acteur de ce nom, benchmark = Fresha + Tala
 - [x] (V) Page dupliquée depuis /agent-vocal-depannage + path /agent-vocal-coiffeur + title + description — **fait 2026-07-20**
-- [ ] (V) Uploader og-agent-vocal-coiffeur.png dans les réglages de la page Framer (Social Image)
+- [x] (V) OG uploadée + prop réglée — fait 2026-07-21
 - [x] (C) Injection du contenu FAITE et VÉRIFIÉE (nuit du 20 au 21/07) : variante coiffeur dans V2_Template_AgentVocal (74 881 car., diff IDENTICAL, résolution par pathname ajoutée car les props d'instance ne sont pas éditables par MCP), navbar + footer mis à jour, backups avant modif committés (7880a76, 78bc80e). RESTE : pousser V2_JsonLd (plugin déconnecté, fichier A-POUSSER prêt) quand Vannina rouvre le plugin
 - [x] (C) Menu/navbar (dropdown Agents vocaux, 4e position) + footer (colonne Navigation) : faits et vérifiés par re-lecture — nuit du 20 au 21/07
-- [ ] (V) Validation visuelle (desktop + mobile) puis PUBLICATION
+- [x] (V+C) PUBLIÉ le 2026-07-21 et vérifié en ligne par Claude (H1, menu, footer, schema, OG, prix) ; page /qui-vous-appelle publiée aussi (bug page vide réparé, buglog)
 - [ ] (C) Sourcing salons de coiffure France (hors Corse) + cross-suppression + pilote Léa coiffeurs

@@ -268,3 +268,11 @@ Recette Léa terminée (v14.1 validée par Vannina) : OUTBOUND_HOURS remis de 8-
 sortant ne peut partir hors plages ouvrées lun-ven. Le garde-fou du pilote est en place.
 Reste pour #21 : credential n8n X-Outbound-Token (UI, action Vannina ou vérif MCP),
 activation WF-OUT + WF-OUT-Retour sur GO explicite de Vannina uniquement.
+
+## 2026-07-21 16h20 — Pages PUBLIÉES + coffre synchronisé
+Site : /agent-vocal-coiffeur EN LIGNE vérifiée (H1 coiffure, menu 4 offres, footer,
+schema ProfessionalService+FAQ, OG, prix fourchettes) ; /qui-vous-appelle EN LIGNE
+vérifiée (H1, opposition 3 gestes, title/desc/OG) après réparation du bug « composants
+hors breakpoint » (consigné au buglog CS-framer-website). Tunnel conformité pilote
+COMPLET. Coffre : 12 entrées standard-voice ajoutées au clair (re-chiffrement à
+planifier avec Vannina). Specs add-ons #26/#27 en cours (agent). Moteur toujours gelé.
