@@ -206,4 +206,49 @@ Achat de base, scraping automatisé (Apify PJ/Maps), activation de WF-OUT, exten
 
 ---
 
+## 6. Lot 1 chargé (2026-07-21, 12h34 Europe/Paris)
+
+Mission #22, phase EXÉCUTION lot 1. **42 prospects chargés** dans `Prospection — Prospects` (`tbl09KiO2lEk270J1`), tous en statut `a_appeler`, par lots de 10 via MCP Airtable (`create_records_for_table`). La table contient 43 records (42 + le test interne). WF-OUT reste INACTIF : aucun appel ne peut partir.
+
+### 6.1 Décompte
+
+| Étape | Volume |
+|---|---|
+| Population Sirene interrogée (API recherche-entreprises, curl) | 1 800 établissements actifs (341 clim 43.22B Corse + 828 plombiers 43.22A Corse + 631 coiffeurs 96.02A sur 7 villes) |
+| Candidats présélectionnés (zones cibles, filtre mots-clés rénovation énergétique/photovoltaïque, pré-suppression par nom+ville vs cold email) | 81 fiches enquêtées |
+| Téléphone vérifié trouvé (E.164 `+33...`) | 42 retenus |
+| Écartés pendant l'enquête | ~39 : téléphone introuvable ou masqué (JMC Plomberie, Cassitta, Bonelli, Bettini, MBT, Zen Coiff, Cut&Coiff, Allo SAV, Sud Froid, Génie Climatique Service...), établissement fermé (Casanova Plomberie : liquidation 2024 ; Paul Mondoloni : établissement 43.22A cessé), **fiche Sirene « Opposé au marketing direct » (Antoine Cubeddu, Bastia : exclu par prudence RGPD)**, SIRET invérifiable (AGPlomberie & Co) |
+| Cross-suppression finale (téléphone E.164 + nom+ville vs `Prospects` cold email 869/821 tel, `Desinscriptions`, `Prospection — Oppositions`) | **0 doublon** sur les 42 (recouvrement déjà éliminé en amont par la pré-suppression nom+ville ; `Desinscriptions` et `Oppositions` vérifiées = 0 record chacune au 2026-07-21) |
+| Doublons internes au lot (par téléphone) | 0 |
+
+### 6.2 Répartition
+
+**Cible A — 18 artisans dépannage Corse** (`secteur=depannage`) :
+- 10 climaticiens/frigoristes : Ajaccio 3, Afa 1, Bastia 1, Biguglia 2, Porto-Vecchio 3
+- 8 plombiers : Ajaccio 3, Borgo 2, Saint-Florent 1, Porto-Vecchio 2
+- Scores 65-85 (clim > plombier ; bonus dépannage 24/7 affiché, mobile direct du gérant)
+
+**Cible B — 24 salons de coiffure villes moyennes hors Corse** (`secteur=coiffure`, `metier=coiffeur`) :
+- Allier : Montluçon 2, Moulins 3, Vichy 4 · Tarn : Albi 6, Castres 3 · Charente : Angoulême 4, Cognac 2
+- Score 70 = pas de réservation en ligne détectée (absent des listes Planity de la ville) ; score 40 = présent sur Planity/Fresha ou résa en ligne sur son site (6 salons concernés : Ikxis, David SCE, Hair du Temps, Le Boudoir Castres, Aurélie Coiff)
+
+### 6.3 Qualité téléphone et sources
+
+- 42/42 numéros E.164 valides (`+33[1-9]XXXXXXXX`), 0 numéro 08 surtaxé, 0 particulier (tous adossés à un SIREN actif vérifié via recherche-entreprises ; SIREN cité dans le champ `source` de chaque record avec la date).
+- Cible A : numéros issus des sites officiels des entreprises (8 cas) et d'annuaires en consultation (118000.fr, mappy, u-corsu, bottin, justacote, e-pro, monartisan, ou-plombier...). Pages Jaunes cité en recoupement quand la fiche existe (consultation, pas d'extraction automatisée).
+- Cible B : colonne vertébrale = JSON-LD de coiffeur.annuairefrancais.fr (nom + SIRET + téléphone), croisé par SIRET avec la population Sirene. Les numéros y sont tronqués d'un chiffre : reconstruction par le chiffre de zone du département (0470 Allier, 0563 Tarn, 0545 Charente), **validée sur 3 échantillons recoupés indépendamment** (Delarbre Montluçon, David SCE Albi, Aurélie Coiff Angoulême : exacts). Les numéros ambigus (préfixes 51/67/81 pouvant être mobiles) ont été écartés ou recoupés par une 2e source.
+- Chaque record note sa lignée complète dans `source` (URL annuaire + fiche annuaire-entreprises + date).
+
+### 6.4 Écarts vs plan
+
+1. **Options selects** : `coiffure` (secteur) et `coiffeur` (metier) créées via `typecast` à l'insertion (le tool MCP `update_field` ne permet pas d'ajouter des choix de select). IDs créés : `selD4WTpjqDvzwo4l` (coiffure), `selF0psaSGQidcFSV` (coiffeur). Seule modification de schéma effectuée.
+2. Électriciens (43.21A) non inclus au lot 1 : priorité clim/plombiers respectée, 18 fiches A de qualité plutôt que forcer à 25 (règle qualité avant quantité, WebSearch et annuaires rate-limités par moments).
+3. C&P Réfrigération (Biguglia) : NAF 46.69B (négoce frigorifique) et non 43.22B ; frigoriste dépanneur réel, retenu avec note dans le record.
+4. Table `Desinscriptions` : 0 record au moment du chargement (le plan en attendait ; vérifiée quand même, à re-vérifier avant tout lot 2).
+5. Villes cible B : Nevers et Tarbes remplacées par Moulins/Vichy/Castres/Cognac (mêmes départements retenus au plan : Allier, Tarn, Charente).
+
+Prochaine étape (hors périmètre lot 1) : validation du fichier par Vannina, prompt Léa `coiffeur`, puis GO/NO-GO avant toute activation de WF-OUT.
+
+---
+
 *Sources : n8n workflow `ScBlNVZaomyft6H9` (lu le 2026-07-20) ; Airtable bases `appZaFI40YcGBCn8D` et `app4mDcBvos5Fd5he` (lues le 2026-07-20) ; recherche-entreprises.api.gouv.fr (comptages du 2026-07-20) ; `docs/PROSPECTION-IA-CS.md` (2026-07-01). Statuts marqués confirmé/probable dans le texte.*
