@@ -297,6 +297,24 @@ des 2 WF-Standard perimees ("Inactif" alors qu'actifs) ; AUCUN canal actif de
 desinscription cold email (webhook unsubscribe = WF-EB-04 inactif, IMAP WF-08-lite
 inactif) a verifier en priorite. WF-OUT / WF-OUT-Retour non touches (pilote 22/07).
 
+## 2026-07-22 00h10 — Corrections n8n post-audit (GO Vannina) : 5/5 appliquées
+Via MCP n8n uniquement (SDK validate/update/publish + GET API en contrôle), zéro SSH.
+(1) RGPD : WF-08-lite IMAP Unsubscribe PUBLIÉ (credential IMAP OVH + tables cohérentes
+avec WF-06a vérifiés avant) ; 2 exécutions succès (3323, 3325), branche « ignoré » sur
+les emails d'audit = chaîne mailto fonctionnelle. Constat : le lien HTTPS
+corsica-studio.com/unsubscribe des emails WF-06a → 404 Framer (canal mort, à réparer) ;
+WF-EB-04 non activé (mauvaise table/URL, tunnel ebook). (2) WF-00 : schedule rapport
+corrigé lundi 8h uniquement (était quotidien), republié, actif, credentials intacts.
+(3) Descriptions WF-Standard-Reception/Digest dépérimées (« Inactif » → « ACTIF depuis
+A.5 02/07 »). (4) 14 workflows morts archivés (9 TEST + 2 DOUBLON + 3 PONCTUEL +
+scaffold purge RGPD), réversible, rien d'autre touché (WF-OUT/WF-OUT-Retour actifs
+pilote NON touchés). (5) WF-06b : draft v1.2 publié, parse_mode retiré, digest réécrit
+(« Envoyés : X (limite Resend : 100/j) » + ⚠️ dès 90, 1ers contacts/relances, démos
++jour/cumulées) ; exécution test 3324 succès, digest reçu Telegram (msg 73) ; clé
+/usage validée (200/403). Backfill démos annulé par Vannina. Reste à vérifier : la
+redirection OVH unsubscribe@corsica-studio.fr → noreply@corsica-studio.com (accès OVH
+bloqué en session). Détail : docs/AUDIT-N8N-2026-07.md section 5.
+
 ## 2026-07-21 23h58 — PILOTE LÉA ACTIVÉ (à la main) + leçon scheduler
 WF-OUT (ScBlNVZaomyft6H9) et WF-OUT-Retour (Kgn4smoLJmeyPDli) PUBLIÉS/ACTIFS à 23h55.
 Aucun appel possible avant demain 9h (cron 9h-17h45 lun-ven + verrou horaires serveur
