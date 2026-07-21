@@ -110,7 +110,7 @@ dans les docs liés + la mémoire (`strategie-agents-ia-cs`).
 - [x] (V) « Cecchi » = erreur du correcteur (résolu 2026-07-20) : pas d'acteur de ce nom, benchmark = Fresha + Tala
 - [x] (V) Page dupliquée depuis /agent-vocal-depannage + path /agent-vocal-coiffeur + title + description — **fait 2026-07-20**
 - [ ] (V) Uploader og-agent-vocal-coiffeur.png dans les réglages de la page Framer (Social Image)
-- [ ] (C) Injection du contenu dans la page (MCP Framer : variante coiffeur du template, H1, sections, pricing, FAQ, schema) + vérification
-- [ ] (C) Menu/navbar + footer : ajouter la page coiffeur au dropdown offres + maillage
+- [x] (C) Injection du contenu FAITE et VÉRIFIÉE (nuit du 20 au 21/07) : variante coiffeur dans V2_Template_AgentVocal (74 881 car., diff IDENTICAL, résolution par pathname ajoutée car les props d'instance ne sont pas éditables par MCP), navbar + footer mis à jour, backups avant modif committés (7880a76, 78bc80e). RESTE : pousser V2_JsonLd (plugin déconnecté, fichier A-POUSSER prêt) quand Vannina rouvre le plugin
+- [x] (C) Menu/navbar (dropdown Agents vocaux, 4e position) + footer (colonne Navigation) : faits et vérifiés par re-lecture — nuit du 20 au 21/07
 - [ ] (V) Validation visuelle (desktop + mobile) puis PUBLICATION
 - [ ] (C) Sourcing salons de coiffure France (hors Corse) + cross-suppression + pilote Léa coiffeurs
