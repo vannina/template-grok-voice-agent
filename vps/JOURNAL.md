@@ -286,3 +286,13 @@ planifiées : go-pilote-lea-activation (22/07 8h45 : publish WF-OUT ScBlNVZaomyf
 WF-OUT-Retour Kgn4smoLJmeyPDli + vérifs serveur) et rapport-pilote-lea-matin (10h30 :
 statuts Airtable + logs + executions + coûts + reco). Rien n'est actif ce soir : le
 premier appel du pilote partira le 22/07 entre 9h00 et 9h15.
+
+## 2026-07-21 16h40 — Audit n8n LECTURE SEULE (aucune modification)
+Audit complet des 42 workflows visibles (10 actifs) pour le rapport
+docs/AUDIT-N8N-2026-07.md. Acces : SELECT uniquement sur Postgres n8n_central
+(execution_entity, workflow_entity, webhook_entity) via SSH root, zero ecriture,
+zero action Docker. Constats cles : 0 echec d'execution sur toute l'instance
+depuis le 22/06 ; WF-00 "rapport hebdo" tourne en fait quotidien 8h ; descriptions
+des 2 WF-Standard perimees ("Inactif" alors qu'actifs) ; AUCUN canal actif de
+desinscription cold email (webhook unsubscribe = WF-EB-04 inactif, IMAP WF-08-lite
+inactif) a verifier en priorite. WF-OUT / WF-OUT-Retour non touches (pilote 22/07).
