@@ -326,3 +326,19 @@ de la session principale) → zéro action. Parade : pré-approuver chaque nouve
 planifiée via « Run now » supervisé une fois, ou exécuter à la main les étapes critiques.
 Corrections n8n : agent relancé à 23h56 (5 corrections + désinscription RGPD).
 Backfill démos : ANNULÉ par Vannina (archives Telegram suffisantes).
+
+## 2026-07-24 12h15 — Retours cold email : 3 défauts de fond révélés
+Réponse Hôtel Restaurant Le Kallisté (Serra Di Ferro, 23/07) : « si déjà vous démarchez,
+merci de respecter le nom de l'établissement. Et je décroche toujours... connaissez-vous
+le transfert d'appel ? ». Traité : Stop + blacklist + fiche annotée.
+TROIS défauts de fond identifiés au-delà de la désinscription :
+1. TUTOIEMENT sur un HÔTELIER (règle CS = vouvoiement hôteliers/libérales). Cause :
+   champ tutoiement_autorise=TRUE sur 868 prospects, dont ~50 hébergements. Correction
+   de masse lancée (agent) : passage à FALSE pour hôtels/auberges/résidences/campings
+   + professions libérales. Tâche de fond : la campagne tourne 40-90 mails/j.
+2. NOM D'ÉTABLISSEMENT INEXACT affiché en tête d'email (3e cas de données source fausses
+   après Salducci homonyme et Ortu di u Piobbu/Puscaghja) -> tâche #42 (audit noms).
+3. OBJECTION MÉTIER majeure non traitée : « je décroche toujours / le transfert d'appel
+   existe » -> tâche #41 (réponse à intégrer emails + Léa + FAQ + simulateur).
+Désinscriptions traitées à ce jour (fiche + blacklist) : Salducci, Ferrandi, L'Ardoise
+Ajaccio, La Marmite de Laurent, refuge Puscaghja, Le Kallisté = 6.
