@@ -252,3 +252,79 @@ Prochaine étape (hors périmètre lot 1) : validation du fichier par Vannina, p
 ---
 
 *Sources : n8n workflow `ScBlNVZaomyft6H9` (lu le 2026-07-20) ; Airtable bases `appZaFI40YcGBCn8D` et `app4mDcBvos5Fd5he` (lues le 2026-07-20) ; recherche-entreprises.api.gouv.fr (comptages du 2026-07-20) ; `docs/PROSPECTION-IA-CS.md` (2026-07-01). Statuts marqués confirmé/probable dans le texte.*
+
+---
+
+## 7. Correction tutoiement hôteliers (2026-07-24)
+
+Rédigé le 2026-07-24. Base `app4mDcBvos5Fd5he`, table `Prospects` (`tblIbcAR8GucFkgyw`), champ `tutoiement_autorise` (`fldIf6aQO6yeiz0uO`).
+
+### 7.1 Déclencheur
+
+Le 23/07, un hôtelier (Le Kallisté) s'est plaint d'avoir reçu un email tutoyé. Règle /CS : tutoiement pour les artisans et commerçants, **vouvoiement obligatoire** pour les hôteliers, l'hébergement et les professions libérales.
+
+### 7.2 Périmètre et méthode
+
+- **868 records** examinés (tous ceux avec `tutoiement_autorise = TRUE`).
+- Balayage complet des 868 `denomination` en 3 pages, puis contre-vérification par requêtes ciblées `contains` sur : `otel`, `ôtel`, `uberge`, `amping`, `îte`, `sidence`, `hambre`, `elais`, `illa`, `efuge`, `omaine`, `ostellerie`, `esort`, `ension de fam`.
+- Contrôle professions libérales : filtre `metier` sur les options hotel / avocat / expert_comptable / medecin / dentiste / architecte / agence_immo / autre → **0 record**, plus requêtes `contains` sur `abinet`, `octeur`, `vocat`, `omptable`, `otaire`, `entiste`, `rchitect`, `linique`, `harmacie`, `érinaire`, `inésith` → **0 record**. Le lot TRUE ne contenait que des métiers de la restauration/hébergement.
+
+### 7.3 Résultat
+
+**61 records corrigés** : `tutoiement_autorise` passé à FALSE + note horodatée ajoutée en append dans `notes_internes` (`fldSomwRlHurMQWGE`), contenu existant préservé :
+`2026-07-24 : vouvoiement force (regle CS : hoteliers et professions liberales = vouvoiement).`
+
+Aucun autre champ modifié, aucune suppression. Restaurants, pizzerias, bars et brasseries non touchés.
+
+**Hôtels (21)** : Hôtel L'Ondine · Hôtel Restaurant U Paradisu · Hôtel Restaurant La Caravelle · Hôtel Restaurant La Bergerie · Santa Vittoria Hôtel de la Plage · Hôtel Restaurant · Hôtel Restaurant du Fango · Hôtel U Paesolu · Hôtel le Royal · Hôtel Farera · Hôtel Restaurant l'Europe · Hôtel Des Roches · Hôtel Restaurant de La Jetée · Hôtel-Restaurant La Lagune · Cors'Hôtel · Hôtel Restaurant U Marinaru · Hôtel Marina di Lava · Hotel Lilium Maris · Hotel-Restaurant Des Deux Sorru · Sofitel Golfe d'Ajaccio Sea and Spa · Paesotel E Caselle
+
+**Auberges et fermes-auberges (31)** : FERME AUBERGE PERIDUNDELLU · Auberge U San Martinu · L 'AUBERGE DU PECHEUR · Auberge du Cheval Blanc · AUBERGE U SIRENU · AUBERGE DU PECHEUR · Auberge D'Alata · L'Auberge Corse · Ferme auberge d Alzitone · Auberge Montana · AUBERGE DE LICETTO · AUBERGE TAFANI MARIE FRANCE · Auberge U Sirenu · Auberge du Prunelli · Auberge u Pasturellu · Auberge Casa Mathea · Auberge du pêcheur / Agula Marina · AUBERGE DE LA FORET · AUBERGE A FILETTA · Auberge du Coucou · Auberge de la Restonica · AUBERGE DU SANGLIER · Ferme Auberge Pozzo di Mastri · L'AUBERGE · AUBERGE CHEZ FLORA · CAMPING AUBERGE BUNGALOW CAVALLO MORTO · Auberge Acquella · Auberge du col de Bavella · Auberge Napoléon · FERME AUBERGE L'AGHIALLE · Auberge la Ferme
+
+**Campings (2, hors camping-auberge déjà cité)** : Camping Ras L'Bol · CAMPING OLVA SAS
+
+**Gîtes (2)** : Gîte Du Chalet Pietri · Gîte A Funtana
+
+**Chambres d'hôtes (1)** : Restaurant - Chambres d'Hôtes TERRA BELLA
+
+**Relais (2)** : Le Relais Campagnard · Le Relais
+
+**Villa (1)** : Villa les Orangers
+
+**Refuge (1)** : Refuge d'Ortu di u Piobbu
+
+### 7.4 Cas ambigus tranchés
+
+Le risque étant asymétrique (vouvoyer un artisan ne vexe personne, tutoyer un hôtelier fait perdre le prospect), le doute a systématiquement tranché vers le **vouvoiement**.
+
+- **« Hôtel Restaurant … » (9 fiches)** → hôteliers, vouvoiement, même si le métier Airtable dit « Restaurant ».
+- **« Auberge … » sans mention d'hébergement (20+ fiches)** → beaucoup ne sont peut-être que des restaurants, mais impossible de trancher sur le seul nom : vouvoiement par défaut.
+- **Fermes-auberges (3)** → hébergement rural fréquent : vouvoiement.
+- **Le Relais / Le Relais Campagnard** → « relais » relève du vocabulaire hôtelier : vouvoiement.
+- **Villa les Orangers** → « villa » en contexte touristique corse = hébergement : vouvoiement.
+- **Refuge d'Ortu di u Piobbu** → refuge de montagne du GR20, hébergement avéré : vouvoiement (fiche déjà signalée email erroné le 21/07, note préservée).
+- **Paesotel E Caselle** → village-hôtel : vouvoiement.
+- **Sofitel Golfe d'Ajaccio Sea and Spa** → marque hôtelière, aucun mot-clé « hôtel » dans le nom : détecté au balayage manuel.
+- **Restaurant - Chambres d'Hôtes TERRA BELLA** → métier Airtable « Pizzeria », mais chambres d'hôtes : vouvoiement.
+
+**Faux positifs volontairement laissés en tutoiement :**
+- *BRASSERIE GRILL DE L'HOTEL DE VILLE* → « hôtel de ville » = mairie, pas un hébergement.
+- *U Bistrotellu* → collision de sous-chaîne sur « otel ».
+- *Restaurant Le Refuge* et *Le Refuge* → nommés explicitement restaurant / restaurants connus, pas des refuges de montagne.
+- *La Bergerie*, *LA FERME A STADDA*, *Restaurant la ferme*, *Le Lodge* → noms de restaurants sans indice d'hébergement.
+
+### 7.5 Vérification finale (prouvée)
+
+Requêtes de contrôle exécutées après correction :
+
+| Contrôle | Avant | Après |
+|---|---|---|
+| `tutoiement_autorise = TRUE` (total) | 868 | **807** (soit 868 − 61) |
+| TRUE + `contains "ôtel"` | 17 | **0** |
+| TRUE + `contains "uberge"` | 31 | **0** |
+| TRUE + `contains "amping"` | 3 | **0** |
+| TRUE + `contains "îte"` | 2 | **0** |
+| TRUE + `contains "hambre"` | 1 | **0** |
+| TRUE + `contains "elais"` | 2 | **0** |
+| TRUE + `contains "otel"` | 5 | **2** (les 2 faux positifs assumés ci-dessus) |
+
+Plus aucun hébergement identifiable ne reste en `tutoiement_autorise = TRUE`.
